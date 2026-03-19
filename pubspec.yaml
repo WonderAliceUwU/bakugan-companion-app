@@ -51,24 +51,22 @@ flutter:
     - assets/images/characters/julie.png
     - assets/images/characters/marucho.png
     - assets/images/characters/masquerade.png
-    # Carpetas de modelos (declarar la carpeta incluye todos los archivos dentro)
+    - assets/images/attributes/pyrus_game.png
+    - assets/images/attributes/aquos_game.png
+    - assets/images/attributes/subterra_game.png
+    - assets/images/attributes/haos_game.png
+    - assets/images/attributes/darkus_game.png
+    - assets/images/attributes/ventus_game.png
+    # Carpetas de modelos
     - assets/models/dragonoid/
-    - assets/models/hydranoid/
-    - assets/models/skyress/
-    - assets/models/tigrerra/
-    - assets/models/preyas/
     - assets/models/gorem/
     - assets/models/fear_ripper/
     - assets/models/griffon/
     - assets/models/sirenoid/
     - assets/models/ravenoid/
     - assets/models/centipoid/
-    - assets/models/cycloid/
     - assets/models/reaper/
     - assets/models/monarus/
     - assets/models/harpus/
-    - assets/models/delta_dragonoid/
-    - assets/models/dual_hydranoid/
     - assets/models/blade_tigrerra/
-    - assets/models/storm_skyress/
     - assets/models/hammer_gorem/

@@ -47,17 +47,23 @@ Route _fadeRoute(Widget page) {
 }
 
 // --- MODELOS DE DATOS ---
-class Bakugan {
-  final String name;
+class BakuganVariant {
+  final String attribute;
   final String modelPath;
   final Color color;
-  Bakugan({required this.name, required this.modelPath, required this.color});
+  BakuganVariant({required this.attribute, required this.modelPath, required this.color});
+}
+
+class Bakugan {
+  final String name;
+  final List<BakuganVariant> variants;
+  Bakugan({required this.name, required this.variants});
 }
 
 class PlayerData {
   final String name;
   final String character;
-  final List<Bakugan> deck = [];
+  final List<BakuganVariant> deck = [];
   PlayerData({required this.name, required this.character});
 }
 
@@ -71,45 +77,46 @@ Future<void> loadAvailableBakugans() async {
         .where((String key) => key.startsWith('assets/models/') && key.endsWith('.glb'))
         .toList();
 
-    availableBakugans = modelPaths.map((path) {
+    Map<String, List<BakuganVariant>> grouped = {};
+
+    for (var path in modelPaths) {
       String fileName = path.split('/').last.replaceAll('.glb', '');
-      String name = fileName.split('_').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ');
+      List<String> parts = fileName.split('_');
+      String attribute = parts.last.toLowerCase();
+      String speciesName = parts.length > 1
+          ? parts.sublist(0, parts.length - 1).map((word) => word[0].toUpperCase() + word.substring(1)).join(' ')
+          : fileName[0].toUpperCase() + fileName.substring(1);
+
       Color color = Colors.red;
-      if (path.contains('pyrus')) color = Colors.red;
-      else if (path.contains('aquos')) color = Colors.blue;
-      else if (path.contains('subterra')) color = Colors.orange;
-      else if (path.contains('haos')) color = Colors.white;
-      else if (path.contains('darkus')) color = Colors.purple;
-      else if (path.contains('ventus')) color = Colors.green;
-      return Bakugan(name: name, modelPath: path, color: color);
-    }).toList();
+      if (attribute.contains('pyrus')) color = Colors.red;
+      else if (attribute.contains('aquos')) color = Colors.blue;
+      else if (attribute.contains('subterra')) color = Colors.orange;
+      else if (attribute.contains('haos')) color = Colors.white;
+      else if (attribute.contains('darkus')) color = Colors.purple;
+      else if (attribute.contains('ventus')) color = Colors.green;
+
+      grouped.putIfAbsent(speciesName, () => []).add(
+        BakuganVariant(attribute: attribute, modelPath: path, color: color)
+      );
+    }
+
+    availableBakugans = grouped.entries.map((e) => Bakugan(name: e.key, variants: e.value)).toList();
+
+    if (availableBakugans.isEmpty) {
+       _loadFallback();
+    }
   } catch (e) {
     debugPrint("Error loading models: $e");
-    try {
-      final String manifestContent = await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-      final modelPaths = manifestMap.keys
-          .where((String key) => key.startsWith('assets/models/') && key.endsWith('.glb'))
-          .toList();
-
-      if (availableBakugans.isEmpty) {
-        availableBakugans = modelPaths.map((path) {
-          String fileName = path.split('/').last.replaceAll('.glb', '');
-          String name = fileName.split('_').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ');
-          Color color = Colors.red;
-          if (path.contains('pyrus')) color = Colors.red;
-          else if (path.contains('aquos')) color = Colors.blue;
-          else if (path.contains('subterra')) color = Colors.orange;
-          else if (path.contains('haos')) color = Colors.white;
-          else if (path.contains('darkus')) color = Colors.purple;
-          else if (path.contains('ventus')) color = Colors.green;
-          return Bakugan(name: name, modelPath: path, color: color);
-        }).toList();
-      }
-    } catch (e2) {
-      debugPrint("Fallback error: $e2");
-    }
+    _loadFallback();
   }
+}
+
+Future<void> _loadFallback() async {
+  availableBakugans = [
+    Bakugan(name: 'Dragonoid', variants: [
+      BakuganVariant(attribute: 'pyrus', modelPath: 'assets/models/dragonoid/dragonoid_pyrus.glb', color: Colors.red),
+    ])
+  ];
 }
 
 // --- PANTALLAS ---
@@ -455,7 +462,8 @@ class BakuganSelectScreen extends StatefulWidget {
 class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   int currentPlayerIndex = 0;
   int selectedBakuganIndex = 0;
-  final PageController _carouselController = PageController(viewportFraction: 0.3);
+  int selectedVariantIndex = 0;
+  final PageController _carouselController = PageController(viewportFraction: 0.2);
   late AudioPlayer _sfxPlayer;
 
   @override
@@ -469,18 +477,43 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     await _sfxPlayer.play(AssetSource('sound/select.mp3'));
   }
 
+  bool _isVariantTaken(BakuganVariant variant) {
+    for (var p in widget.players) {
+      if (p.deck.any((v) => v.modelPath == variant.modelPath)) return true;
+    }
+    return false;
+  }
+
   void _addBakugan() {
+    final species = availableBakugans[selectedBakuganIndex];
+    final variant = species.variants[selectedVariantIndex];
+    
+    if (_isVariantTaken(variant)) return;
+
     _playClick();
     final p = widget.players[currentPlayerIndex];
     if (p.deck.length < 3) {
-      setState(() => p.deck.add(availableBakugans[selectedBakuganIndex]));
+      setState(() => p.deck.add(variant));
     }
+  }
+
+  void _removeBakugan(int playerIdx, int bakuganIdx) {
+    _playClick();
+    setState(() {
+      widget.players[playerIdx].deck.removeAt(bakuganIdx);
+      currentPlayerIndex = playerIdx; // Set as current when modifying
+    });
   }
 
   void _nextPlayer() {
     _playClick();
     if (currentPlayerIndex < widget.players.length - 1) {
-      setState(() { currentPlayerIndex++; selectedBakuganIndex = 0; _carouselController.jumpToPage(0); });
+      setState(() { 
+        currentPlayerIndex++; 
+        selectedBakuganIndex = 0; 
+        selectedVariantIndex = 0;
+        _carouselController.jumpToPage(0); 
+      });
     } else {
       debugPrint("Battle Start!");
     }
@@ -496,7 +529,9 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   Widget build(BuildContext context) {
     if (availableBakugans.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final currentPlayer = widget.players[currentPlayerIndex];
-    final currentBakugan = availableBakugans[selectedBakuganIndex];
+    final currentSpecies = availableBakugans[selectedBakuganIndex];
+    final currentVariant = currentSpecies.variants[selectedVariantIndex];
+    final bool currentIsTaken = _isVariantTaken(currentVariant);
 
     return Scaffold(
       body: Container(
@@ -504,97 +539,201 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
         child: Stack(
           children: [
             Positioned(top: 40, left: 20, child: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 30), onPressed: () { _playClick(); Navigator.of(context).pop(); })),
+            
+            // HORIZONTAL PLAYER LIST ON LEFT
             Positioned(
-              left: 20, top: 100, bottom: 60,
-              child: Column(
-                children: widget.players.asMap().entries.map((entry) {
-                  bool isCurrent = entry.key == currentPlayerIndex;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.only(bottom: 15), padding: const EdgeInsets.all(12), width: 260,
-                    decoration: BoxDecoration(color: isCurrent ? Colors.blue.withOpacity(0.2) : Colors.black87, border: Border.all(color: isCurrent ? Colors.blueAccent : Colors.white24, width: 3), borderRadius: BorderRadius.circular(15)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(entry.value.name.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: List.generate(3, (i) {
-                            final hasBakugan = i < entry.value.deck.length;
-                            return Container(
-                              width: 70, height: 70, margin: const EdgeInsets.only(right: 5),
-                              child: hasBakugan 
-                                ? BakuganPreview(bakugan: entry.value.deck[i], isDeck: true) 
-                                : Transform(
-                                    transform: Matrix4.skewX(-0.15),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black,
-                                        border: Border.all(color: Colors.white10, width: 2),
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      child: const Center(child: Icon(Icons.help_outline, color: Colors.white12, size: 25)),
+              left: 40, top: 130, bottom: 40,
+              child: SizedBox(
+                width: 550,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: widget.players.asMap().entries.map((entry) {
+                      bool isCurrent = entry.key == currentPlayerIndex;
+                      final themeColor = entry.key % 2 == 0 ? Colors.blueAccent : Colors.redAccent;
+                      return GestureDetector(
+                        onTap: () => setState(() => currentPlayerIndex = entry.key),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 80.0),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 170, height: 190,
+                                child: CharacterMiniature(char: entry.value.character, isSelected: isCurrent),
+                              ),
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(entry.value.name.toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: 2, color: isCurrent ? themeColor : Colors.white70)),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      children: List.generate(3, (i) {
+                                        final hasBakugan = i < entry.value.deck.length;
+                                        return GestureDetector(
+                                          onTap: hasBakugan ? () => _removeBakugan(entry.key, i) : null,
+                                          child: Transform(
+                                            alignment: Alignment.center,
+                                            transform: Matrix4.skewX(-0.15),
+                                            child: Container(
+                                              width: 90, height: 90, margin: const EdgeInsets.only(right: 10),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: hasBakugan ? entry.value.deck[i].color : Colors.white12, width: 2),
+                                                boxShadow: hasBakugan ? [BoxShadow(color: entry.value.deck[i].color.withValues(alpha: 0.4), blurRadius: 10)] : null,
+                                              ),
+                                              child: hasBakugan 
+                                                ? Stack(
+                                                    children: [
+                                                      BakuganPreview(variant: entry.value.deck[i], isDeck: true),
+                                                      const Positioned(top: 2, right: 2, child: Icon(Icons.cancel, size: 16, color: Colors.redAccent)),
+                                                    ],
+                                                  ) 
+                                                : const Center(child: Icon(Icons.add, color: Colors.white10, size: 24)),
+                                            ),
+                                          ),
+                                        );
+                                      }),
                                     ),
-                                  ),
-                            );
-                          }),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
             ),
+
             Positioned.fill(
-              left: 300,
+              left: 600,
               child: Column(
                 children: [
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
                   Text(currentPlayer.name.toUpperCase(), style: const TextStyle(fontSize: 24, letterSpacing: 5, color: Colors.blueAccent)),
                   const Text('SELECT YOUR DECK', style: TextStyle(fontFamily: 'title_font', fontSize: 50)),
-                  Expanded(child: Center(child: SizedBox(width: 500, height: 500, child: BakuganPreview(bakugan: currentBakugan, isLarge: true)))),
-                  Text(currentBakugan.name.toUpperCase(), style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold, color: currentBakugan.color, shadows: [Shadow(blurRadius: 15, color: currentBakugan.color)])),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 160,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(icon: const Icon(Icons.arrow_back_ios, size: 40), onPressed: () { _playClick(); _carouselController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }),
-                        SizedBox(
-                          width: 600,
-                          child: PageView.builder(
-                            controller: _carouselController, itemCount: availableBakugans.length,
-                            onPageChanged: (idx) => setState(() => selectedBakuganIndex = idx),
-                            itemBuilder: (context, idx) => AnimatedScale(
-                              scale: selectedBakuganIndex == idx ? 1.1 : 0.8,
-                              duration: const Duration(milliseconds: 200),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                  const SizedBox(height: 5),
+                  Expanded(
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // ATTRIBUTE SELECTOR
+                          Transform.translate(
+                            offset: const Offset(15, 0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: currentSpecies.variants.asMap().entries.map((vEntry) {
+                                bool isSel = vEntry.key == selectedVariantIndex;
+                                bool isTaken = _isVariantTaken(vEntry.value);
+                                String attr = vEntry.value.attribute;
+                                return GestureDetector(
+                                  onTap: isTaken ? null : () { _playClick(); setState(() => selectedVariantIndex = vEntry.key); },
+                                  child: Transform(
+                                    alignment: Alignment.center,
+                                    transform: Matrix4.skewX(-0.15),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      margin: const EdgeInsets.symmetric(vertical: 2),
+                                      padding: const EdgeInsets.all(10),
+                                      width: 100,
+                                      decoration: BoxDecoration(
+                                        color: isTaken ? Colors.grey.withValues(alpha: 0.1) : (isSel ? vEntry.value.color.withValues(alpha: 0.4) : Colors.transparent),
+                                        border: Border.all(color: isTaken ? Colors.grey : (isSel ? vEntry.value.color : Colors.white24), width: 2),
+                                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(15), bottomLeft: Radius.circular(15)),
+                                      ),
+                                      child: Transform(
+                                        alignment: Alignment.center,
+                                        transform: Matrix4.skewX(0.15),
+                                        child: ColorFiltered(
+                                          colorFilter: isTaken ? const ColorFilter.mode(Colors.grey, BlendMode.saturation) : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                                          child: Image.asset(
+                                            'assets/images/attributes/${attr}_game.png',
+                                            width: 50, height: 50,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (c, e, s) => const Icon(Icons.stars, size: 40, color: Colors.white24)
+                                          ),
+                                        )
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          // LARGE PREVIEW
+                          SizedBox(
+                            width: 800, height: 500,
+                            child: BakuganPreview(
+                              key: ValueKey('large_${currentVariant.modelPath}'),
+                              variant: currentVariant, 
+                              isLarge: true,
+                              speciesName: currentSpecies.name,
+                              isTaken: currentIsTaken,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // CAROUSEL
+                  Transform.translate(
+                    offset: const Offset(0, -100), // Moved MORE UP
+                    child: SizedBox(
+                      height: 180,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(icon: const Icon(Icons.arrow_back_ios, size: 40), onPressed: () { _playClick(); _carouselController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }),
+                          SizedBox(
+                            width: 1200,
+                            child: PageView.builder(
+                              controller: _carouselController, itemCount: availableBakugans.length,
+                              onPageChanged: (idx) => setState(() { 
+                                selectedBakuganIndex = idx; 
+                                selectedVariantIndex = 0;
+                              }),
+                              itemBuilder: (context, idx) => Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 15),
                                 child: BakuganPreview(
-                                  bakugan: availableBakugans[idx],
-                                  isSelected: selectedBakuganIndex == idx
+                                  key: ValueKey('preview_${availableBakugans[idx].variants[0].modelPath}'),
+                                  variant: availableBakugans[idx].variants[0],
+                                  isSelected: selectedBakuganIndex == idx,
+                                  speciesName: availableBakugans[idx].name,
                                 ),
                               ),
                             ),
                           ),
+                          IconButton(icon: const Icon(Icons.arrow_forward_ios, size: 40), onPressed: () { _playClick(); _carouselController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Transform.translate(
+                    offset: const Offset(0, -50),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        BakuganButton(
+                          text: currentIsTaken ? 'ALREADY PICKED' : 'ADD', 
+                          onPressed: _addBakugan, 
+                          width: 320, height: 90,
+                          color: currentIsTaken ? Colors.grey : Colors.blueAccent,
                         ),
-                        IconButton(icon: const Icon(Icons.arrow_forward_ios, size: 40), onPressed: () { _playClick(); _carouselController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }),
+                        if (currentPlayer.deck.length == 3 || widget.players.any((p) => p.deck.isNotEmpty)) ...[
+                          const SizedBox(width: 25),
+                          BakuganButton(text: 'READY', onPressed: _nextPlayer, width: 240, height: 90),
+                        ],
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      BakuganButton(text: 'ADD', onPressed: _addBakugan, width: 180),
-                      if (currentPlayer.deck.length == 3) ...[
-                        const SizedBox(width: 20),
-                        BakuganButton(text: 'READY', onPressed: _nextPlayer, width: 180),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -606,71 +745,150 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
 }
 
 class BakuganPreview extends StatefulWidget {
-  final Bakugan bakugan;
+  final BakuganVariant variant;
   final bool isLarge;
   final bool isDeck;
   final bool isSelected;
-  const BakuganPreview({super.key, required this.bakugan, this.isLarge = false, this.isDeck = false, this.isSelected = false});
+  final String? speciesName;
+  final bool isTaken;
+  const BakuganPreview({super.key, required this.variant, this.isLarge = false, this.isDeck = false, this.isSelected = false, this.speciesName, this.isTaken = false});
 
   @override
   State<BakuganPreview> createState() => _BakuganPreviewState();
 }
 
-class _BakuganPreviewState extends State<BakuganPreview> {
+class _BakuganPreviewState extends State<BakuganPreview> with AutomaticKeepAliveClientMixin {
   final Flutter3DController _controller = Flutter3DController();
 
   @override
-  Widget build(BuildContext context) {
-    final borderColor = widget.isLarge ? widget.bakugan.color : (widget.isSelected ? widget.bakugan.color : Colors.white24);
-    final borderWidth = widget.isLarge ? 8.0 : (widget.isSelected ? 4.0 : 2.0);
-    final themeColor = widget.bakugan.color;
+  bool get wantKeepAlive => true; 
 
-    return Transform(
-      transform: Matrix4.skewX(-0.15),
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: borderColor, width: borderWidth),
-          boxShadow: (widget.isSelected || widget.isLarge)
-            ? [BoxShadow(color: themeColor.withOpacity(0.4), blurRadius: 20, spreadRadius: 2)] 
-            : null,
-        ),
-        child: Stack(
-          children: [
-            // Patrón de cuadrícula
-            Positioned.fill(
-              child: CustomPaint(
-                painter: GridPainter(color: widget.isLarge ? themeColor.withOpacity(0.15) : Colors.white10),
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    
+    Color borderColor = widget.isLarge ? (widget.isTaken ? Colors.grey : widget.variant.color) : (widget.isSelected ? widget.variant.color : Colors.white24);
+    final borderWidth = widget.isLarge ? 8.0 : (widget.isSelected ? 4.0 : 2.0);
+    final themeColor = widget.isTaken ? Colors.grey : widget.variant.color;
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(-0.15),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8),
+                border: widget.isLarge ? Border.all(color: borderColor, width: borderWidth) : null,
+                boxShadow: (widget.isSelected || widget.isLarge) && !widget.isTaken
+                  ? [BoxShadow(color: themeColor.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2)] 
+                  : null,
               ),
-            ),
-            // El modelo 3D
-            Transform(
-              transform: Matrix4.skewX(0.15), // Compensamos el skew para que el Bakugan no se vea deformado
-              child: IgnorePointer(
-                ignoring: !widget.isLarge, // Solo interactivo en grande
-                child: Flutter3DViewer(
-                  key: ValueKey('${widget.bakugan.modelPath}_${widget.isLarge}_${widget.isSelected}'),
-                  src: widget.bakugan.modelPath,
-                  controller: _controller,
-                  progressBarColor: Colors.transparent, // Intentamos ocultar el fondo blanco de carga
-                  onLoad: (_) {
-                    if (!widget.isLarge) {
-                      // Miniatura: Mucho más lejos (100) y mirando abajo-izquierda
-                      _controller.setCameraOrbit(30, 75, 100);
-                    } else {
-                      // Grande: Más lejos (80) y activamos rotación (startRotation)
-                      _controller.setCameraOrbit(0, 75, 100);
-                      _controller.startRotation(rotationSpeed: 15);
-                    }
-                  },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CustomPaint(
+                  painter: GridPainter(color: widget.isLarge ? (widget.isTaken ? Colors.white10 : themeColor.withValues(alpha: 0.15)) : Colors.white10),
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        
+        Positioned.fill(
+          child: ColorFiltered(
+            colorFilter: widget.isTaken ? const ColorFilter.mode(Colors.grey, BlendMode.saturation) : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+            child: IgnorePointer(
+              ignoring: !widget.isLarge,
+              child: Flutter3DViewer(
+                key: ValueKey('model_${widget.variant.modelPath}_${widget.isLarge}'),
+                src: widget.variant.modelPath,
+                controller: _controller,
+                progressBarColor: Colors.transparent,
+                onLoad: (_) {
+                  if (!widget.isLarge) {
+                    _controller.setCameraOrbit(30, 75, 100);
+                  } else {
+                    _controller.setCameraOrbit(0, 75, 100);
+                    _controller.startRotation(rotationSpeed: 15);
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+
+        if (widget.isTaken && widget.isLarge)
+          Center(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(-0.15),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                color: Colors.black87,
+                child: const Text('PICKED', style: TextStyle(fontFamily: 'title_font', fontSize: 60, color: Colors.redAccent, fontWeight: FontWeight.bold, shadows: [Shadow(blurRadius: 15, color: Colors.black)])),
+              ),
+            ),
+          ),
+
+        if (widget.isLarge && widget.speciesName != null)
+          Positioned(
+            right: 40, bottom: 30,
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(-0.15),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.8),
+                  border: Border(left: BorderSide(color: themeColor, width: 8)),
+                ),
+                child: Text(
+                  widget.speciesName!.toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: 'title_font',
+                    fontSize: 45,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 2,
+                    shadows: [Shadow(blurRadius: 15, color: themeColor)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        if (!widget.isLarge)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.skewX(-0.15),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: borderColor, width: borderWidth),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+        if (!widget.isLarge && !widget.isDeck && widget.speciesName != null)
+           Positioned(
+             left: 10, bottom: 10,
+             child: Transform(
+               alignment: Alignment.center,
+               transform: Matrix4.skewX(-0.15),
+               child: Container(
+                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                 color: Colors.black54,
+                 child: Text(widget.speciesName!.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+               ),
+             ),
+           ),
+      ],
     );
   }
 }
@@ -687,16 +905,18 @@ class PlayerSlot extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeColor = isBlue ? Colors.blueAccent : Colors.redAccent;
     return Transform(
+      alignment: Alignment.center,
       transform: Matrix4.skewX(-0.15),
       child: Container(
         width: 300, height: 480, clipBehavior: Clip.antiAlias,
-        foregroundDecoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: isActive ? themeColor : (char != null ? themeColor.withOpacity(0.9) : Colors.white24), width: 10)),
-        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8), boxShadow: isActive ? [BoxShadow(color: themeColor.withOpacity(0.6), blurRadius: 30, spreadRadius: 5)] : null),
+        foregroundDecoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: isActive ? themeColor : (char != null ? themeColor.withValues(alpha: 0.9) : Colors.white24), width: 10)),
+        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8), boxShadow: isActive ? [BoxShadow(color: themeColor.withValues(alpha: 0.6), blurRadius: 30, spreadRadius: 5)] : null),
         child: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: GridPainter(color: themeColor.withOpacity(0.15)))),
+            Positioned.fill(child: CustomPaint(painter: GridPainter(color: themeColor.withValues(alpha: 0.15)))),
             if (char != null)
               Transform(
+                alignment: Alignment.center,
                 transform: Matrix4.skewX(0.15),
                 child: TweenAnimationBuilder(
                   key: ValueKey(char),
@@ -716,7 +936,11 @@ class PlayerSlot extends StatelessWidget {
                   },
                 ),
               ),
-            Transform(transform: Matrix4.skewX(0.15), child: Align(alignment: Alignment.bottomCenter, child: Container(width: double.infinity, padding: const EdgeInsets.only(top: 8, bottom: 8, left: 10, right: 80), decoration: BoxDecoration(color: Colors.black.withOpacity(0.85), border: Border(top: BorderSide(color: themeColor, width: 3))), child: TextField(controller: controller, textAlign: TextAlign.end, style: const TextStyle(fontSize: 26, color: Colors.white, fontWeight: FontWeight.w900), decoration: const InputDecoration(border: InputBorder.none, isDense: true))))),
+            Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(0.15),
+              child: Align(alignment: Alignment.bottomCenter, child: Container(width: double.infinity, padding: const EdgeInsets.only(top: 8, bottom: 8, left: 10, right: 80), decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.85), border: Border(top: BorderSide(color: themeColor, width: 3))), child: TextField(controller: controller, textAlign: TextAlign.end, style: const TextStyle(fontSize: 26, color: Colors.white, fontWeight: FontWeight.w900), decoration: const InputDecoration(border: InputBorder.none, isDense: true))))
+            ),
           ],
         ),
       ),
@@ -733,16 +957,21 @@ class CharacterMiniature extends StatelessWidget {
   Widget build(BuildContext context) {
     final borderColor = isSelected ? Colors.redAccent : Colors.blueAccent;
     return Transform(
+      alignment: Alignment.center,
       transform: Matrix4.skewX(-0.15),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200), clipBehavior: Clip.antiAlias,
         foregroundDecoration: BoxDecoration(borderRadius: BorderRadius.circular(5), border: Border.all(color: borderColor, width: isSelected ? 8 : 4)),
-        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5), boxShadow: [BoxShadow(color: borderColor.withOpacity(isSelected ? 0.8 : 0.3), blurRadius: isSelected ? 15 : 8)]),
+        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5), boxShadow: [BoxShadow(color: borderColor.withValues(alpha: isSelected ? 0.8 : 0.3), blurRadius: isSelected ? 15 : 8)]),
         child: Stack(
           children: [
             Positioned.fill(child: CustomPaint(painter: GridPainter(color: Colors.white12))),
-            Transform(transform: Matrix4.skewX(0.15), child: Transform.scale(scale: 2.4, alignment: const Alignment(-0.5, -1), child: Image.asset('assets/images/characters/$char.png', fit: BoxFit.cover))),
-            Align(alignment: Alignment.bottomCenter, child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 4), color: Colors.black87, child: Transform(transform: Matrix4.skewX(0.15), child: Text(char[0].toUpperCase() + char.substring(1), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))))),
+            Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(0.15),
+              child: Transform.scale(scale: 2.4, alignment: const Alignment(-0.5, -1), child: Image.asset('assets/images/characters/$char.png', fit: BoxFit.cover))
+            ),
+            Align(alignment: Alignment.bottomCenter, child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 4), color: Colors.black87, child: Transform(alignment: Alignment.center, transform: Matrix4.skewX(0.15), child: Text(char[0].toUpperCase() + char.substring(1), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))))),
           ],
         ),
       ),
@@ -767,7 +996,8 @@ class BakuganButton extends StatefulWidget {
   final String text;
   final VoidCallback onPressed;
   final double width, height;
-  const BakuganButton({super.key, required this.text, required this.onPressed, this.width = 250, this.height = 65});
+  final Color? color;
+  const BakuganButton({super.key, required this.text, required this.onPressed, this.width = 250, this.height = 65, this.color});
   @override
   State<BakuganButton> createState() => _BakuganButtonState();
 }
@@ -784,6 +1014,7 @@ class _BakuganButtonState extends State<BakuganButton> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final themeColor = widget.color ?? const Color(0xFF4A90E2);
     return AnimatedBuilder(
       animation: _pulse,
       builder: (context, child) => Transform.scale(
@@ -792,8 +1023,8 @@ class _BakuganButtonState extends State<BakuganButton> with SingleTickerProvider
           onTap: () { _pulse.forward(); widget.onPressed(); },
           child: Container(
             width: widget.width, height: widget.height,
-            decoration: BoxDecoration(color: const Color(0xFF0A0A0A), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFF6A6A6A), width: 5), boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(_pulse.value * 0.8), blurRadius: 25 * _pulse.value, spreadRadius: 8 * _pulse.value)]),
-            child: Center(child: Text(widget.text, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'button_font', color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, shadows: [Shadow(blurRadius: 12.0 + (_pulse.value * 15), color: const Color(0xFF4A90E2))]))),
+            decoration: BoxDecoration(color: const Color(0xFF0A0A0A), borderRadius: BorderRadius.circular(15), border: Border.all(color: widget.color ?? const Color(0xFF6A6A6A), width: 5), boxShadow: [BoxShadow(color: themeColor.withValues(alpha: _pulse.value * 0.8), blurRadius: 25 * _pulse.value, spreadRadius: 8 * _pulse.value)]),
+            child: Center(child: Text(widget.text, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'button_font', color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, shadows: [Shadow(blurRadius: 12.0 + (_pulse.value * 15), color: themeColor)]))),
           ),
         ),
       ),
