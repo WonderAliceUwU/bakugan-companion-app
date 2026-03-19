@@ -1,0 +1,74 @@
+name: bakugan_companion
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.10.8 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  video_player: ^2.8.1
+  audioplayers: ^5.2.1
+  flutter_svg: ^2.0.10+1
+  flutter_3d_controller: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: title_font
+      fonts:
+        - asset: assets/font/titles_font.otf
+          weight: 700
+    - family: body_font
+      fonts:
+        - asset: assets/font/body_font.ttf
+          weight: 700
+    - family: button_font
+      fonts:
+        - asset: assets/font/button_font.ttf
+
+  assets:
+    - assets/video/bakugan_opening.mp4
+    - assets/images/Menu.png
+    - assets/images/selection-bg.png
+    - assets/music/menu/Title.flac
+    - assets/music/menu/Menu.flac
+    - assets/sound/select.mp3
+    - assets/images/characters/dan.png
+    - assets/images/characters/runo.png
+    - assets/images/characters/shun.png
+    - assets/images/characters/alice.png
+    - assets/images/characters/julie.png
+    - assets/images/characters/marucho.png
+    - assets/images/characters/masquerade.png
+    # Carpetas de modelos (declarar la carpeta incluye todos los archivos dentro)
+    - assets/models/dragonoid/
+    - assets/models/hydranoid/
+    - assets/models/skyress/
+    - assets/models/tigrerra/
+    - assets/models/preyas/
+    - assets/models/gorem/
+    - assets/models/fear_ripper/
+    - assets/models/griffon/
+    - assets/models/sirenoid/
+    - assets/models/ravenoid/
+    - assets/models/centipoid/
+    - assets/models/cycloid/
+    - assets/models/reaper/
+    - assets/models/monarus/
+    - assets/models/harpus/
+    - assets/models/delta_dragonoid/
+    - assets/models/dual_hydranoid/
+    - assets/models/blade_tigrerra/
+    - assets/models/storm_skyress/
+    - assets/models/hammer_gorem/
