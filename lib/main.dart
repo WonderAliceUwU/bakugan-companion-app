@@ -553,7 +553,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
             
             // HORIZONTAL PLAYER LIST ON LEFT
             Positioned(
-              left: 40, top: 100, bottom: 40,
+              left: 60, top: 100, bottom: 40,
               child: SizedBox(
                 width: 600, // Wide enough for portrait + name + 3 slots
                 child: SingleChildScrollView(
@@ -565,7 +565,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                       return GestureDetector(
                         onTap: () => setState(() => currentPlayerIndex = entry.key),
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 80.0), // Large gap between players
+                          padding: const EdgeInsets.only(bottom: 60.0), // Large gap between players
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -979,9 +979,9 @@ class _BakuganPreviewState extends State<BakuganPreview> with AutomaticKeepAlive
             ),
           ),
 
-        if (widget.isLarge && widget.speciesName != null)
+        if (!widget.isTaken && widget.isLarge && widget.speciesName != null)
           Positioned(
-            right: 40, bottom: 30,
+            right: 35, bottom: 8,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
