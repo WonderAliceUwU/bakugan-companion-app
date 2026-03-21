@@ -40,10 +40,17 @@ flutter:
   assets:
     - assets/video/bakugan_opening.mp4
     - assets/images/Menu.png
+    - assets/images/menu-2.png
     - assets/images/selection-bg.png
+    - assets/images/match-bg.png
+    - assets/images/logo.png
+    - assets/images/cards/anverse.png
     - assets/music/menu/Title.flac
     - assets/music/menu/Menu.flac
-    - assets/sound/select.mp3
+    - assets/music/arena/arena-1.flac
+    - assets/music/battle/before_ability.flac
+    - assets/music/battle/after_ability.flac
+    - assets/sound/select.wav
     - assets/images/characters/dan.png
     - assets/images/characters/runo.png
     - assets/images/characters/shun.png

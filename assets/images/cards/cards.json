@@ -1,0 +1,2157 @@
+{
+  "cards": {
+    "fire_pit": {
+      "name": "Fire Pit",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 140,
+        "aquos": 120,
+        "ventus": 60,
+        "haos": 20,
+        "darkus": 20,
+        "subterra": 80
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "muddy_ground": {
+      "name": "Muddy Ground",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 20,
+        "aquos": 60,
+        "ventus": 20,
+        "haos": 120,
+        "darkus": 80,
+        "subterra": 140
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "light_burst": {
+      "name": "Light Burst",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 50,
+        "ventus": 110,
+        "haos": 200,
+        "darkus": 170,
+        "subterra": 90
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "tsunami": {
+      "name": "Tsunami",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 20,
+        "aquos": 170,
+        "ventus": 50,
+        "haos": 80,
+        "darkus": 110,
+        "subterra": 110
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "dusk": {
+      "name": "Dusk",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 20,
+        "ventus": 120,
+        "haos": 60,
+        "darkus": 140,
+        "subterra": 20
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "high_energy": {
+      "name": "High Energy",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 120,
+        "ventus": 120,
+        "haos": 110,
+        "darkus": 120,
+        "subterra": 120
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "tornado_alley": {
+      "name": "Tornado Alley",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 170,
+        "aquos": 110,
+        "ventus": 180,
+        "haos": 50,
+        "darkus": 90,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "whirlpool": {
+      "name": "Whirlpool",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 90,
+        "aquos": 200,
+        "ventus": 50,
+        "haos": 110,
+        "darkus": 50,
+        "subterra": 170
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "gargonoid": {
+      "name": "Gargonoid",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 60,
+        "ventus": 50,
+        "haos": 90,
+        "darkus": 150,
+        "subterra": 120
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "gargonoid"
+          },
+          "text": {
+            "en": "Each Gargonoid receives an additional G-Power bonus from this card.",
+            "es": "Cada Gargonoid recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "manion": {
+      "name": "Manion",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 150,
+        "ventus": 30,
+        "haos": 50,
+        "darkus": 120,
+        "subterra": 110
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "manion"
+          },
+          "text": {
+            "en": "Each Manion receives an additional G-Power bonus from this card.",
+            "es": "Cada Manion recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "mantris": {
+      "name": "Mantris",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 110,
+        "ventus": 120,
+        "haos": 150,
+        "darkus": 90,
+        "subterra": 60
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "mantris"
+          },
+          "text": {
+            "en": "Each Mantris receives an additional G-Power bonus from this card.",
+            "es": "Cada Mantris recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "terrorclaw": {
+      "name": "Terrorclaw",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 90,
+        "ventus": 150,
+        "haos": 120,
+        "darkus": 110,
+        "subterra": 50
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "terrorclaw"
+          },
+          "text": {
+            "en": "Each Terrorclaw receives an additional G-Power bonus from this card.",
+            "es": "Cada Terrorclaw recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "cycloid": {
+      "name": "Cycloid",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 120,
+        "ventus": 60,
+        "haos": 120,
+        "darkus": 100,
+        "subterra": 70
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "cycloid"
+          },
+          "text": {
+            "en": "Each Cycloid receives an additional G-Power bonus from this card.",
+            "es": "Cada Cycloid recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "hynoid": {
+      "name": "Hynoid",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 50,
+        "ventus": 140,
+        "haos": 70,
+        "darkus": 120,
+        "subterra": 150
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "hynoid"
+          },
+          "text": {
+            "en": "Each Hynoid receives an additional G-Power bonus from this card.",
+            "es": "Cada Hynoid recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "teamwork": {
+      "name": "Teamwork",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 90,
+        "aquos": 20,
+        "ventus": 60,
+        "haos": 80,
+        "darkus": 30,
+        "subterra": 120
+      },
+      "effects": [
+        {
+          "type": "g_per_unique_bakugan_type",
+          "target": "self",
+          "value": 50,
+          "text": {
+            "en": "Each Bakugan gets +50 G-Power for each different type of Bakugan they are using in the game.",
+            "es": "Cada Bakugan obtiene +50 de Poder G por cada tipo diferente de Bakugan que esté usando en el juego."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "tuskor": {
+      "name": "Tuskor",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 120,
+        "ventus": 110,
+        "haos": 90,
+        "darkus": 50,
+        "subterra": 60
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "tuskor"
+          },
+          "text": {
+            "en": "Each Tuskor receives an additional G-Power bonus from this card.",
+            "es": "Cada Tuskor recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "duck_and_win": {
+      "name": "Duck & Win",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 60,
+        "ventus": 110,
+        "haos": 120,
+        "darkus": 140,
+        "subterra": 90
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "lowest_g_wins",
+          "text": {
+            "en": "The Bakugan with the lowest G-Power total wins this battle.",
+            "es": "El Bakugan con el menor Poder G total gana esta batalla."
+          }
+        }
+      ]
+    },
+
+    "g_power_exchange": {
+      "name": "G-Power Exchange",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 50,
+        "ventus": 80,
+        "haos": 20,
+        "darkus": 50,
+        "subterra": 20
+      },
+      "effects": [
+        {
+          "type": "swap_printed_g_power",
+          "target": "both",
+          "text": {
+            "en": "The Bakugan have their printed G-Power swapped.",
+            "es": "Los Bakugan intercambian su Poder G impreso."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "stand_off": {
+      "name": "Stand Off",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 140,
+        "aquos": 80,
+        "ventus": 20,
+        "haos": 80,
+        "darkus": 60,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "no_ability_cards",
+          "text": {
+            "en": "No Ability cards may be played in this battle.",
+            "es": "No se pueden jugar cartas de habilidad en esta batalla."
+          }
+        }
+      ]
+    },
+
+    "bakugan_swap": {
+      "name": "Bakugan Swap",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 50,
+        "ventus": 80,
+        "haos": 50,
+        "darkus": 140,
+        "subterra": 30
+      },
+      "effects": [
+        {
+          "type": "swap_bakugan",
+          "target": "both",
+          "text": {
+            "en": "Each player with an unused Bakugan moves their Bakugan from this Gate card to their used pile and moves one of their unused Bakugan to this Gate Card.",
+            "es": "Cada jugador con un Bakugan sin usar mueve su Bakugan de esta carta Portal a su pila usada y coloca uno de sus Bakugan sin usar en esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "card_force": {
+      "name": "Card Force",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 20,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 20,
+        "subterra": 20
+      },
+      "effects": [
+        {
+          "type": "g_per_used_ability_card",
+          "target": "self",
+          "value": 50,
+          "text": {
+            "en": "The G-Power bonus is raised by 50 for each Ability card in a used pile when this Gate card is revealed.",
+            "es": "El bono de Poder G aumenta en 50 por cada carta de habilidad en la pila usada cuando esta carta Portal es revelada."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "pounce": {
+      "name": "Pounce",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 170,
+        "ventus": 140,
+        "haos": 140,
+        "darkus": 170,
+        "subterra": 110
+      },
+      "effects": [
+        {
+          "type": "conditional_gate_bonus_block",
+          "target": "self",
+          "condition": {
+            "same_attribute_in_used_pile": true
+          },
+          "text": {
+            "en": "The Bakugan with the lowest printed G-Power does not get the bonus from this card if the owner has another Bakugan of the same Attribute in his used pile.",
+            "es": "El Bakugan con el menor Poder G impreso no recibe el bono de esta carta si su dueño tiene otro Bakugan del mismo atributo en su pila usada."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "stand_your_ground": {
+      "name": "Stand Your Ground",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 20,
+        "aquos": 80,
+        "ventus": 110,
+        "haos": 50,
+        "darkus": 60,
+        "subterra": 140
+      },
+      "effects": [
+        {
+          "type": "return_all_used_ability_cards",
+          "target": "all",
+          "text": {
+            "en": "After this battle is over, all players get all of their Ability cards back from their used piles.",
+            "es": "Después de esta batalla, todos los jugadores recuperan todas sus cartas de habilidad de sus pilas usadas."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "maruchos_throw": {
+      "name": "Marucho's Throw",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "move_to_other_gate",
+          "target": "self",
+          "condition": {
+            "bakugan_stands": true
+          },
+          "text": {
+            "en": "Play after you roll if your Bakugan stands. You may move the Bakugan to the other Gate card.",
+            "es": "Juega después de lanzar si tu Bakugan se mantiene en pie. Puedes mover el Bakugan a la otra carta Portal."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "julies_throw": {
+      "name": "Julie's Throw",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "replace_opponent_bakugan",
+          "target": "opponent",
+          "text": {
+            "en": "Play before you roll. Pick an enemy Bakugan on a Gate card. Your opponent puts that Bakugan in his used pile and replaces it with one of his unused Bakugan.",
+            "es": "Juega antes de lanzar. Elige un Bakugan enemigo en una carta Portal. Tu oponente lo pone en su pila usada y lo reemplaza con uno de sus Bakugan sin usar."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "runos_throw": {
+      "name": "Runo's Throw",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "play_additional_bakugan",
+          "target": "self",
+          "text": {
+            "en": "Play before you roll. You may roll a Bakugan from your used pile this turn (you still only roll one Bakugan this turn).",
+            "es": "Juega antes de lanzar. Puedes lanzar un Bakugan de tu pila usada este turno (sigues lanzando solo uno este turno)."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "shuns_throw": {
+      "name": "Shun's Throw",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "peek_gate_card",
+          "target": "self",
+          "text": {
+            "en": "Play before you roll. Look at one face down Gate card in the arena.",
+            "es": "Juega antes de lanzar. Mira una carta Portal boca abajo en la arena."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "masquerades_throw": {
+      "name": "Masquerade's Throw",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "force_discard_ability",
+          "target": "opponent",
+          "text": {
+            "en": "Play before you roll. Your opponent must put one of his unplayed Ability cards in his used pile. (That card has no effect.)",
+            "es": "Juega antes de lanzar. Tu oponente debe poner una de sus cartas de habilidad no jugadas en su pila usada. (Esa carta no tiene efecto.)"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "dans_throw": {
+      "name": "Dan's Throw",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "retrieve_used_ability",
+          "target": "self",
+          "condition": {
+            "battle_occurs": true
+          },
+          "text": {
+            "en": "Play before you roll. If this roll results in a battle, you may take back one of your Ability cards from your used pile.",
+            "es": "Juega antes de lanzar. Si este lanzamiento resulta en batalla, puedes recuperar una carta de habilidad de tu pila usada."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "evil_power": {
+      "name": "Evil Power",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "highest_g_gets_bonus",
+          "target": "all",
+          "value": 50,
+          "condition": {
+            "battle_occurs": true
+          },
+          "text": {
+            "en": "Play before you roll. If there is a battle this turn, the Bakugan with the highest printed G-Power gets +50 G-Power.",
+            "es": "Juega antes de lanzar. Si hay batalla este turno, el Bakugan con mayor Poder G impreso obtiene +50 de Poder G."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "rikimaros_surprise": {
+      "name": "Rikimaro's Surprise",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "nullify_gate_text",
+          "target": "all",
+          "text": {
+            "en": "Play before you roll. All text boxes on Gate cards are considered empty for battles this turn. (Text on Gate cards other than Attribute bonuses have no effect.)",
+            "es": "Juega antes de lanzar. Todos los textos de las cartas Portal se consideran vacíos este turno."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "blaze": {
+      "name": "Blaze",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 50,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 50
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus",
+          "target": "self",
+          "text": {
+            "en": "Play during a battle. Your Bakugan gains G-Power based on its Attribute.",
+            "es": "Juega durante una batalla. Tu Bakugan gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "home_advantage": {
+      "name": "Home Advantage",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 50,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 110
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_own_gate",
+          "target": "self",
+          "text": {
+            "en": "Play during a battle on one of your Gate cards. Your Bakugan gains G-Power based on its Attribute.",
+            "es": "Juega durante una batalla en una de tus cartas Portal. Tu Bakugan gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "partners": {
+      "name": "Partners",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 60,
+        "ventus": 130,
+        "haos": 150,
+        "darkus": 50,
+        "subterra": 100
+      },
+      "effects": [
+        {
+          "type": "named_bakugan_bonus",
+          "target": "self",
+          "value": 50,
+          "condition": {
+            "bakugan_any_of": ["dragonoid", "griffon"]
+          },
+          "text": {
+            "en": "Each Dragonoid and Griffon Bakugan gets +50 G-Power.",
+            "es": "Cada Bakugan Dragonoid y Griffon obtiene +50 de Poder G."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "power_up": {
+      "name": "Power Up",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 110,
+        "ventus": 90,
+        "haos": 50,
+        "darkus": 60,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "lowest_printed_g_gets_repeated_gate_bonus",
+          "target": "self",
+          "condition": {
+            "lowest_printed_g_power": true
+          },
+          "scaling": {
+            "per_opponent_used_ability_card": 1
+          },
+          "text": {
+            "en": "The Bakugan with the lowest printed G-Power gets the bonus from this card 1 extra time for each Ability card in its opponent's used pile.",
+            "es": "El Bakugan con el menor Poder G impreso obtiene el bono de esta carta 1 vez adicional por cada carta de habilidad en la pila usada de su oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "blinding_gate": {
+      "name": "Blinding Gate",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 80,
+        "ventus": 140,
+        "haos": 90,
+        "darkus": 120,
+        "subterra": 60
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "lowest_g_wins",
+          "text": {
+            "en": "The Bakugan with the lowest G-Power total wins this battle.",
+            "es": "El Bakugan con el menor Poder G total gana esta batalla."
+          }
+        }
+      ]
+    },
+
+    "quick_sand": {
+      "name": "Quick Sand",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 60,
+        "ventus": 90,
+        "haos": 120,
+        "darkus": 140,
+        "subterra": 90
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "lowest_g_wins",
+          "text": {
+            "en": "The Bakugan with the lowest G-Power total wins this battle.",
+            "es": "El Bakugan con el menor Poder G total gana esta batalla."
+          }
+        }
+      ]
+    },
+
+    "try_again": {
+      "name": "Try Again",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "reroll_self",
+          "target": "self",
+          "condition": {
+            "rolled_attribute_any_of": ["pyrus", "haos", "subterra"]
+          },
+          "text": {
+            "en": "Play after you roll any Pyrus, Haos or Subterra Bakugan. You may re-roll that Bakugan.",
+            "es": "Juega después de lanzar cualquier Bakugan Pyrus, Haos o Subterra. Puedes relanzar ese Bakugan."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "mega_impact": {
+      "name": "Mega Impact",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 50,
+        "ventus": 0,
+        "haos": 50,
+        "darkus": 0,
+        "subterra": 80
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_own_gate",
+          "target": "self",
+          "text": {
+            "en": "Play during a battle on one of your Gate cards. Your Bakugan gains G-Power based on its Attribute.",
+            "es": "Juega durante una batalla en una de tus cartas Portal. Tu Bakugan gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "circle_of_fire": {
+      "name": "Circle of Fire",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 0,
+        "ventus": 50,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_own_gate",
+          "target": "self",
+          "text": {
+            "en": "Play during a battle on one of your Gate cards. Your Bakugan gains G-Power based on its Attribute.",
+            "es": "Juega durante una batalla en una de tus cartas Portal. Tu Bakugan gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "hot_wind": {
+      "name": "Hot Wind",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 0,
+        "ventus": 80,
+        "haos": 0,
+        "darkus": 50,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_own_gate",
+          "target": "self",
+          "text": {
+            "en": "Play during a battle on one of your Gate cards. Your Bakugan gains G-Power based on its Attribute.",
+            "es": "Juega durante una batalla en una de tus cartas Portal. Tu Bakugan gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "ventus": {
+      "name": "Ventus",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "swap_gate_with_unused",
+          "target": "self",
+          "condition": {
+            "battle_start": true,
+            "bakugan_attribute": "ventus"
+          },
+          "text": {
+            "en": "Play at the start of a battle where you have a Ventus Bakugan. Swap the Gate card with one from your unused pile.",
+            "es": "Juega al comienzo de una batalla en la que tengas un Bakugan Ventus. Intercambia la carta Portal con una de tu pila sin usar."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "copy_cat": {
+      "name": "Copy Cat",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "copy_g_power_from_opponents_used_pile",
+          "target": "self",
+          "text": {
+            "en": "Play at the start of a battle. Your Bakugan has its printed G-Power changed to the G-Power of the Bakugan of your choice in your opponent's used pile.",
+            "es": "Juega al comienzo de una batalla. El Poder G impreso de tu Bakugan se cambia al Poder G del Bakugan que elijas en la pila usada de tu oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "attractor": {
+      "name": "Attractor",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "move_opponent_to_other_gate",
+          "target": "opponent",
+          "condition": {
+            "opponent_bakugan_stands": true
+          },
+          "text": {
+            "en": "Play after your opponent's Bakugan is rolled and stands. Move that Bakugan to the other Gate card.",
+            "es": "Juega después de que el Bakugan de tu oponente sea lanzado y quede de pie. Mueve ese Bakugan a la otra carta Portal."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "do_over": {
+      "name": "Do Over",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "reroll_self",
+          "target": "self",
+          "condition": {
+            "rolled_attribute_any_of": ["ventus", "darkus", "aquos"]
+          },
+          "text": {
+            "en": "Play after you roll a Ventus, Darkus or Aquos Bakugan. You may re-roll that Bakugan.",
+            "es": "Juega después de lanzar un Bakugan Ventus, Darkus o Aquos. Puedes relanzar ese Bakugan."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "earthen_mound": {
+      "name": "Earthen Mound",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 90,
+        "ventus": 50,
+        "haos": 170,
+        "darkus": 110,
+        "subterra": 200
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "elevated_field": {
+      "name": "Elevated Field",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 90,
+        "aquos": 110,
+        "ventus": 100,
+        "haos": 90,
+        "darkus": 110,
+        "subterra": 100
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "force_wind": {
+      "name": "Force Wind",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 120,
+        "aquos": 80,
+        "ventus": 140,
+        "haos": 40,
+        "darkus": 60,
+        "subterra": 20
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "low_energy": {
+      "name": "Low Energy",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 60,
+        "ventus": 20,
+        "haos": 70,
+        "darkus": 50,
+        "subterra": 20
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "sand_storm": {
+      "name": "Sand Storm",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 80,
+        "ventus": 170,
+        "haos": 50,
+        "darkus": 20,
+        "subterra": 110
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "haunted_night": {
+      "name": "Haunted Night",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 50,
+        "ventus": 170,
+        "haos": 90,
+        "darkus": 200,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "sunrise": {
+      "name": "Sunrise",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 20,
+        "aquos": 20,
+        "ventus": 80,
+        "haos": 140,
+        "darkus": 120,
+        "subterra": 60
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "volcanic_lake": {
+      "name": "Volcanic Lake",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 200,
+        "aquos": 170,
+        "ventus": 90,
+        "haos": 50,
+        "darkus": 50,
+        "subterra": 110
+      },
+      "effects": [],
+      "rules": []
+    },
+    "limulus": {
+      "name": "Limulus",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 40,
+        "ventus": 60,
+        "haos": 100,
+        "darkus": 150,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "limulus"
+          },
+          "text": {
+            "en": "Each Limulus receives an additional G-Power bonus from this card.",
+            "es": "Cada Limulus recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "ravenoid": {
+      "name": "Ravenoid",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 150,
+        "ventus": 40,
+        "haos": 110,
+        "darkus": 50,
+        "subterra": 100
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "ravenoid"
+          },
+          "text": {
+            "en": "Each Ravenoid receives an additional G-Power bonus from this card.",
+            "es": "Cada Ravenoid recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "warius": {
+      "name": "Warius",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 40,
+        "aquos": 100,
+        "ventus": 150,
+        "haos": 50,
+        "darkus": 60,
+        "subterra": 110
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "warius"
+          },
+          "text": {
+            "en": "Each Warius receives an additional G-Power bonus from this card.",
+            "es": "Cada Warius recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "wormquake": {
+      "name": "Wormquake",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 50,
+        "ventus": 110,
+        "haos": 90,
+        "darkus": 40,
+        "subterra": 60
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "wormquake"
+          },
+          "text": {
+            "en": "Each Wormquake receives an additional G-Power bonus from this card.",
+            "es": "Cada Wormquake recibe una bonificación adicional de Poder G de esta carta."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "forest_fire": {
+      "name": "Forest Fire",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 130,
+        "ventus": 160,
+        "haos": 110,
+        "darkus": 80,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "global_attribute_bonus_from_used_pile",
+          "target": "all",
+          "value": 50,
+          "condition": {
+            "this_card_in_any_used_pile": true,
+            "bakugan_attribute_any_of": ["pyrus", "darkus", "subterra"]
+          },
+          "text": {
+            "en": "While this card is in any player's used pile, all Pyrus, Darkus and Subterra Bakugan are +50 G-Power.",
+            "es": "Mientras esta carta esté en la pila usada de cualquier jugador, todos los Bakugan Pyrus, Darkus y Subterra obtienen +50 de Poder G."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "gorem": {
+      "name": "Gorem",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 90,
+        "aquos": 150,
+        "ventus": 180,
+        "haos": 150,
+        "darkus": 200,
+        "subterra": 100
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "gorem_auto_win_if_printed_g_150_or_more_vs_opponent",
+          "text": {
+            "en": "If there is a Gorem that has a printed G-Power of 150 or more than its opponent at this battle, the battle ends immediately and the Gorem wins.",
+            "es": "Si hay un Gorem que tiene un Poder G impreso de 150 o más que su oponente en esta batalla, la batalla termina inmediatamente y Gorem gana."
+          }
+        }
+      ]
+    },
+
+    "lightning_storm": {
+      "name": "Lightning Storm",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 120,
+        "aquos": 90,
+        "ventus": 100,
+        "haos": 70,
+        "darkus": 140,
+        "subterra": 170
+      },
+      "effects": [
+        {
+          "type": "global_attribute_bonus_from_used_pile",
+          "target": "all",
+          "value": 50,
+          "condition": {
+            "this_card_in_any_used_pile": true,
+            "bakugan_attribute_any_of": ["aquos", "ventus", "haos"]
+          },
+          "text": {
+            "en": "While this card is in any player's used pile, all Aquos, Ventus and Haos Bakugan are +50 G-Power.",
+            "es": "Mientras esta carta esté en la pila usada de cualquier jugador, todos los Bakugan Aquos, Ventus y Haos obtienen +50 de Poder G."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "skyress": {
+      "name": "Skyress",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 120,
+        "ventus": 150,
+        "haos": 80,
+        "darkus": 100,
+        "subterra": 100
+      },
+      "effects": [
+        {
+          "type": "retrieve_all_used_ability_cards_if_loses",
+          "target": "self",
+          "condition": {
+            "bakugan": "skyress",
+            "self_loses_battle": true
+          },
+          "text": {
+            "en": "If a Skyress loses this battle, its owner may take all Ability cards that were played in this battle (including their opponent's) and add them to their unused pile.",
+            "es": "Si un Skyress pierde esta batalla, su dueño puede tomar todas las cartas de habilidad jugadas en esta batalla, incluidas las de su oponente, y añadirlas a su pila sin usar."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "drag": {
+      "name": "Drag",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 50,
+        "ventus": 20,
+        "haos": 90,
+        "darkus": 130,
+        "subterra": 100
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "player_with_most_used_gate_cards_cannot_play_ability_cards",
+          "text": {
+            "en": "The player with the most Gate cards in their used pile may not play Ability cards. If tied, both players may play cards.",
+            "es": "El jugador con más cartas Portal en su pila usada no puede jugar cartas de habilidad. Si hay empate, ambos jugadores pueden jugar cartas."
+          }
+        }
+      ]
+    },
+
+    "lockdown": {
+      "name": "Lockdown",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 100,
+        "ventus": 40,
+        "haos": 70,
+        "darkus": 50,
+        "subterra": 80
+      },
+      "effects": [
+        {
+          "type": "double_ability_card_bonuses",
+          "target": "all",
+          "text": {
+            "en": "Double all G-Power bonuses given by Ability cards in this battle.",
+            "es": "Duplica todos los bonos de Poder G otorgados por cartas de habilidad en esta batalla."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "rainbow": {
+      "name": "Rainbow",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 60,
+        "ventus": 50,
+        "haos": 90,
+        "darkus": 70,
+        "subterra": 20
+      },
+      "effects": [
+        {
+          "type": "g_per_different_attribute_used_by_player",
+          "target": "self",
+          "value": 100,
+          "text": {
+            "en": "Each Bakugan gets +100 G-Power for each different color Bakugan the player is using in this game.",
+            "es": "Cada Bakugan obtiene +100 de Poder G por cada color diferente de Bakugan que el jugador esté usando en esta partida."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "tricky_gate": {
+      "name": "Tricky Gate",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 80,
+        "ventus": 140,
+        "haos": 90,
+        "darkus": 120,
+        "subterra": 60
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "lowest_g_wins",
+          "text": {
+            "en": "The Bakugan with the lowest G-Power total wins this battle.",
+            "es": "El Bakugan con el menor Poder G total gana esta batalla."
+          }
+        }
+      ]
+    },
+
+    "earth_wind_fire": {
+      "name": "Earth Wind & Fire",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 120,
+        "ventus": 70,
+        "haos": 170,
+        "darkus": 150,
+        "subterra": 80
+      },
+      "effects": [
+        {
+          "type": "g_per_opponent_used_gate",
+          "target": "self",
+          "value": 100,
+          "condition": {
+            "bakugan_attribute_any_of": ["subterra", "ventus", "pyrus"]
+          },
+          "text": {
+            "en": "Each Subterra, Ventus and Pyrus Bakugan gets +100 G-Power for each Gate card in their opponent's used pile.",
+            "es": "Cada Bakugan Subterra, Ventus y Pyrus obtiene +100 de Poder G por cada carta Portal en la pila usada del oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "g_power_exchange_block": {
+      "name": "G-Power Exchange",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 30,
+        "ventus": 40,
+        "haos": 20,
+        "darkus": 20,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "highest_printed_g_cannot_play_abilities",
+          "text": {
+            "en": "The player with the highest printed G-Power may not play Ability cards during this battle.",
+            "es": "El jugador con el mayor Poder G impreso no puede jugar cartas de habilidad durante esta batalla."
+          }
+        }
+      ]
+    },
+
+    "quick_charge": {
+      "name": "Quick Charge",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 80,
+        "ventus": 100,
+        "haos": 130,
+        "darkus": 110,
+        "subterra": 170
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "lowest_printed_g_cannot_play_abilities",
+          "text": {
+            "en": "The player with the lowest printed G-Power may not play Ability cards during this battle.",
+            "es": "El jugador con el menor Poder G impreso no puede jugar cartas de habilidad durante esta batalla."
+          }
+        }
+      ]
+    },
+
+    "river_styx": {
+      "name": "River Styx",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 170,
+        "aquos": 80,
+        "ventus": 150,
+        "haos": 100,
+        "darkus": 70,
+        "subterra": 120
+      },
+      "effects": [
+        {
+          "type": "g_per_opponent_used_gate",
+          "target": "self",
+          "value": 100,
+          "condition": {
+            "bakugan_attribute_any_of": ["darkus", "aquos", "haos"]
+          },
+          "text": {
+            "en": "Each Darkus, Aquos and Haos Bakugan gets +100 G-Power for each Gate card in their opponent's used pile.",
+            "es": "Cada Bakugan Darkus, Aquos y Haos obtiene +100 de Poder G por cada carta Portal en la pila usada del oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "magnetic_action": {
+      "name": "Magnetic Action",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "place_opponent_on_gate",
+          "target": "opponent",
+          "text": {
+            "en": "Play after your opponent rolls. Put the Bakugan rolled on one of the Gate cards of your choice.",
+            "es": "Juega después de que tu oponente lance. Coloca ese Bakugan en una carta Portal de tu elección."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "meeting_place": {
+      "name": "Meeting Place",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "replace_gate_and_move_bakugan",
+          "target": "all",
+          "condition": {
+            "no_battle_on_roll": true
+          },
+          "text": {
+            "en": "Play after your opponent rolls. If no battle occurs, your opponent replaces that Gate card with one from their unused pile. All Bakugan move to the new Gate.",
+            "es": "Si no hay batalla, tu oponente reemplaza esa carta Portal y los Bakugan se mueven a la nueva."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "perfect_aim": {
+      "name": "Perfect Aim",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 0,
+        "aquos": 0,
+        "ventus": 0,
+        "haos": 0,
+        "darkus": 0,
+        "subterra": 0
+      },
+      "effects": [
+        {
+          "type": "place_instead_of_roll",
+          "target": "self",
+          "condition": {
+            "bakugan_attribute": "ventus"
+          },
+          "text": {
+            "en": "Play before you roll a Ventus Bakugan. Place it on a Gate card instead of rolling.",
+            "es": "Coloca tu Bakugan Ventus en una carta Portal en lugar de lanzarlo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "unexpected_guest": {
+      "name": "Unexpected Guest",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "place_used_bakugan_on_new_gate",
+          "target": "self",
+          "text": {
+            "en": "Play after your opponent places a Gate card. Put one of your used Pyrus Bakugan on that card.",
+            "es": "Coloca un Bakugan Pyrus usado en esa carta Portal."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "clean_slate": {
+      "name": "Clean Slate",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "return_all_bakugan_to_used",
+          "target": "all",
+          "condition": {
+            "bakugan_attribute": "darkus"
+          },
+          "text": {
+            "en": "Play before you roll a Darkus Bakugan. All Bakugan on Gate cards return to their owners' used piles. Remove this card from the game.",
+            "es": "Todos los Bakugan regresan a sus pilas usadas. Retira esta carta del juego."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "a_hand_up": {
+      "name": "A Hand Up",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "lowest_printed_g_bonus",
+          "target": "self",
+          "value": 50,
+          "condition": {
+            "bakugan_attribute": "haos",
+            "battle_occurs": true
+          },
+          "text": {
+            "en": "If this roll results in a battle, the Bakugan with the lowest printed G-Power gets +50 G-Power.",
+            "es": "El Bakugan con menor Poder G impreso obtiene +50."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "marionette": {
+      "name": "Marionette",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "move_if_only_one_bakugan",
+          "target": "self",
+          "condition": {
+            "bakugan_attribute": "aquos",
+            "single_bakugan_on_field": true
+          },
+          "text": {
+            "en": "If there is only one Bakugan on the field, move it to another Gate card.",
+            "es": "Mueve ese Bakugan a otra carta Portal."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "stuck": {
+      "name": "Stuck",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "set_ability_bonus_to_zero",
+          "target": "all",
+          "condition": {
+            "bakugan_attribute": "subterra",
+            "battle_occurs": true
+          },
+          "text": {
+            "en": "If a battle occurs, all G-Power bonuses from Ability cards are reduced to zero.",
+            "es": "Todos los bonos de cartas de habilidad se reducen a 0."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "flash": {
+      "name": "Flash",
+      "type": "ability",
+      "attributes": {
+        "haos": 50,
+        "darkus": 110
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_own_gate",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "g_power_bonus": {
+      "name": "G-Power Bonus",
+      "type": "ability",
+      "attributes": {
+        "aquos": 60,
+        "darkus": 60,
+        "ventus": 60
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "g_power_up": {
+      "name": "G-Power Up",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 60,
+        "ventus": 60,
+        "haos": 60
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "dark_growth": {
+      "name": "Dark Growth",
+      "type": "ability",
+      "attributes": {
+        "haos": 50,
+        "darkus": 80,
+        "ventus": 50
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "circle_of_fire_blue": {
+      "name": "Circle of Fire",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 110,
+        "ventus": 50
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_own_gate",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "special_boost": {
+      "name": "Special Boost",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "conditional_attribute_bonus",
+          "target": "self",
+          "condition": {
+            "special_treatment": true,
+            "more_used_gate_cards_than_opponent": true
+          },
+          "text": {
+            "en": "If your Bakugan has a special treatment and you have more used Gate cards than your opponent, it gains G-Power based on its Attribute.",
+            "es": "Si cumple las condiciones, gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "special_crush": {
+      "name": "Special Crush",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "conditional_attribute_bonus",
+          "target": "self",
+          "condition": {
+            "special_treatment": true,
+            "opponent_more_used_gate_cards": true
+          },
+          "text": {
+            "en": "If your opponent has more Gate cards in their used pile and your Bakugan has a special treatment, it gains G-Power based on its Attribute.",
+            "es": "Si tu oponente tiene más cartas Portal usadas y tu Bakugan tiene tratamiento especial, gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "updraft": {
+      "name": "Updraft",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 70,
+        "ventus": 140
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_opponent_gate",
+          "target": "self",
+          "text": {
+            "en": "Play during a battle on one of your opponent's Gate cards. Your Bakugan gains G-Power based on its Attribute.",
+            "es": "Juega en una carta Portal del oponente. Gana Poder G según su atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "aquos_2": {
+      "name": "Aquos 2",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "force_opponent_swap_bakugan",
+          "target": "opponent",
+          "condition": {
+            "battle_start": true,
+            "bakugan_attribute": "aquos"
+          },
+          "text": {
+            "en": "At the start of a battle with an Aquos Bakugan, your opponent swaps their Bakugan with one from their unused pile, if possible.",
+            "es": "El oponente intercambia su Bakugan con uno de su pila sin usar."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "haos_2": {
+      "name": "Haos 2",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "remove_opponent_used_gate",
+          "target": "opponent",
+          "condition": {
+            "battle_start": true,
+            "bakugan_attribute": "haos",
+            "opponent_g_difference_160_or_more": true
+          },
+          "text": {
+            "en": "If opponent's G-Power is 160 or more higher, remove one Gate card from their used pile.",
+            "es": "Si la diferencia es de 160+, elimina una carta Portal usada del oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "preyas_switch": {
+      "name": "Preyas Switch",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "change_attribute",
+          "target": "self",
+          "condition": {
+            "bakugan": "preyas"
+          },
+          "text": {
+            "en": "Any Preyas in this battle may change to any Attribute.",
+            "es": "Preyas puede cambiar a cualquier atributo."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "tigrerra": {
+      "name": "Tigrerra",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "flat_bonus",
+          "target": "self",
+          "value": 100,
+          "condition": {
+            "bakugan_any_of": ["tigrerra", "blade_tigrerra"],
+            "different_gate": true
+          },
+          "text": {
+            "en": "If you have a Tigrerra or Blade Tigrerra on another Gate, your Bakugan gets +100 G-Power.",
+            "es": "Si tienes un Tigrerra en otra carta, obtienes +100."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "darkus_2": {
+      "name": "Darkus 2",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "use_opponent_gate_bonus",
+          "target": "self",
+          "condition": {
+            "win_battle": true,
+            "bakugan_attribute": "darkus"
+          },
+          "text": {
+            "en": "After winning with a Darkus Bakugan, you may use the opponent's Gate bonus instead of your own.",
+            "es": "Puedes usar el bono de la carta Portal del oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "pyrus_2": {
+      "name": "Pyrus 2",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "use_opponent_gate_bonus",
+          "target": "self",
+          "condition": {
+            "win_battle": true,
+            "bakugan_attribute": "pyrus"
+          },
+          "text": {
+            "en": "After winning with a Pyrus Bakugan, you may use the opponent's Gate bonus instead of your own.",
+            "es": "Puedes usar el bono del oponente."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "subterra_2": {
+      "name": "Sub Terra 2",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "place_used_gate_as_active",
+          "target": "self",
+          "condition": {
+            "battle_start": true,
+            "bakugan_attribute": "subterra",
+            "win_150_or_more": true
+          },
+          "text": {
+            "en": "If you win by 150+, place one of your used Gate cards as the active Gate.",
+            "es": "Si ganas por 150+, colocas una carta Portal usada."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "ventus_2": {
+      "name": "Ventus 2",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "swap_with_opponent_used_gate",
+          "target": "self",
+          "condition": {
+            "battle_start": true,
+            "bakugan_attribute": "ventus"
+          },
+          "text": {
+            "en": "Swap the current Gate with one from your opponent's used pile.",
+            "es": "Intercambia la carta Portal con una del oponente."
+          }
+        },
+        {
+          "type": "attribute_based_bonus",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "powder_keg": {
+      "name": "Powder Keg",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 140,
+        "aquos": 120,
+        "ventus": 60,
+        "haos": 20,
+        "darkus": 40,
+        "subterra": 80
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "heavy_surf": {
+      "name": "Heavy Surf",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 140,
+        "ventus": 40,
+        "haos": 80,
+        "darkus": 20,
+        "subterra": 120
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "the_cliffs": {
+      "name": "The Cliffs",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 120,
+        "aquos": 100,
+        "ventus": 50,
+        "haos": 50,
+        "darkus": 100,
+        "subterra": 150
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "vacuum": {
+      "name": "Vacuum",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 20,
+        "ventus": 70,
+        "haos": 60,
+        "darkus": 20,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "pit_dweller": {
+      "name": "Pit Dweller",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 50,
+        "ventus": 50,
+        "haos": 100,
+        "darkus": 150,
+        "subterra": 120
+      },
+      "effects": [],
+      "rules": []
+    }
+  }
+}
