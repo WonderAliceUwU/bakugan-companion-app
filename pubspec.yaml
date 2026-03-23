@@ -45,12 +45,15 @@ flutter:
     - assets/images/match-bg.png
     - assets/images/logo.png
     - assets/images/cards/anverse.png
+    - assets/images/cards/cards.json
+    - assets/images/cards/base/
+    - assets/images/cards/new_vestroia/
     - assets/music/menu/Title.flac
     - assets/music/menu/Menu.flac
     - assets/music/arena/arena-1.flac
     - assets/music/battle/before_ability.flac
     - assets/music/battle/after_ability.flac
-    - assets/sound/select.wav
+    - assets/sound/
     - assets/images/characters/dan.png
     - assets/images/characters/runo.png
     - assets/images/characters/shun.png

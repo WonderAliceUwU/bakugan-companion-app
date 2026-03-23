@@ -2152,6 +2152,1394 @@
       },
       "effects": [],
       "rules": []
+    },
+
+    "nightmare": {
+      "file": "BA250_GA_nightmare_07.png",
+      "name": "Nightmare",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 70,
+        "ventus": 120,
+        "haos": 120,
+        "darkus": 170,
+        "subterra": 20
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "the_spires": {
+      "file": "BA251_GA_spires_08.png",
+      "name": "The Spires",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 40,
+        "ventus": 150,
+        "haos": 110,
+        "darkus": 70,
+        "subterra": 40
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "monarus": {
+      "file": "BA252_GA_monarus_09.png",
+      "name": "Monarus",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 150,
+        "ventus": 100,
+        "haos": 180,
+        "darkus": 120,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "monarus"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "harpus": {
+      "file": "BA253_GA_harpus_10.png",
+      "name": "Harpus",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 120,
+        "aquos": 140,
+        "ventus": 50,
+        "haos": 110,
+        "darkus": 90,
+        "subterra": 100
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "harpus"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "fortress": {
+      "file": "BA254_GA_fourtress_11.png",
+      "name": "Fortress",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 110,
+        "ventus": 140,
+        "haos": 130,
+        "darkus": 100,
+        "subterra": 170
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "fortress"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "sirenoid": {
+      "file": "BA255_GA_sirenoid_12.png",
+      "name": "Sirenoid",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 90,
+        "ventus": 130,
+        "haos": 120,
+        "darkus": 70,
+        "subterra": 110
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "target": "self",
+          "condition": {
+            "bakugan": "sirenoid"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "rattleoid": {
+      "file": "BA256_GA_rattleoid_13.png",
+      "name": "Rattleoid",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 200,
+        "aquos": 150,
+        "ventus": 180,
+        "haos": 150,
+        "darkus": 170,
+        "subterra": 50
+      },
+      "effects": [
+        {
+          "type": "g_per_opponent_unused_ability",
+          "target": "self",
+          "value": 50,
+          "text": {
+            "en": "Each Rattleoid gets +50 G-Power for each Ability card left in opponent's unused pile at end of battle."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "lone_wolf": {
+      "file": "BA257_GA_lonewolf_14.png",
+      "name": "Lone Wolf",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 120,
+        "ventus": 80,
+        "haos": 80,
+        "darkus": 90,
+        "subterra": 70
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "double_gate_bonus_if_only_gate",
+          "text": {
+            "en": "If this is the only Gate card in play, double all attribute bonuses."
+          }
+        }
+      ]
+    },
+
+    "ethereas": {
+      "file": "BA258_GA_ethereas_15.png",
+      "name": "Ethereas",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 50,
+        "ventus": 20,
+        "haos": 100,
+        "darkus": 80,
+        "subterra": 40
+      },
+      "effects": [
+        {
+          "type": "lowest_printed_g_extra_bonus_per_gate",
+          "target": "self",
+          "value": 50
+        }
+      ],
+      "rules": []
+    },
+
+    "el_condor": {
+      "file": "BA259_GA_ElCondor_16.png",
+      "name": "El Condor",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 180,
+        "aquos": 200,
+        "ventus": 70,
+        "haos": 150,
+        "darkus": 90,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "swap_attribute_with_opponent",
+          "target": "self",
+          "condition": {
+            "bakugan": "el_condor"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "g_power_swap": {
+      "file": "BA260_GA_g_power_swap_17.png",
+      "name": "G-Power Swap",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 70,
+        "aquos": 90,
+        "ventus": 60,
+        "haos": 130,
+        "darkus": 100,
+        "subterra": 130
+      },
+      "effects": [
+        {
+          "type": "swap_printed_g_power",
+          "target": "both"
+        }
+      ],
+      "rules": []
+    },
+
+    "lock_and_load": {
+      "file": "BA261_GA_lockload_18.png",
+      "name": "Lock & Load",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 150,
+        "ventus": 150,
+        "haos": 50,
+        "darkus": 80,
+        "subterra": 70
+      },
+      "effects": [
+        {
+          "type": "return_all_used_ability_cards",
+          "target": "all"
+        }
+      ],
+      "rules": []
+    },
+
+    "lift": {
+      "file": "BA262_GA_lift_19.png",
+      "name": "Lift",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 70,
+        "aquos": 170,
+        "ventus": 200,
+        "haos": 130,
+        "darkus": 90,
+        "subterra": 120
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "most_used_gate_cannot_play_ability",
+          "text": {
+            "en": "Player with most used Gate cards cannot play Ability cards."
+          }
+        }
+      ]
+    },
+
+    "bait": {
+      "file": "BA263_GA_bait_20.png",
+      "name": "Bait",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 50,
+        "ventus": 100,
+        "haos": 70,
+        "darkus": 50,
+        "subterra": 90
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "fewest_used_gate_recovers_abilities",
+          "text": {
+            "en": "Player with fewest Gate cards in used pile returns all used Ability cards."
+          }
+        }
+      ]
+    },
+
+    "drain_power": {
+      "file": "BA264_GA_drainpower_21.png",
+      "name": "Drain Power",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 100,
+        "ventus": 40,
+        "haos": 70,
+        "darkus": 50,
+        "subterra": 80
+      },
+      "effects": [
+        {
+          "type": "move_unused_abilities_to_used_for_bonus",
+          "target": "self",
+          "value": 100
+        }
+      ],
+      "rules": []
+    },
+
+    "special_help": {
+      "file": "BA265_GA_specialhelp_22.png",
+      "name": "Special Help",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 40,
+        "ventus": 50,
+        "haos": 110,
+        "darkus": 150,
+        "subterra": 50
+      },
+      "effects": [
+        {
+          "type": "g_per_special_treatment_used",
+          "target": "self",
+          "value": 50
+        }
+      ],
+      "rules": []
+    },
+
+    "high_voltage": {
+      "file": "BA266_GA_highvoltage_23.png",
+      "name": "High Voltage",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 250,
+        "aquos": 200,
+        "ventus": 150,
+        "haos": 250,
+        "darkus": 200,
+        "subterra": 300
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "winner_over_100_difference_discards_abilities",
+          "text": {
+            "en": "If winner wins by more than 100 G-Power, opponent discards all Ability cards."
+          }
+        }
+      ]
+    },
+
+    "sting": {
+      "file": "BA267_GA_sting_24.png",
+      "name": "Sting",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 80,
+        "ventus": 70,
+        "haos": 20,
+        "darkus": 90,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "most_used_gate_must_discard_ability",
+          "text": {
+            "en": "The player with the most Gate cards in their used pile must put an Ability card into their used pile."
+          }
+        }
+      ]
+    },
+
+    "runos_launcher": {
+      "file": "BA268_AB_runoslaunch_25.png",
+      "name": "Runo's Launcher",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "lowest_printed_gets_highest_gate_bonus",
+          "condition": {
+            "bakugan_attribute": "haos"
+          },
+          "text": {
+            "en": "If battle occurs, the Bakugan with lowest printed G-Power gets the highest Gate bonus."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "masquerades_launcher": {
+      "file": "BA269_AB_masqlauncher_26.png",
+      "name": "Masquerade's Launcher",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "change_attribute",
+          "target": "any",
+          "condition": {
+            "bakugan_attribute": "darkus"
+          },
+          "text": {
+            "en": "Choose a Bakugan on a Gate card. It changes attribute for the turn."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "maruchos_launcher": {
+      "file": "BA270_AB_maruchoslauncher_27.png",
+      "name": "Marucho's Launcher",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "play_additional_gate_if_single",
+          "condition": {
+            "bakugan_attribute": "aquos",
+            "only_one_gate_in_play": true
+          },
+          "text": {
+            "en": "If only one Gate card is in play, play another from your unused pile."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "julies_launcher": {
+      "file": "BA271_AB_julieslauncher_28.png",
+      "name": "Julie's Launcher",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "send_both_to_used_no_battle",
+          "condition": {
+            "bakugan_attribute": "subterra"
+          },
+          "text": {
+            "en": "If your Bakugan stands with an opponent's, both go to used pile (no battle)."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "stealin": {
+      "file": "BA272_AB_stealin_29.png",
+      "name": "Stealin'",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "steal_used_resources",
+          "target": "self",
+          "text": {
+            "en": "Move one of your used Bakugan and one of your opponent's used Ability cards to your unused pile."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "combo_battle": {
+      "file": "BA273_AB_combobattle_30.png",
+      "name": "Combo Battle",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "battle_with_multiple_bakugan",
+          "target": "all",
+          "text": {
+            "en": "Both players add one more Bakugan to the battle. Highest total wins. All used afterward."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "shuns_launcher": {
+      "file": "BA274_AB_shunslauncher_31.png",
+      "name": "Shun's Launcher",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "move_any_standing_bakugan",
+          "condition": {
+            "bakugan_attribute": "ventus"
+          },
+          "text": {
+            "en": "Move any standing Bakugan to other Gate cards without starting battle."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "dans_launcher": {
+      "file": "BA275_AB_danslauncher_32.png",
+      "name": "Dan's Launcher",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "place_on_occupied_gate",
+          "condition": {
+            "bakugan_attribute": "pyrus"
+          },
+          "text": {
+            "en": "Place your Bakugan on a Gate card already occupied by opponent."
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "darkfire_color_shift": {
+      "file": "BA276_AB_darkfire_33.png",
+      "name": "Darkfire Color Shift",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "use_gate_bonus_directly",
+          "condition": {
+            "bakugan_attribute_any_of": ["pyrus", "darkus"]
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "lightwind_color_shift": {
+      "file": "BA277_AB_lightwind_34.png",
+      "name": "Lightwind Color Shift",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "use_gate_bonus_directly",
+          "condition": {
+            "bakugan_attribute_any_of": ["haos", "ventus"]
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "brushfire": {
+      "file": "BA278_AB_brushfire_35.png",
+      "name": "Brushfire",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "attribute_based_bonus_on_opponent_gate"
+        }
+      ],
+      "rules": []
+    },
+
+    "g_power_increase": {
+      "file": "BA279_AB_gPowerIncrease_36.png",
+      "name": "G-Power Increase",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "attribute_based_bonus"
+        }
+      ],
+      "rules": []
+    },
+
+    "power_triangle": {
+      "file": "BA281_AB_powertriangle_38.png",
+      "name": "Power Triangle",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "g_per_unused_piles",
+          "value": 50,
+          "condition": {
+            "bakugan_attribute_any_of": ["pyrus", "aquos", "haos"]
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "special_bump": {
+      "file": "BA282_AB_specialbump_39.png",
+      "name": "Special Bump",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "use_gate_highlighted_bonus",
+          "condition": {
+            "special_treatment": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "special_boost_2": {
+      "file": "BA283_AB_specialboost_40.png",
+      "name": "Special Boost",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "attribute_bonus_per_used_gate",
+          "condition": {
+            "special_treatment": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "touch_with_fire": {
+      "file": "BA284_AB_touchwithfire_41.png",
+      "name": "Touch With Fire",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "conditional_attribute_bonus",
+          "condition": {
+            "bakugan_attribute": "pyrus",
+            "gate_has_pyrus_highlight": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "flowing_waters": {
+      "file": "BA285_AB_flowingwaters_42.png",
+      "name": "Flowing Waters",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "recover_bakugan_and_gate_cards",
+          "condition": {
+            "bakugan_attribute": "aquos",
+            "lost_battle": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "see_the_light": {
+      "file": "BA286_AB_seethelight_43.png",
+      "name": "See the Light",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "g_per_opponent_used_gate",
+          "value": 50,
+          "condition": {
+            "bakugan_attribute": "haos"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "darkness_to_victory": {
+      "file": "BA287_AB_darknesstovictory_44.png",
+      "name": "Darkness to Victory",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "flip_opponent_gates_face_up",
+          "condition": {
+            "bakugan_attribute": "darkus",
+            "lost_battle": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "strong_winds_blow": {
+      "file": "BA288_AB_strongwingsblow_45.png",
+      "name": "Strong Winds Blow",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "double_gate_bonus",
+          "condition": {
+            "bakugan_attribute": "ventus",
+            "battle_start": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "ground": {
+      "file": "BA289_AB_ground_46.png",
+      "name": "Ground",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "cap_gate_bonus_to_50",
+          "condition": {
+            "bakugan_attribute": "subterra",
+            "battle_start": true
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "bee_striker": {
+      "file": "BA290_AB_beestriker_47.png",
+      "name": "Bee Striker",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "match_highest_gate_bonus_if_same_attribute",
+          "value": 200
+        }
+      ],
+      "rules": []
+    },
+
+    "tentaclear": {
+      "file": "BA291_AB_tentaclear_48.png",
+      "name": "Tentaclear",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "block_opponent_gate_bonus_if_same_attribute_team",
+          "condition": {
+            "bakugan": "tentaclear"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "earthen_wave": {
+      "file": "BA293_AB_SM_Earthen_Wave.png",
+      "name": "Earthen Wave",
+      "type": "ability",
+      "attributes": {
+        "pyrus": 140,
+        "aquos": 120,
+        "ventus": 60,
+        "haos": 20,
+        "darkus": 40,
+        "subterra": 80
+      },
+      "effects": [
+        {
+          "type": "attribute_based_bonus"
+        }
+      ],
+      "rules": []
+    },
+
+    "sun_spot": {
+      "file": "BA294_GA_sun_spot_03d.png",
+      "name": "Sun Spot",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 140,
+        "ventus": 40,
+        "haos": 80,
+        "darkus": 20,
+        "subterra": 120
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "black_hole": {
+      "file": "BA295_GA_black_hole_04d.png",
+      "name": "Black Hole",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 120,
+        "aquos": 100,
+        "ventus": 50,
+        "haos": 50,
+        "darkus": 100,
+        "subterra": 150
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "wind_farm": {
+      "file": "BA296_GA_wind_farm_05d.png",
+      "name": "Wind Farm",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 20,
+        "ventus": 70,
+        "haos": 60,
+        "darkus": 20,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "whirlpool_2": {
+      "file": "BA297_GA_whirlpool_06d.png",
+      "name": "Whirlpool",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 50,
+        "ventus": 150,
+        "haos": 100,
+        "darkus": 120,
+        "subterra": 150
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "fields_of_lava": {
+      "file": "BA298_GA_fields_of_lava_07d.png",
+      "name": "Fields of Lava",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 70,
+        "ventus": 120,
+        "haos": 120,
+        "darkus": 170,
+        "subterra": 20
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "blue_sky": {
+      "file": "BA299_GA_blue_sky_08d.png",
+      "name": "Blue Sky",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 40,
+        "ventus": 150,
+        "haos": 110,
+        "darkus": 70,
+        "subterra": 40
+      },
+      "effects": [],
+      "rules": []
+    },
+
+    "wavern": {
+      "file": "BA300_GA_wavern_09d.png",
+      "name": "Wavern",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 150,
+        "ventus": 100,
+        "haos": 180,
+        "darkus": 120,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "condition": {
+            "bakugan": "wavern"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "exedra": {
+      "file": "BA301_GA_EXEDRA_10d.png",
+      "name": "Exedra",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 120,
+        "aquos": 140,
+        "ventus": 50,
+        "haos": 110,
+        "darkus": 90,
+        "subterra": 100
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "condition": {
+            "bakugan": "exedra"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "apollonir": {
+      "file": "BA302_GA_apollinir_11d.png",
+      "name": "Apollonir",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 80,
+        "aquos": 110,
+        "ventus": 140,
+        "haos": 130,
+        "darkus": 100,
+        "subterra": 170
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "condition": {
+            "bakugan": "apollonir"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "clayf": {
+      "file": "BA303_GA_clayf_12d.png",
+      "name": "Clayf",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 90,
+        "ventus": 130,
+        "haos": 120,
+        "darkus": 70,
+        "subterra": 110
+      },
+      "effects": [
+        {
+          "type": "double_gate_bonus_for",
+          "condition": {
+            "bakugan": "clayf"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "oberus": {
+      "file": "BA304_GA_oberus_13d.png",
+      "name": "Oberus",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 200,
+        "aquos": 150,
+        "ventus": 180,
+        "haos": 150,
+        "darkus": 170,
+        "subterra": 50
+      },
+      "effects": [
+        {
+          "type": "g_per_used_gate",
+          "value": 20,
+          "condition": {
+            "bakugan": "oberus"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "crushing_blow": {
+      "file": "BA305_GA_crushing_blow_14d.png",
+      "name": "Crushing Blow",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 50,
+        "aquos": 120,
+        "ventus": 80,
+        "haos": 80,
+        "darkus": 90,
+        "subterra": 70
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "no_abilities_if_200_difference_lowest_wins"
+        }
+      ]
+    },
+
+    "swift_blow": {
+      "file": "BA306_GA_swift_blow_15d.png",
+      "name": "Swift Blow",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 50,
+        "ventus": 20,
+        "haos": 100,
+        "darkus": 80,
+        "subterra": 40
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "no_abilities_if_200_difference"
+        }
+      ]
+    },
+
+    "frosch": {
+      "file": "BA307_GA_frosch_16d.png",
+      "name": "Frosch",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 180,
+        "aquos": 200,
+        "ventus": 70,
+        "haos": 150,
+        "darkus": 90,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "random_unused_ability_interaction",
+          "target": "all"
+        }
+      ],
+      "rules": []
+    },
+
+    "magma_fields": {
+      "file": "BA308_GA_magma_fields_17d.png",
+      "name": "Magma Fields",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 70,
+        "aquos": 90,
+        "ventus": 60,
+        "haos": 130,
+        "darkus": 100,
+        "subterra": 130
+      },
+      "effects": [
+        {
+          "type": "double_ability_bonus_for_lowest_printed"
+        }
+      ],
+      "rules": []
+    },
+
+    "charging_ground": {
+      "file": "BA309_GA_charging_grounds_18d.png",
+      "name": "Charging Ground",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 150,
+        "ventus": 150,
+        "haos": 50,
+        "darkus": 80,
+        "subterra": 70
+      },
+      "effects": [
+        {
+          "type": "recover_red_or_blue_for_lowest_printed",
+          "target": "self"
+        }
+      ],
+      "rules": []
+    },
+
+    "blurred_heat": {
+      "file": "BA310_GA_blurred_heat_19d.png",
+      "name": "Blurred Heat",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 70,
+        "aquos": 170,
+        "ventus": 200,
+        "haos": 130,
+        "darkus": 90,
+        "subterra": 120
+      },
+      "effects": [
+        {
+          "type": "recover_blue_or_green_for_lowest_printed"
+        }
+      ],
+      "rules": []
+    },
+
+    "wind_swept_caverns": {
+      "file": "BA311_GA_wind_swept_caverns_20d.png",
+      "name": "Wind Swept Caverns",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 150,
+        "aquos": 50,
+        "ventus": 100,
+        "haos": 70,
+        "darkus": 50,
+        "subterra": 90
+      },
+      "effects": [
+        {
+          "type": "recover_red_or_green_for_lowest_printed"
+        }
+      ],
+      "rules": []
+    },
+
+    "naga": {
+      "file": "BA312_GA_naga_21d.png",
+      "name": "Naga",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 110,
+        "aquos": 100,
+        "ventus": 40,
+        "haos": 70,
+        "darkus": 50,
+        "subterra": 80
+      },
+      "effects": [
+        {
+          "type": "g_per_all_used_abilities",
+          "value": 20,
+          "condition": {
+            "bakugan": "naga"
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "chum": {
+      "file": "BA313_GA_chum_22d.png",
+      "name": "Chum",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 100,
+        "aquos": 40,
+        "ventus": 50,
+        "haos": 110,
+        "darkus": 150,
+        "subterra": 50
+      },
+      "effects": [],
+      "rules": [
+        {
+          "type": "fewest_used_gate_recovers_all_abilities"
+        }
+      ]
+    },
+
+    "mana_surge": {
+      "file": "BA314_GA_mana_surge_23d.png",
+      "name": "Mana Surge",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 250,
+        "aquos": 200,
+        "ventus": 150,
+        "haos": 250,
+        "darkus": 200,
+        "subterra": 300
+      },
+      "effects": [
+        {
+          "type": "all_players_gain_ability_from_collection"
+        }
+      ],
+      "rules": []
+    },
+
+    "grand_exchange": {
+      "file": "BA315_GA_grand_exchange_24d.png",
+      "name": "Grand Exchange",
+      "type": "gate",
+      "attributes": {
+        "pyrus": 60,
+        "aquos": 80,
+        "ventus": 70,
+        "haos": 20,
+        "darkus": 90,
+        "subterra": 50
+      },
+      "effects": [
+        {
+          "type": "swap_all_unused_abilities_between_players"
+        }
+      ],
+      "rules": []
+    },
+
+    "minefield": {
+      "file": "BA316_AB_minefield_25d.png",
+      "name": "Minefield",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "send_all_standing_to_used"
+        }
+      ],
+      "rules": []
+    },
+
+    "brainwash": {
+      "file": "BA317_AB_brainwash_26d.png",
+      "name": "Brainwash",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "move_opponent_bakugan_to_other_gate"
+        }
+      ],
+      "rules": []
+    },
+
+    "distraction": {
+      "file": "BA318_AB_distraction_27d.png",
+      "name": "Distraction",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "remove_special_effect_bakugan"
+        }
+      ],
+      "rules": []
+    },
+
+    "go_for_perfect": {
+      "file": "BA319_AB_go_for_perfect_28d.png",
+      "name": "Go for Perfect",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "reroll_up_to_two_times_if_not_stand"
+        }
+      ],
+      "rules": []
+    },
+
+    "take_two": {
+      "file": "BA320_AB_take_two_29d.png",
+      "name": "Take Two",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "reroll_specific_attributes",
+          "condition": {
+            "bakugan_attribute_any_of": ["darkus", "ventus", "subterra", "haos"]
+          }
+        }
+      ],
+      "rules": []
+    },
+
+    "mirage": {
+      "file": "BA321_AB_mirage_30d.png",
+      "name": "Mirage",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "force_opponent_swap_bakugan_after_stand"
+        }
+      ],
+      "rules": []
+    },
+
+    "restock": {
+      "file": "BA322_AB_restock_31d.png",
+      "name": "Restock",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "place_gate_if_none"
+        }
+      ],
+      "rules": []
+    },
+
+    "the_glow": {
+      "file": "BA324_AB_the_glow_33d.png",
+      "name": "The Glow",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "attribute_bonus_if_lowest_printed"
+        }
+      ],
+      "rules": []
+    },
+
+    "the_shadow": {
+      "file": "BA325_AB_the_shadow_34d.png",
+      "name": "The Shadow",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "attribute_bonus_if_lowest_printed"
+        }
+      ],
+      "rules": []
+    },
+
+    "the_gust": {
+      "file": "BA326_AB_the_gust_35d.png",
+      "name": "The Gust",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "attribute_bonus_if_lowest_printed"
+        }
+      ],
+      "rules": []
+    },
+
+    "big_brawl": {
+      "file": "BA327_AB_big_brawl_36d.png",
+      "name": "Big Brawl",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "g_per_different_attribute_standing"
+        }
+      ],
+      "rules": []
+    },
+
+    "pit_fight": {
+      "file": "BA328_AB_pit_fight_37d.png",
+      "name": "Pit Fight",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "g_per_different_type_standing"
+        }
+      ],
+      "rules": []
+    },
+
+    "color_shift": {
+      "file": "BA329_AB_color_shift_38d.png",
+      "name": "Color Shift",
+      "type": "ability",
+      "effects": [
+        {
+          "type": "change_attribute_to_any_in_game",
+          "condition": {
+            "lowest_printed_g_power": true
+          }
+        }
+      ],
+      "rules": []
     }
+
+
   }
 }
