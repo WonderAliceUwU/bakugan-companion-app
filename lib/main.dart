@@ -102,6 +102,8 @@ class GateCard {
   final String imagePath;
   final String? descriptionEn;
   final String? descriptionEs;
+  final String cardClass;
+  final bool hasEffect;
 
   const GateCard({
     required this.key,
@@ -110,6 +112,8 @@ class GateCard {
     required this.imagePath,
     required this.descriptionEn,
     required this.descriptionEs,
+    required this.cardClass,
+    required this.hasEffect,
   });
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
@@ -122,6 +126,8 @@ class AbilityCard {
   final String imagePath;
   final String? descriptionEn;
   final String? descriptionEs;
+  final String cardClass;
+  final Set<String> timings;
 
   const AbilityCard({
     required this.key,
@@ -130,9 +136,17 @@ class AbilityCard {
     required this.imagePath,
     required this.descriptionEn,
     required this.descriptionEs,
+    required this.cardClass,
+    required this.timings,
   });
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
+
+  bool get supportsStartOfBattle => timings.contains('start_of_battle');
+  bool get supportsDuringBattle {
+    if (timings.isEmpty) return true;
+    return timings.any((timing) => timing != 'start_of_battle');
+  }
 }
 
 const double _gateCardAspectRatio = 842 / 1130;
@@ -142,6 +156,59 @@ const Offset _battleBonusAnchor = Offset(-40, 0);
 const Offset _battlePendingBonusOffset = Offset(0, -10);
 const double _battleBonusRiseStart = 42;
 const double _descriptionPanelSkew = 22;
+const Map<String, List<Color>> _gateDescriptionBorderGradients = {
+  'copper': [
+    Color(0xFF6B432B),
+    Color(0xFFAA7249),
+    Color(0xFFDAB497),
+    Color(0xFF8B5A39),
+  ],
+  'gold': [
+    Color(0xFF6E5A2A),
+    Color(0xFF9F8445),
+    Color(0xFFDCC9A7),
+    Color(0xFF7A6432),
+  ],
+  'silver': [
+    Color(0xFF5C6168),
+    Color(0xFF9EA0A0),
+    Color(0xFFD9DDE2),
+    Color(0xFF6C737C),
+  ],
+};
+
+const Map<String, List<Color>> _abilityDescriptionBorderGradients = {
+  'green': [
+    Color(0xFF163D31),
+    Color(0xFF2F8A6C),
+    Color(0xFF2F8A6C),
+    Color(0xFF0E241D),
+  ],
+  'blue': [
+    Color(0xFF283440),
+    Color(0xFF41505F),
+    Color(0xFF6A7D91),
+    Color(0xFF182028),
+  ],
+  'red': [
+    Color(0xFF4A1714),
+    Color(0xFF9F322D),
+    Color(0xFFC15E58),
+    Color(0xFF2C0E0D),
+  ],
+};
+
+const Map<String, Color> _abilityDescriptionAccentColors = {
+  'green': Color(0xFF5FD0A2),
+  'blue': Color(0xFF8FA7BB),
+  'red': Color(0xFFE07A73),
+};
+
+const Map<String, Color> _gateDescriptionAccentColors = {
+  'copper': Color(0xFFE1B089),
+  'gold': Color(0xFFF2DDAF),
+  'silver': Color(0xFFE8EDF2),
+};
 const double _abilityPresentationCardScale = 0.84;
 const double _abilityPresentationWidth = 500;
 const double _abilityPresentationHeight = 660;
@@ -209,7 +276,17 @@ String? _matchCardImagePath({
   required String cardKey,
   required String cardName,
   required List<String> assetPaths,
+  String? fileName,
 }) {
+  if (fileName != null) {
+    final directMatch = assetPaths.firstWhere(
+      (path) => path.toLowerCase().endsWith(fileName.toLowerCase()),
+      orElse: () => '',
+    );
+    if (directMatch.isNotEmpty) {
+      return directMatch;
+    }
+  }
   final lookupPatterns = {
     ..._cardLookupPatterns(cardKey),
     ..._cardLookupPatterns(cardName),
@@ -3415,78 +3492,150 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       final String rawJson = await rootBundle.loadString(
         'assets/images/cards/cards.json',
       );
-      final Map<String, dynamic> decoded =
-          jsonDecode(rawJson) as Map<String, dynamic>;
-      final Map<String, dynamic> cards =
-          decoded['cards'] as Map<String, dynamic>;
+
+      final dynamic decodedJson = jsonDecode(rawJson);
+      if (decodedJson is! Map) {
+        throw Exception('cards.json root is not a JSON object');
+      }
+
+      final Map<String, dynamic> decoded = Map<String, dynamic>.from(decodedJson);
+
+      final dynamic cardsNode = decoded['cards'];
+      if (cardsNode is! Map) {
+        throw Exception('cards.json does not contain a valid "cards" object');
+      }
+
+      final Map<String, dynamic> cards = Map<String, dynamic>.from(cardsNode);
+
       final AssetManifest manifest = await AssetManifest.loadFromAssetBundle(
         rootBundle,
       );
+
       final List<String> assets = manifest
           .listAssets()
           .where(
             (asset) =>
-                asset.startsWith('assets/images/cards/') &&
-                asset != 'assets/images/cards/anverse.png' &&
-                asset.endsWith('.png'),
-          )
+        asset.startsWith('assets/images/cards/') &&
+            asset != 'assets/images/cards/anverse.png' &&
+            asset.endsWith('.png'),
+      )
           .toList();
 
       final Map<String, GateCard> loadedCards = {};
       final Map<String, AbilityCard> loadedAbilityCards = {};
 
       for (final entry in cards.entries) {
-        final data = entry.value as Map<String, dynamic>;
+        final key = entry.key;
+        final value = entry.value;
 
-        final imagePath = _matchCardImagePath(
-          cardKey: entry.key,
-          cardName: data['name'] as String,
-          assetPaths: assets,
-        );
+        if (value is! Map) {
+          debugPrint('Skipping card "$key": value is not an object');
+          continue;
+        }
 
-        final effects = data['effects'] as List<dynamic>? ?? const [];
-        final rules = data['rules'] as List<dynamic>? ?? const [];
-        String? descriptionEn;
-        String? descriptionEs;
-        for (final item in [...effects, ...rules]) {
-          final text = (item as Map<String, dynamic>)['text'];
-          if (text is Map<String, dynamic>) {
-            final es = text['es'] as String?;
-            final en = text['en'] as String?;
-            descriptionEn = en ?? es;
-            descriptionEs = es ?? en;
-            if (descriptionEs != null && descriptionEs.trim().isNotEmpty) {
-              break;
+        final data = Map<String, dynamic>.from(value);
+
+        final String name = (data['name'] ?? '').toString().trim();
+        final String type = (data['type'] ?? '').toString().trim().toLowerCase();
+        final String? fileName = data['file']?.toString();
+        final String cardClass =
+        (data['card_class'] ?? 'silver').toString().toLowerCase();
+
+        if (name.isEmpty || type.isEmpty) {
+          debugPrint('Skipping card "$key": missing name or type');
+          continue;
+        }
+
+        final descriptionsRaw = data['descriptions'];
+        final Map<String, dynamic> descriptions =
+        descriptionsRaw is Map<String, dynamic>
+            ? descriptionsRaw
+            : descriptionsRaw is Map
+            ? Map<String, dynamic>.from(descriptionsRaw)
+            : const {};
+
+        final String? descriptionEn = descriptions['en']?.toString();
+        final String? descriptionEs = descriptions['es']?.toString();
+
+        final effectsRaw = data['effects'];
+        final List<dynamic> effects =
+        effectsRaw is List ? List<dynamic>.from(effectsRaw) : const [];
+
+        final rulesRaw = data['rules'];
+        final List<dynamic> rules =
+        rulesRaw is List ? List<dynamic>.from(rulesRaw) : const [];
+
+        final attributesRaw = data['attributes'];
+        final Map<String, int> attributes = <String, int>{};
+
+        if (attributesRaw is Map) {
+          for (final attrEntry in attributesRaw.entries) {
+            final attrKey = attrEntry.key.toString().toLowerCase();
+            final attrValue = attrEntry.value;
+            if (attrValue is num) {
+              attributes[attrKey] = attrValue.toInt();
+            } else {
+              final parsed = int.tryParse(attrValue.toString());
+              if (parsed != null) {
+                attributes[attrKey] = parsed;
+              }
             }
           }
         }
 
-        final rawAttributes =
-            (data['attributes'] as Map<String, dynamic>?) ?? const {};
-        final attributes = rawAttributes.map(
-          (key, value) => MapEntry(key.toLowerCase(), (value as num).toInt()),
+        final imagePath = _matchCardImagePath(
+          cardKey: key,
+          cardName: name,
+          assetPaths: assets,
+          fileName: fileName,
         );
 
-        if (data['type'] == 'gate') {
-          loadedCards[entry.key] = GateCard(
-            key: entry.key,
-            name: data['name'] as String,
+        if (type == 'gate') {
+          loadedCards[key] = GateCard(
+            key: key,
+            name: name,
             imagePath: imagePath ?? 'assets/images/cards/anverse.png',
             descriptionEn: descriptionEn,
             descriptionEs: descriptionEs,
             attributes: attributes,
+            cardClass: cardClass,
+            hasEffect: effects.isNotEmpty || rules.isNotEmpty,
           );
-        } else if (data['type'] == 'ability') {
-          loadedAbilityCards[entry.key] = AbilityCard(
-            key: entry.key,
-            name: data['name'] as String,
+        } else if (type == 'ability') {
+          final Set<String> timings = <String>{};
+
+          for (final effect in effects) {
+            if (effect is Map) {
+              final timing = effect['timing']?.toString().toLowerCase();
+              if (timing != null && timing.isNotEmpty) {
+                timings.add(timing);
+              }
+            }
+          }
+
+          loadedAbilityCards[key] = AbilityCard(
+            key: key,
+            name: name,
             imagePath: imagePath ?? 'assets/images/cards/anverse.png',
             descriptionEn: descriptionEn,
             descriptionEs: descriptionEs,
             attributes: attributes,
+            cardClass: cardClass,
+            timings: timings,
           );
+        } else {
+          debugPrint('Skipping card "$key": unknown type "$type"');
         }
       }
+
+      debugPrint('Loaded gate cards: ${loadedCards.length}');
+      debugPrint('Loaded ability cards: ${loadedAbilityCards.length}');
+      debugPrint(
+        'Gate names: ${loadedCards.values.map((c) => c.name).take(10).toList()}',
+      );
+      debugPrint(
+        'Ability names: ${loadedAbilityCards.values.map((c) => c.name).take(10).toList()}',
+      );
 
       if (!mounted) return;
       setState(() {
@@ -3495,7 +3644,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _isLoadingGateCards = false;
         _isLoadingAbilityCards = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ERROR loading battle cards: $e');
+      debugPrintStack(stackTrace: st);
+
       if (!mounted) return;
       setState(() {
         _isLoadingGateCards = false;
@@ -3554,26 +3706,33 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return null;
   }
 
-  List<AbilityCard> _rankAbilityCardMatches(String input, {int limit = 6}) {
+  List<AbilityCard> _rankAbilityCardMatches(
+    String input, {
+    int limit = 6,
+    required bool beforeGateReveal,
+  }) {
     final query = _normalizeCardLookup(input);
     if (query.isEmpty) return const [];
 
-    final ranked =
-        _abilityCards.values
-            .map((card) {
-              final normalizedName = _normalizeCardLookup(card.name);
-              final normalizedKey = _normalizeCardLookup(card.key);
+    final candidateCards = beforeGateReveal
+        ? _abilityCards.values.where((card) => card.supportsStartOfBattle)
+        : _abilityCards.values.where((card) => card.supportsDuringBattle);
 
-              int score = 0;
-              if (normalizedName == query) score += 1000;
-              if (normalizedKey == query) score += 900;
-              if (normalizedName.startsWith(query)) score += 400;
-              if (normalizedKey.startsWith(query)) score += 300;
-              if (normalizedName.contains(query)) score += 150;
-              if (normalizedKey.contains(query)) score += 100;
+    final ranked = candidateCards
+        .map((card) {
+          final normalizedName = _normalizeCardLookup(card.name);
+          final normalizedKey = _normalizeCardLookup(card.key);
 
-              return (card: card, score: score);
-            })
+          int score = 0;
+          if (normalizedName == query) score += 1000;
+          if (normalizedKey == query) score += 900;
+          if (normalizedName.startsWith(query)) score += 400;
+          if (normalizedKey.startsWith(query)) score += 300;
+          if (normalizedName.contains(query)) score += 150;
+          if (normalizedKey.contains(query)) score += 100;
+
+          return (card: card, score: score);
+        })
             .where((entry) => entry.score > 0)
             .toList()
           ..sort((a, b) {
@@ -3585,11 +3744,18 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return ranked.take(limit).map((entry) => entry.card).toList();
   }
 
-  AbilityCard? _findAbilityCard(String input) {
+  AbilityCard? _findAbilityCard(
+    String input, {
+    required bool beforeGateReveal,
+  }) {
     final query = _normalizeCardLookup(input);
     if (query.isEmpty) return null;
 
-    final matches = _rankAbilityCardMatches(input, limit: 6);
+    final matches = _rankAbilityCardMatches(
+      input,
+      limit: 6,
+      beforeGateReveal: beforeGateReveal,
+    );
     if (matches.isEmpty) return null;
 
     final topMatch = matches.first;
@@ -3845,6 +4011,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     }
     FocusManager.instance.primaryFocus?.unfocus();
     _cardNameController.clear();
+    final isBeforeReveal = _revealedCard == null;
 
     final selectedCard = await showDialog<AbilityCard>(
       context: context,
@@ -3854,11 +4021,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             Future<void> submit() async {
-              final match = _findAbilityCard(_cardNameController.text);
+              final match = _findAbilityCard(
+                _cardNameController.text,
+                beforeGateReveal: isBeforeReveal,
+              );
               if (match == null) {
                 setDialogState(() {
-                  errorText =
-                      'Ability card not found. Type the printed card name.';
+                  errorText = isBeforeReveal
+                      ? 'Ability card not found or not valid before the gate reveal.'
+                      : 'Ability card not found or not valid after the gate reveal.';
                 });
                 return;
               }
@@ -3904,7 +4075,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       focusNode: _cardNameFocusNode,
                       displayStringForOption: (option) => option.name,
                       optionsBuilder: (textEditingValue) {
-                        return _rankAbilityCardMatches(textEditingValue.text);
+                        return _rankAbilityCardMatches(
+                          textEditingValue.text,
+                          beforeGateReveal: isBeforeReveal,
+                        );
                       },
                       onSelected: (option) {
                         Navigator.of(context).pop(option);
@@ -4312,9 +4486,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             bottom: 28,
             child: Center(
               child: BakuganButton(
-                text: 'END FIGHT',
+                text: 'END BRAWL',
                 onPressed: canEndFight ? _endFight : () {},
-                width: 250,
+                width: 300,
                 height: 70,
                 color: canEndFight ? null : Colors.grey,
               ),
@@ -4354,7 +4528,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             alignment: Alignment.center,
             children: [
               AnimatedScale(
-                scale: _isResolvingCard ? 1.04 : 1.0,
+                scale: 1.06,
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
                 child: Stack(
@@ -4362,16 +4536,17 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                   children: [
                     _revealedCard == null
                         ? InteractiveCard(
-                            key: const ValueKey('anverse_card'),
-                            imagePath: 'assets/images/cards/anverse.png',
-                            onTap: _openGateCardPrompt,
-                          )
-                        : _RevealCardFace(
-                            key: ValueKey(
-                              'revealed_${_revealedCard!.key}_${_revealedCard!.imagePath}',
-                            ),
-                            imagePath: _revealedCard!.imagePath,
-                          ),
+                      key: const ValueKey('anverse_card'),
+                      imagePath: 'assets/images/cards/anverse.png',
+                      onTap: _openGateCardPrompt,
+                    )
+                        : InteractiveCard(
+                      key: ValueKey(
+                        'revealed_${_revealedCard!.key}_${_revealedCard!.imagePath}',
+                      ),
+                      imagePath: _revealedCard!.imagePath,
+                      onTap: () {}, // o null si prefieres que no haga nada al click
+                    ),
                     IgnorePointer(
                       child: AnimatedOpacity(
                         opacity: _showRevealFlash ? 1 : 0,
@@ -4412,53 +4587,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Widget _buildGateDescriptionPanel(GateCard card) {
     return _buildLocalizedDescriptionPanel(
       width: 560,
-      enText: card.descriptionEn ?? '',
+      title: card.name,
       esText: card.descriptionEs ?? card.descriptionEn ?? '',
       maxHeight: 132,
-    );
-  }
-
-  Widget _buildDescriptionColumn({
-    required String label,
-    required String text,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: const Color(0xFF9FD2FF),
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            fontStyle: FontStyle.italic,
-            letterSpacing: 2.5,
-            shadows: [
-              Shadow(
-                color: const Color(0xFF5BA8FF).withValues(alpha: 0.4),
-                blurRadius: 10,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          text,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.96),
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            height: 1.3,
-            shadows: const [
-              Shadow(
-                color: Colors.black54,
-                offset: Offset(1, 1),
-                blurRadius: 3,
-              ),
-            ],
-          ),
-        ),
-      ],
+      frameGradient: _gateDescriptionGradient(card.cardClass),
+      accentColor: _gateDescriptionAccentColor(card.cardClass),
     );
   }
 
@@ -4662,90 +4795,167 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Widget _buildAbilityOverlayDescription(AbilityCard card) {
     final hasDescription =
         (card.descriptionEn?.trim().isNotEmpty ?? false) ||
-        (card.descriptionEs?.trim().isNotEmpty ?? false);
+            (card.descriptionEs?.trim().isNotEmpty ?? false);
+
     if (!hasDescription) return const SizedBox.shrink();
 
     return _buildLocalizedDescriptionPanel(
       width: 550,
-      enText: card.descriptionEn ?? card.descriptionEs ?? '',
+      title: card.name,
       esText: card.descriptionEs ?? card.descriptionEn ?? '',
-      maxHeight: 96,
+      maxHeight: 260,
+      frameGradient: _abilityDescriptionGradient(card.cardClass),
+      accentColor: _abilityDescriptionAccentColor(card.cardClass),
     );
+  }
+
+  List<Color> _abilityDescriptionGradient(String cardClass) {
+    return _abilityDescriptionBorderGradients[cardClass] ??
+        _abilityDescriptionBorderGradients['blue']!;
+  }
+
+  List<Color> _gateDescriptionGradient(String cardClass) {
+    return _gateDescriptionBorderGradients[cardClass] ??
+        _gateDescriptionBorderGradients['silver']!;
+  }
+
+  Color _abilityDescriptionAccentColor(String cardClass) {
+    return _abilityDescriptionAccentColors[cardClass] ??
+        _abilityDescriptionAccentColors['blue']!;
+  }
+
+  Color _gateDescriptionAccentColor(String cardClass) {
+    return _gateDescriptionAccentColors[cardClass] ??
+        _gateDescriptionAccentColors['silver']!;
   }
 
   Widget _buildLocalizedDescriptionPanel({
     required double width,
-    required String enText,
     required String esText,
     required double maxHeight,
+    required List<Color> frameGradient,
+    required Color accentColor,
+    String? title,
   }) {
     const double panelSkew = -0.12;
-    const double textInnerSkew = -0.04; // Subtle "HUD" lean for the text
+    const double textInnerSkew = -0.04;
 
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.skewX(panelSkew),
       child: Container(
         width: width,
-        padding: const EdgeInsets.all(3), // Border thickness
+        padding: const EdgeInsets.all(3), // el marco
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.blueAccent, Colors.cyan, Colors.blue.shade900],
+            colors: frameGradient,
           ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF050B14),
-                  Color(0xFF0B1623),
-                  Color(0xFF050B14),
-                ],
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.18),
+              blurRadius: 16,
+              spreadRadius: 1,
             ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(painter: GridPainter(color: Colors.white10)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.65),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          decoration: BoxDecoration(
+            color: const Color(0xFF05080D),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: GridPainter(
+                    color: accentColor.withValues(alpha: 0.07),
+                  ),
                 ),
-                Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.skewX(textInnerSkew),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _buildDescriptionColumn(
-                            label: 'EN',
-                            text: enText,
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
-                          color: Colors.cyanAccent.withValues(alpha: 0.35),
-                        ),
-                        Expanded(
-                          child: _buildDescriptionColumn(
-                            label: 'ES',
-                            text: esText,
-                          ),
-                        ),
+              ),
+
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.03),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.10),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(textInnerSkew),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if ((title ?? '').trim().isNotEmpty) ...[
+                        Text(
+                          title!.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            fontStyle: FontStyle.italic,
+                            letterSpacing: 1.6,
+                            shadows: [
+                              Shadow(
+                                color: accentColor.withValues(alpha: 0.30),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          height: 1.2,
+                          color: accentColor.withValues(alpha: 0.28),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      Text(
+                        esText,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.96),
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          height: 1.28,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black87,
+                              offset: Offset(1, 1),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
