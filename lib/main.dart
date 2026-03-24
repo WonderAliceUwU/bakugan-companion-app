@@ -197,6 +197,33 @@ class GateCard {
       usedGateCardsInAllPiles: usedGateCardsInAllPiles,
     ).totalBonus;
   }
+
+  bool lowestTotalGPowerWins({
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+  }) {
+    for (final effect in effects) {
+      if (effect is! Map) continue;
+      if (effect['type'] == 'lowest_total_g_power_wins_battle') {
+        return true;
+      }
+      if (effect['type'] ==
+          'lowest_total_g_power_wins_battle_if_printed_gap_gte') {
+        final condition = effect['condition'];
+        if (condition is Map) {
+          final dynamic thresholdRaw =
+              condition['printed_g_power_difference_gte'];
+          if (thresholdRaw is num) {
+            final int threshold = thresholdRaw.toInt();
+            if ((leftPrintedGPower - rightPrintedGPower).abs() >= threshold) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
 }
 
 class AbilityCard {
@@ -232,6 +259,26 @@ class AbilityCard {
   bool get supportsDuringBattle {
     if (timings.isEmpty) return true;
     return timings.any((timing) => timing != 'start_of_battle');
+  }
+}
+
+class MatchPresentedAbility {
+  final AbilityCard card;
+  final bool isActive;
+
+  const MatchPresentedAbility({
+    required this.card,
+    this.isActive = true,
+  });
+
+  MatchPresentedAbility copyWith({
+    AbilityCard? card,
+    bool? isActive,
+  }) {
+    return MatchPresentedAbility(
+      card: card ?? this.card,
+      isActive: isActive ?? this.isActive,
+    );
   }
 }
 
@@ -301,6 +348,8 @@ const double _abilityPresentationHeight = 660;
 const double _abilityPresentationCardHeight =
     _gateCardHeight * _abilityPresentationCardScale;
 const double _abilityPresentationGap = 44;
+
+const double _matchAbilityRailSpacing = 6;
 
 String _normalizeCardLookup(String value) {
   return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -2430,109 +2479,115 @@ class CharacterMiniature extends StatelessWidget {
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.skewX(-0.15),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: currentGradient[0].withValues(
-                alpha: glowAlpha ?? (isSelected ? 0.6 : 0.2),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: isSelected ? 1.0 : 0.94, end: 1.0),
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        builder: (context, scale, child) {
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: currentGradient[0].withValues(
+                  alpha: glowAlpha ?? (isSelected ? 0.6 : 0.2),
+                ),
+                blurRadius: glowAlpha != null
+                    ? 30
+                    : (isSelected ? 20 : 10),
+                spreadRadius: 2,
               ),
-              blurRadius: glowAlpha != null
-                  ? 30
-                  : (isSelected ? 20 : 10), // Boosted blur for battle screen
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: EdgeInsets.all(thickness ?? (isSelected ? 6 : 3)),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: currentGradient,
-              ),
-            ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
             child: Container(
-              clipBehavior: Clip.antiAlias,
+              padding: EdgeInsets.all(thickness ?? (isSelected ? 6 : 3)),
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(4),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: currentGradient,
+                ),
               ),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: GridPainter(color: Colors.white10),
-                    ),
-                  ),
-                  Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.skewX(0.15),
-                    child: Transform.scale(
-                      scale: 2.4,
-                      alignment: const Alignment(-0.5, -1),
-                      child: Image.asset(
-                        'assets/images/characters/$char.png',
-                        fit: BoxFit.cover,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: GridPainter(color: Colors.white10),
                       ),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.15),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.3),
-                          ],
+                    Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.skewX(0.15),
+                      child: Transform.scale(
+                        scale: 2.4,
+                        alignment: const Alignment(-0.5, -1),
+                        child: Image.asset(
+                          'assets/images/characters/$char.png',
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                  ),
-                  if (showName)
-                    Align(
-                      alignment: Alignment.bottomCenter,
+                    Positioned.fill(
                       child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.85),
-                          border: Border(
-                            top: BorderSide(
-                              color: currentGradient[0],
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                        child: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.skewX(0.15),
-                          child: Text(
-                            displayName
-                                .toUpperCase(), // Shows Player Name or Char Name
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize:
-                                  14, // Slightly smaller to fit longer player names
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                              fontStyle: FontStyle.italic,
-                            ),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.15),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.3),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                ],
+                    if (showName)
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.85),
+                            border: Border(
+                              top: BorderSide(
+                                color: currentGradient[0],
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.skewX(0.15),
+                            child: Text(
+                              displayName.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -2664,6 +2719,10 @@ class PlayerArenaInfo extends StatelessWidget {
   final int? selectedBakuganIndex;
   final Function(int)? onBakuganTap;
   final bool isSelecting;
+  final bool isExpanded;
+  final VoidCallback? onPortraitTap;
+  final Widget? portraitOverlay;
+  final bool portraitOverlayAbove;
 
   const PlayerArenaInfo({
     super.key,
@@ -2677,6 +2736,10 @@ class PlayerArenaInfo extends StatelessWidget {
     this.selectedBakuganIndex,
     this.onBakuganTap,
     this.isSelecting = false,
+    this.isExpanded = false,
+    this.onPortraitTap,
+    this.portraitOverlay,
+    this.portraitOverlayAbove = false,
   });
 
   @override
@@ -2692,21 +2755,38 @@ class PlayerArenaInfo extends StatelessWidget {
       Colors.blue.shade900,
     ];
 
-    final children = [
+    final double portraitWidth = isExpanded ? 230 : 180;
+    final double portraitHeight = isExpanded ? 270 : 210;
+    final double slotSize = isExpanded ? 116 : 90;
+    final double slotGap = isExpanded ? 18 : 15;
+    final double infoGap = isExpanded ? 54 : 40;
+
+    final rowChildren = [
       // --- CHARACTER PORTRAIT ---
-      SizedBox(
-        width: 180,
-        height: 210, // Increased size
-        child: CharacterMiniature(
-          char: player.character,
-          isSelected: isSelected,
-          showName: true,
-          label: player.name.toUpperCase(),
-          glowAlpha: glowAlpha,
-          thickness: thickness,
+      GestureDetector(
+        onTap: onPortraitTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeInOutCubicEmphasized,
+          width: portraitWidth,
+          height: portraitHeight,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeInOutCubicEmphasized,
+            scale: isExpanded ? 1.0 : 0.92,
+            child: CharacterMiniature(
+              char: player.character,
+              isSelected: isSelected,
+              showName: true,
+              label: player.name.toUpperCase(),
+              glowAlpha: glowAlpha,
+              thickness: thickness,
+            ),
+          ),
         ),
       ),
-      const SizedBox(width: 40), // Increased gap
+      SizedBox(width: infoGap),
       // --- INFO & DECK ---
       Column(
         crossAxisAlignment: isMirrored
@@ -2715,7 +2795,6 @@ class PlayerArenaInfo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 15),
-
           // --- BAKUGAN SLOTS ---
           if (isSelecting && selectedBakuganIndex == null)
             Padding(
@@ -2746,11 +2825,11 @@ class PlayerArenaInfo extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
-                    width: 90,
-                    height: 90,
+                    width: slotSize,
+                    height: slotSize,
                     margin: EdgeInsets.only(
-                      right: isMirrored ? 0 : 15,
-                      left: isMirrored ? 15 : 0,
+                      right: isMirrored ? 0 : slotGap,
+                      left: isMirrored ? slotGap : 0,
                     ),
                     padding: EdgeInsets.all(
                       isPicked ? 4 : 2,
@@ -2817,12 +2896,28 @@ class PlayerArenaInfo extends StatelessWidget {
       ),
     ];
 
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
-      children: isMirrored ? children.reversed.toList() : children,
+      children: isMirrored ? rowChildren.reversed.toList() : rowChildren,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (portraitOverlayAbove && portraitOverlay != null) ...[
+          portraitOverlay!,
+          const SizedBox(height: 12),
+        ],
+        row,
+        if (!portraitOverlayAbove && portraitOverlay != null) ...[
+          const SizedBox(height: 12),
+          portraitOverlay!,
+        ],
+      ],
     );
   }
+
 }
 
 class ScoreboardScreen extends StatefulWidget {
@@ -2841,6 +2936,23 @@ class ScoreboardScreen extends StatefulWidget {
 class _ScoreboardScreenState extends State<ScoreboardScreen> {
   late List<int> scores;
   late AudioPlayer _sfxPlayer;
+  final AudioPlayer _arenaPlayerA = AudioPlayer();
+  final AudioPlayer _arenaPlayerB = AudioPlayer();
+  final TextEditingController _matchCardNameController = TextEditingController();
+  final FocusNode _matchCardNameFocusNode = FocusNode();
+  Map<String, AbilityCard> _matchAbilityCards = {};
+  bool _isLoadingMatchAbilityCards = true;
+  List<String> _arenaPlaylist = const [];
+  int _currentArenaTrackIndex = 0;
+  int _currentArenaTrackLoopCount = 0;
+  bool _isArenaMuted = false;
+  bool _useArenaPlayerA = true;
+  bool _isArenaCrossfading = false;
+  AbilityCard? _focusedMatchAbilityCard;
+  int? _focusedMatchAbilityPlayerIndex;
+  int? _focusedMatchAbilityIndex;
+  late List<List<MatchPresentedAbility?>> _presentedMatchAbilities;
+  bool _isPauseMenuOpen = false;
 
   bool selectionMode = false;
   BakuganVariant? leftBakugan;
@@ -2857,16 +2969,1033 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     scores = widget.isTeamBattle
         ? [0, 0]
         : List.filled(widget.players.length, 0);
-    _playBattleMusic();
+    _presentedMatchAbilities = List.generate(
+      widget.players.length,
+          (_) => List<MatchPresentedAbility?>.filled(3, null),
+    );
+    _loadMatchAbilityCards();
+    _loadArenaPlaylistAndStart();
   }
 
-  Future<void> _playBattleMusic() async {
+  AudioPlayer get _activeArenaPlayer => _useArenaPlayerA ? _arenaPlayerA : _arenaPlayerB;
+  AudioPlayer get _inactiveArenaPlayer => _useArenaPlayerA ? _arenaPlayerB : _arenaPlayerA;
+
+  Future<void> _loadArenaPlaylistAndStart() async {
     try {
       await _bgMusicPlayer.stop();
-      await _bgMusicPlayer.setVolume(0.4);
-      await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgMusicPlayer.play(AssetSource('music/arena/arena-1.flac'));
+      final AssetManifest manifest = await AssetManifest.loadFromAssetBundle(
+        rootBundle,
+      );
+      final tracks = manifest
+          .listAssets()
+          .where(
+            (asset) =>
+                asset.startsWith('assets/music/arena/') &&
+                asset.endsWith('.flac') &&
+                !asset.endsWith('.DS_Store'),
+          )
+          .toList()
+        ..sort();
+      _arenaPlaylist = tracks.isNotEmpty
+          ? tracks
+          : const ['assets/music/arena/arena-1.flac'];
+      _arenaPlayerA.onPlayerComplete.listen((_) {
+        if (_useArenaPlayerA) {
+          _handleArenaTrackComplete();
+        }
+      });
+      _arenaPlayerB.onPlayerComplete.listen((_) {
+        if (!_useArenaPlayerA) {
+          _handleArenaTrackComplete();
+        }
+      });
+      await _playArenaTrack(0, immediate: true);
+      if (mounted) setState(() {});
     } catch (_) {}
+  }
+
+  Future<void> _setArenaPlayerVolume(AudioPlayer player, double volume) async {
+    try {
+      await player.setVolume(_isArenaMuted ? 0 : volume);
+    } catch (_) {}
+  }
+
+  Future<void> _playArenaTrack(int index, {bool immediate = false}) async {
+    if (_arenaPlaylist.isEmpty || _isArenaCrossfading) return;
+    final normalizedIndex = (index % _arenaPlaylist.length + _arenaPlaylist.length) % _arenaPlaylist.length;
+    final nextTrack = _arenaPlaylist[normalizedIndex];
+    final nextPlayer = immediate ? _activeArenaPlayer : _inactiveArenaPlayer;
+    final currentPlayer = _activeArenaPlayer;
+
+    try {
+      _isArenaCrossfading = true;
+      await nextPlayer.stop();
+      await nextPlayer.setReleaseMode(ReleaseMode.stop);
+      await _setArenaPlayerVolume(nextPlayer, 0);
+      await nextPlayer.play(
+        AssetSource(nextTrack.replaceFirst('assets/', '')),
+      );
+
+      if (immediate) {
+        _currentArenaTrackIndex = normalizedIndex;
+        _currentArenaTrackLoopCount = 0;
+        await _setArenaPlayerVolume(nextPlayer, 0.4);
+        _isArenaCrossfading = false;
+        if (mounted) setState(() {});
+        return;
+      }
+
+      const steps = 12;
+      for (int step = 1; step <= steps; step++) {
+        final t = step / steps;
+        await _setArenaPlayerVolume(nextPlayer, 0.4 * t);
+        await _setArenaPlayerVolume(currentPlayer, 0.4 * (1 - t));
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+      await currentPlayer.stop();
+      _useArenaPlayerA = !_useArenaPlayerA;
+      _currentArenaTrackIndex = normalizedIndex;
+      _currentArenaTrackLoopCount = 0;
+      _isArenaCrossfading = false;
+      if (mounted) setState(() {});
+    } catch (_) {
+      _isArenaCrossfading = false;
+    }
+  }
+
+  Future<void> _handleArenaTrackComplete() async {
+    if (_currentArenaTrackLoopCount == 0) {
+      _currentArenaTrackLoopCount = 1;
+      final activeTrack = _arenaPlaylist[_currentArenaTrackIndex];
+      try {
+        await _activeArenaPlayer.stop();
+        await _activeArenaPlayer.play(
+          AssetSource(activeTrack.replaceFirst('assets/', '')),
+        );
+        await _setArenaPlayerVolume(_activeArenaPlayer, 0.4);
+      } catch (_) {}
+      if (mounted) setState(() {});
+      return;
+    }
+    await _playArenaTrack(_currentArenaTrackIndex + 1);
+  }
+
+  Future<void> _pauseArenaPlaylist() async {
+    try {
+      await _arenaPlayerA.pause();
+      await _arenaPlayerB.pause();
+    } catch (_) {}
+  }
+
+  Future<void> _resumeArenaPlaylist() async {
+    try {
+      await _activeArenaPlayer.resume();
+      await _setArenaPlayerVolume(_activeArenaPlayer, 0.4);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleArenaMute() async {
+    setState(() => _isArenaMuted = !_isArenaMuted);
+    await _setArenaPlayerVolume(_arenaPlayerA, _useArenaPlayerA ? 0.4 : 0);
+    await _setArenaPlayerVolume(_arenaPlayerB, _useArenaPlayerA ? 0 : 0.4);
+  }
+
+  Future<void> _playRevealSfx(String assetName) async {
+    try {
+      await _sfxPlayer.stop();
+      await _sfxPlayer.play(AssetSource('sound/$assetName'));
+    } catch (_) {}
+  }
+
+  Future<void> _loadMatchAbilityCards() async {
+    try {
+      final String rawJson = await rootBundle.loadString(
+        'assets/images/cards/cards.json',
+      );
+      final decodedJson = jsonDecode(rawJson);
+      if (decodedJson is! Map) return;
+      final decoded = Map<String, dynamic>.from(decodedJson);
+      final cardsNode = decoded['cards'];
+      if (cardsNode is! Map) return;
+
+      final cards = Map<String, dynamic>.from(cardsNode);
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final assets = manifest
+          .listAssets()
+          .where(
+            (asset) =>
+                asset.startsWith('assets/images/cards/') &&
+                asset != 'assets/images/cards/anverse.png' &&
+                asset.endsWith('.png'),
+          )
+          .toList();
+
+      final Map<String, AbilityCard> loadedAbilityCards = {};
+      for (final entry in cards.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (value is! Map) continue;
+        final data = Map<String, dynamic>.from(value);
+        if ((data['type'] ?? '').toString().trim().toLowerCase() != 'ability') {
+          continue;
+        }
+
+        final String name = (data['name'] ?? '').toString().trim();
+        final String? fileName = data['file']?.toString();
+        final String cardClass =
+            (data['card_class'] ?? 'blue').toString().toLowerCase();
+        final descriptionsRaw = data['descriptions'];
+        final Map<String, dynamic> descriptions =
+            descriptionsRaw is Map<String, dynamic>
+            ? descriptionsRaw
+            : descriptionsRaw is Map
+            ? Map<String, dynamic>.from(descriptionsRaw)
+            : const {};
+        final String? descriptionEn = descriptions['en']?.toString();
+        final String? descriptionEs = descriptions['es']?.toString();
+        final attributesRaw = data['attributes'];
+        final Map<String, int> attributes = <String, int>{};
+        if (attributesRaw is Map) {
+          for (final attrEntry in attributesRaw.entries) {
+            final attrKey = attrEntry.key.toString().toLowerCase();
+            final attrValue = attrEntry.value;
+            if (attrValue is num) {
+              attributes[attrKey] = attrValue.toInt();
+            }
+          }
+        }
+        final effectsRaw = data['effects'];
+        final List<dynamic> effects =
+            effectsRaw is List ? List<dynamic>.from(effectsRaw) : const [];
+        final rulesRaw = data['rules'];
+        final List<dynamic> rules =
+            rulesRaw is List ? List<dynamic>.from(rulesRaw) : const [];
+        final Set<String> timings = <String>{};
+        final timingsRaw = data['timings'];
+        if (timingsRaw is List) {
+          for (final timing in timingsRaw) {
+            timings.add(timing.toString().toLowerCase());
+          }
+        }
+        for (final rule in rules) {
+          if (rule is Map && rule['timing'] != null) {
+            timings.add(rule['timing'].toString().toLowerCase());
+          }
+        }
+        for (final effect in effects) {
+          if (effect is Map && effect['timing'] != null) {
+            timings.add(effect['timing'].toString().toLowerCase());
+          }
+        }
+
+        final imagePath = _matchCardImagePath(
+          cardKey: key,
+          cardName: name,
+          assetPaths: assets,
+          fileName: fileName,
+        );
+        loadedAbilityCards[key] = AbilityCard(
+          key: key,
+          name: name,
+          imagePath: imagePath ?? 'assets/images/cards/anverse.png',
+          descriptionEn: descriptionEn,
+          descriptionEs: descriptionEs,
+          attributes: attributes,
+          cardClass: cardClass,
+          timings: timings,
+          effects: effects,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _matchAbilityCards = loadedAbilityCards;
+        _isLoadingMatchAbilityCards = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMatchAbilityCards = false;
+      });
+    }
+  }
+
+  bool _isMatchStageAbilityCard(AbilityCard card) {
+    return !card.timings.contains('start_of_battle') &&
+        !card.timings.contains('during_battle');
+  }
+
+  List<AbilityCard> _rankMatchAbilityCardMatches(String input) {
+    final query = _normalizeCardLookup(input);
+    if (query.isEmpty) {
+      return _matchAbilityCards.values
+          .where(_isMatchStageAbilityCard)
+          .take(8)
+          .toList();
+    }
+
+    final ranked = _matchAbilityCards.values
+        .where(_isMatchStageAbilityCard)
+        .map((card) {
+          final normalizedName = _normalizeCardLookup(card.name);
+          final normalizedKey = _normalizeCardLookup(card.key);
+          int score = 0;
+          if (normalizedName == query) score += 1000;
+          if (normalizedKey == query) score += 900;
+          if (normalizedName.startsWith(query)) score += 400;
+          if (normalizedKey.startsWith(query)) score += 300;
+          if (normalizedName.contains(query)) score += 150;
+          if (normalizedKey.contains(query)) score += 100;
+          return (card: card, score: score);
+        })
+        .where((entry) => entry.score > 0)
+        .toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    return ranked.map((entry) => entry.card).toList();
+  }
+
+  AbilityCard? _findMatchAbilityCard(String input) {
+    final query = _normalizeCardLookup(input);
+    if (query.isEmpty) return null;
+    final matches = _rankMatchAbilityCardMatches(input);
+    if (matches.isEmpty) return null;
+    final topMatch = matches.first;
+    final topName = _normalizeCardLookup(topMatch.name);
+    final topKey = _normalizeCardLookup(topMatch.key);
+    if (topName == query || topKey == query) {
+      return topMatch;
+    }
+    return null;
+  }
+
+  Future<void> _openMatchAbilityPrompt(int playerIndex, int slotIndex) async {
+    if (_isLoadingMatchAbilityCards || selectionMode) return;
+    if (_presentedMatchAbilities[playerIndex][slotIndex] != null) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    _matchCardNameController.clear();
+
+    final selectedCard = await showDialog<AbilityCard>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submit() async {
+              final match = _findMatchAbilityCard(_matchCardNameController.text);
+              if (match == null) {
+                setDialogState(() {
+                  errorText = 'Ability card not found or not available outside battle.';
+                });
+                return;
+              }
+              Navigator.of(context).pop(match);
+            }
+
+            return Dialog(
+              backgroundColor: const Color(0xFF111318),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Container(
+                width: 540,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24, width: 2),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Present Match Ability',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Choose an ability card with no battle timing to stage it on the match screen.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white.withValues(alpha: 0.78),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    RawAutocomplete<AbilityCard>(
+                      textEditingController: _matchCardNameController,
+                      focusNode: _matchCardNameFocusNode,
+                      displayStringForOption: (option) => option.name,
+                      optionsBuilder: (textEditingValue) {
+                        return _rankMatchAbilityCardMatches(textEditingValue.text);
+                      },
+                      onSelected: (option) => Navigator.of(context).pop(option),
+                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          autofocus: true,
+                          onChanged: (_) {
+                            if (errorText != null) {
+                              setDialogState(() => errorText = null);
+                            }
+                          },
+                          onSubmitted: (_) => submit(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Example: Marucho\'s Throw',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.35),
+                            ),
+                            errorText: errorText,
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.06),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        final matches = options.toList();
+                        if (matches.isEmpty) return const SizedBox.shrink();
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            color: const Color(0xFF171B22),
+                            elevation: 12,
+                            borderRadius: BorderRadius.circular(16),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 540, maxHeight: 260),
+                              child: ListView.separated(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shrinkWrap: true,
+                                itemCount: matches.length,
+                                separatorBuilder: (_, _) => const Divider(height: 1, color: Colors.white12),
+                                itemBuilder: (context, index) {
+                                  final card = matches[index];
+                                  return InkWell(
+                                    onTap: () => onSelected(card),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              card.name,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            card.key,
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.55),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(
+                            'CANCEL',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                          ),
+                          child: const Text(
+                            'PRESENT',
+                            style: TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (selectedCard != null) {
+      _presentMatchAbility(playerIndex, slotIndex, selectedCard);
+    }
+  }
+
+  void _presentMatchAbility(int playerIndex, int slotIndex, AbilityCard card) {
+    if (_presentedMatchAbilities[playerIndex][slotIndex] != null) return;
+
+    _playRevealSfx('ability_reveal.wav');
+
+    setState(() {
+      _presentedMatchAbilities[playerIndex][slotIndex] =
+          MatchPresentedAbility(card: card);
+      _focusedMatchAbilityCard = card;
+      _focusedMatchAbilityPlayerIndex = playerIndex;
+      _focusedMatchAbilityIndex = slotIndex;
+    });
+  }
+
+
+  void _focusPresentedAbility(int playerIndex, int abilityIndex) {
+    final presented = _presentedMatchAbilities[playerIndex][abilityIndex];
+    if (presented == null) return;
+
+    setState(() {
+      _focusedMatchAbilityCard = presented.card;
+      _focusedMatchAbilityPlayerIndex = playerIndex;
+      _focusedMatchAbilityIndex = abilityIndex;
+    });
+  }
+
+  void _togglePresentedAbility(int playerIndex, int abilityIndex) {
+    final current = _presentedMatchAbilities[playerIndex][abilityIndex];
+    if (current == null) return;
+
+    setState(() {
+      _presentedMatchAbilities[playerIndex][abilityIndex] = current.copyWith(
+        isActive: !current.isActive,
+      );
+    });
+  }
+
+  Widget _buildArenaPlaylistBar() {
+    final trackLabel = _arenaPlaylist.isEmpty
+        ? 'LOADING...'
+        : _arenaPlaylist[_currentArenaTrackIndex]
+            .split('/')
+            .last
+            .replaceAll('.flac', '')
+            .replaceAll('-', ' ')
+            .toUpperCase();
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 18),
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.skewX(-0.12),
+          child: Container(
+            width: 600,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white24, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 28,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(0.12),
+              child: Row(
+                children: [
+                  _buildPlaylistIconButton(
+                    icon: Icons.skip_previous,
+                    onTap: () => _playArenaTrack(_currentArenaTrackIndex - 1),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'ARENA PLAYLIST',
+                          style: TextStyle(
+                            color: Colors.white60,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        Text(
+                          trackLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildPlaylistIconButton(
+                    icon: _isArenaMuted ? Icons.volume_off : Icons.volume_up,
+                    onTap: _toggleArenaMute,
+                  ),
+                  const SizedBox(width: 10),
+                  _buildPlaylistIconButton(
+                    icon: Icons.skip_next,
+                    onTap: () => _playArenaTrack(_currentArenaTrackIndex + 1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaylistIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Icon(icon, color: Colors.white, size: 24),
+      ),
+    );
+  }
+
+  Widget _buildMatchAbilityOverlay() {
+    final card = _focusedMatchAbilityCard;
+    if (card == null) return const SizedBox.shrink();
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: false,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.45),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InteractiveCard(
+                  imagePath: card.imagePath,
+                  width: 380,
+                  onTap: () {
+                    setState(() {
+                      _focusedMatchAbilityCard = null;
+                      _focusedMatchAbilityPlayerIndex = null;
+                      _focusedMatchAbilityIndex = null;
+                    });
+                  },
+                ),
+                const SizedBox(height: 46),
+                _buildMatchAbilityDescriptionPanel(card),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMatchAbilityDescriptionPanel(AbilityCard card) {
+    final hasDescription =
+        (card.descriptionEn?.trim().isNotEmpty ?? false) ||
+        (card.descriptionEs?.trim().isNotEmpty ?? false);
+    if (!hasDescription) return const SizedBox.shrink();
+
+    final accentColor = _abilityDescriptionAccentColors[card.cardClass] ??
+        _abilityDescriptionAccentColors['blue']!;
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.skewX(-0.12),
+      child: Container(
+        width: 560,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _abilityDescriptionBorderGradients[card.cardClass] ??
+                _abilityDescriptionBorderGradients['blue']!,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color:
+                  (_abilityDescriptionAccentColors[card.cardClass] ??
+                          _abilityDescriptionAccentColors['blue']!)
+                      .withValues(alpha: 0.18),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.65),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: const Color(0xFF05080D),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: GridPainter(
+                    color: accentColor.withValues(alpha: 0.07),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.03),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.10),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(0.12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.name.toUpperCase(),
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 1.6,
+                        ),
+                      ),
+                      Container(
+                        height: 1.2,
+                        color: accentColor.withValues(alpha: 0.28),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        card.descriptionEs ?? card.descriptionEn ?? '',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.96),
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          height: 1.28,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileAbilityRail(int playerIndex, {required bool alignRight}) {
+    final abilities = _presentedMatchAbilities[playerIndex];
+    const int maxSlots = 3;
+
+    return SizedBox(
+      width: 530,
+      height: 104,
+      child: Align(
+        alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          textDirection: alignRight ? TextDirection.rtl : TextDirection.ltr,
+          children: List.generate(maxSlots, (index) {
+            final presented = abilities[index];
+            final hasCard = presented != null;
+
+            final isHidden =
+                hasCard &&
+                    _focusedMatchAbilityCard != null &&
+                    _focusedMatchAbilityPlayerIndex == playerIndex &&
+                    _focusedMatchAbilityIndex == index;
+
+            final isDisabled = _isLoadingMatchAbilityCards || selectionMode;
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeInOutCubic,
+              width: isHidden ? 0 : 90,
+              height: 90,
+              margin: EdgeInsets.symmetric(
+                horizontal: isHidden ? 0 : _matchAbilityRailSpacing / 2,
+              ),
+              child: IgnorePointer(
+                ignoring: isHidden,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  opacity: isHidden ? 0 : 1,
+                  child: AnimatedScale(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    scale: isHidden ? 0.86 : 1,
+                    child: hasCard
+                        ? GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onLongPress: () =>
+                          _togglePresentedAbility(playerIndex, index),
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 180),
+                        opacity: presented.isActive ? 1.0 : 0.48,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 320),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) {
+                              final rotate = Tween<double>(
+                                begin: pi / 2,
+                                end: 0,
+                              ).animate(animation);
+
+                              return AnimatedBuilder(
+                                animation: rotate,
+                                child: child,
+                                builder: (context, child) {
+                                  return Transform(
+                                    alignment: Alignment.center,
+                                    transform: Matrix4.identity()
+                                      ..setEntry(3, 2, 0.0015)
+                                      ..rotateY(rotate.value),
+                                    child: child,
+                                  );
+                                },
+                              );
+                            },
+                            child: InteractiveCard(
+                              key: ValueKey(
+                                'ability_${playerIndex}_${index}_${presented.card.key}',
+                              ),
+                              imagePath: presented.card.imagePath,
+                              width: 90,
+                              onTap: () =>
+                                  _focusPresentedAbility(playerIndex, index),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                        : Opacity(
+                      opacity: isDisabled ? 0.4 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: isDisabled,
+                        child: InteractiveCard(
+                          key: ValueKey('anverse_${playerIndex}_${index}'),
+                          imagePath: 'assets/images/cards/anverse.png',
+                          width: 90,
+                          onTap: () => _openMatchAbilityPrompt(playerIndex, index),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget? _buildProfileAbilityOverlay(int playerIndex, {required bool above}) {
+    if (selectionMode) {
+      return null;
+    }
+    return _buildProfileAbilityRail(playerIndex, alignRight: playerIndex.isOdd);
+  }
+
+  Future<void> _playCharacterSelectMusic() async {
+    try {
+      await _arenaPlayerA.stop();
+      await _arenaPlayerB.stop();
+      await _bgMusicPlayer.stop();
+      await _bgMusicPlayer.play(AssetSource('music/menu/Menu.flac'));
+    } catch (_) {}
+  }
+
+  Future<void> _openPauseMenu() async {
+    if (_isPauseMenuOpen) return;
+    _isPauseMenuOpen = true;
+    await _pauseArenaPlaylist();
+    if (!mounted) return;
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: const Color(0xFF111318),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(-0.12),
+            child: Container(
+              width: 460,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF6E5A2A),
+                    Color(0xFFDCC9A7),
+                    Color(0xFF2A2E38),
+                  ],
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 28,
+                    offset: Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A0D12),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.skewX(0.12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'PAUSED',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 4,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        BakuganButton(
+                          text: 'RESUME',
+                          onPressed: () => Navigator.of(context).pop('resume'),
+                          width: 300,
+                          height: 60,
+                        ),
+                        const SizedBox(height: 12),
+                        BakuganButton(
+                          text: 'RESTART',
+                          onPressed: () => Navigator.of(context).pop('selection'),
+                          width: 300,
+                          height: 60,
+                          color: Colors.orangeAccent,
+                        ),
+                        const SizedBox(height: 12),
+                        BakuganButton(
+                          text: 'MAIN MENU',
+                          onPressed: () => Navigator.of(context).pop('main_menu'),
+                          width: 300,
+                          height: 60,
+                          color: Colors.redAccent,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    _isPauseMenuOpen = false;
+    if (!mounted) return;
+    if (action == 'main_menu') {
+      Navigator.of(context).pushAndRemoveUntil(
+        _fadeRoute(const MainMenuScreen()),
+        (route) => false,
+      );
+      return;
+    }
+    if (action == 'selection') {
+      await _playCharacterSelectMusic();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      return;
+    }
+    await _resumeArenaPlaylist();
   }
 
   void _addPoint(int index) async {
@@ -2911,55 +4040,49 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   @override
   void dispose() {
+    _matchCardNameController.dispose();
+    _matchCardNameFocusNode.dispose();
+    _arenaPlayerA.dispose();
+    _arenaPlayerB.dispose();
     _sfxPlayer.dispose();
     super.dispose();
   }
 
-  Widget _buildSelectionStatus(bool isReady, String side) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: isReady
-            ? Colors.greenAccent.withValues(alpha: 0.2)
-            : Colors.redAccent.withValues(alpha: 0.2),
-        border: Border.all(
-          color: isReady ? Colors.greenAccent : Colors.redAccent,
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        isReady ? 'READY' : 'WAITING...',
-        style: TextStyle(
-          color: isReady ? Colors.greenAccent : Colors.redAccent,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 2,
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/match-bg.png'),
-            fit: BoxFit.cover,
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        const SingleActivator(LogicalKeyboardKey.escape): const ActivateIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<Intent>(
+            onInvoke: (_) {
+              _openPauseMenu();
+              return null;
+            },
           ),
-        ),
-        child: Stack(
-          children: [
-            // Logo in the center
-            IgnorePointer(
-              // Ensure the logo doesn't block any interactions
-              child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  child: !selectionMode
-                      ? Container(
-                          key: const ValueKey('logo'),
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            body: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/match-bg.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Stack(
+                children: [
+                _buildArenaPlaylistBar(),
+                IgnorePointer(
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
                           width: 600,
                           decoration: BoxDecoration(
                             boxShadow: [
@@ -2974,64 +4097,11 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                             'assets/images/logo.png',
                             fit: BoxFit.contain,
                           ),
-                        )
-                      : Column(
-                          key: const ValueKey('prompt'),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'SELECT YOUR',
-                              style: TextStyle(
-                                fontFamily: 'title_font',
-                                fontSize: 40,
-                                color: Colors.white70,
-                                letterSpacing: 10,
-                              ),
-                            ),
-                            Text(
-                              'BAKUGAN',
-                              style: TextStyle(
-                                fontFamily: 'title_font',
-                                fontSize: 120,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                    blurRadius: 40,
-                                    color: Colors.blueAccent,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildSelectionStatus(
-                                  leftBakugan != null,
-                                  "LEFT",
-                                ),
-                                const SizedBox(width: 40),
-                                const Text(
-                                  'VS',
-                                  style: TextStyle(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.bold,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                                const SizedBox(width: 40),
-                                _buildSelectionStatus(
-                                  rightBakugan != null,
-                                  "RIGHT",
-                                ),
-                              ],
-                            ),
-                          ],
                         ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
 
             if (!widget.isTeamBattle) ...[
               _buildCornerPlayer(0, Alignment.topLeft),
@@ -3048,74 +4118,109 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
             ],
 
             // Battle button
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: BakuganButton(
-                  text: !selectionMode
-                      ? 'BATTLE'
-                      : (leftBakugan != null && rightBakugan != null
-                            ? 'FIGHT!'
-                            : 'CHOOSE...'),
-                  onPressed: () {
-                    if (!selectionMode) {
-                      _playClick();
-                      setState(() {
-                        selectionMode = true;
-                        leftBakugan = null;
-                        rightBakugan = null;
-                        leftPlayer = null;
-                        rightPlayer = null;
-                      });
-                    } else if (leftBakugan != null && rightBakugan != null) {
-                      Navigator.push(
-                        context,
-                        _fadeRoute(
-                          BattleArenaScreen(
-                            leftPlayer: leftPlayer!,
-                            rightPlayer: rightPlayer!,
-                            leftBakugan: leftBakugan!,
-                            rightBakugan: rightBakugan!,
-                            usedGateCardsInAllPiles: scores.fold(
-                              0,
-                              (sum, score) => sum + score,
-                            ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (selectionMode) ...[
+                          BakuganButton(
+                            text: 'BACK',
+                            onPressed: () {
+                              setState(() {
+                                selectionMode = false;
+                                leftBakugan = null;
+                                rightBakugan = null;
+                                leftPlayer = null;
+                                rightPlayer = null;
+                                leftBakuganIdx = null;
+                                rightBakuganIdx = null;
+                              });
+                            },
+                            width: 180,
+                            height: 85,
                           ),
-                        ),
-                      ).then((winnerIndex) {
-                        if (!mounted || winnerIndex == null) return;
-                        final sideWinner = winnerIndex as int;
-                        final winningPlayer = sideWinner == 0
-                            ? leftPlayer
-                            : rightPlayer;
-                        if (winningPlayer == null) return;
-                        _addPoint(_scoreIndexForPlayer(winningPlayer));
-                      });
-                    }
-                  },
-                  color:
-                      (selectionMode &&
-                          (leftBakugan == null || rightBakugan == null))
-                      ? Colors.grey
-                      : null,
-                  width: 300, // Increased
-                  height: 85, // Increased
-                ),
-              ),
-            ),
+                          const SizedBox(width: 14),
+                        ],
+                        BakuganButton(
+                          text: !selectionMode
+                              ? 'BATTLE'
+                              : (leftBakugan != null && rightBakugan != null
+                                    ? 'FIGHT!'
+                                    : 'CHOOSE...'),
+                          onPressed: () {
+                            if (!selectionMode) {
+                              _playClick();
+                              setState(() {
+                                selectionMode = true;
+                                leftBakugan = null;
+                                rightBakugan = null;
+                                leftPlayer = null;
+                                rightPlayer = null;
+                              });
+                            } else if (leftBakugan != null && rightBakugan != null) {
+                              final leftPlayerIndex = widget.players.indexOf(leftPlayer!);
+                              final rightPlayerIndex = widget.players.indexOf(rightPlayer!);
 
-            // Back button
-            Positioned(
-              bottom: 0,
-              child: BakuganButton(
-                text: 'X',
-                onPressed: () => Navigator.of(context).pop(),
-                width: 80,
-                height: 50,
+                              _pauseArenaPlaylist();
+                              Navigator.push(
+                                context,
+                                _fadeRoute(
+                                  BattleArenaScreen(
+                                    leftPlayer: leftPlayer!,
+                                    rightPlayer: rightPlayer!,
+                                    leftPlayerIndex: leftPlayerIndex,
+                                    rightPlayerIndex: rightPlayerIndex,
+                                    leftBakugan: leftBakugan!,
+                                    rightBakugan: rightBakugan!,
+                                    usedGateCardsInAllPiles: scores.fold(
+                                      0,
+                                          (sum, score) => sum + score,
+                                    ),
+                                    presentedMatchAbilities: _presentedMatchAbilities,
+                                  ),
+                                ),
+                              ).then((winnerIndex) {
+                                _resumeArenaPlaylist();
+                                if (!mounted || winnerIndex == null) return;
+                                final sideWinner = winnerIndex as int;
+                                final winningPlayer = sideWinner == 0
+                                    ? leftPlayer
+                                    : rightPlayer;
+                                if (winningPlayer == null) return;
+                                _addPoint(_scoreIndexForPlayer(winningPlayer));
+                              });
+                            }
+                          },
+                          color:
+                              (selectionMode &&
+                                  (leftBakugan == null || rightBakugan == null))
+                              ? Colors.grey
+                              : null,
+                          width: 300,
+                          height: 85,
+                        ),
+                        if (!selectionMode) ...[
+                          const SizedBox(width: 14),
+                          BakuganButton(
+                            text: 'PAUSE',
+                            onPressed: _openPauseMenu,
+                            width: 180,
+                            height: 85,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+            
+            _buildMatchAbilityOverlay(),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -3169,9 +4274,13 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       glowAlpha: 0.6,
       thickness: 6.0,
       isSelecting: selectionMode,
+      isExpanded: selectionMode,
       selectedBakuganIndex: isMirrored
           ? (rightPlayer == player ? rightBakuganIdx : null)
           : (leftPlayer == player ? leftBakuganIdx : null),
+      onPortraitTap: null,
+      portraitOverlay: _buildProfileAbilityOverlay(index, above: false),
+      portraitOverlayAbove: false,
       onBakuganTap: selectionMode
           ? (bIdx) => isMirrored
                 ? _selectRight(player, bIdx)
@@ -3200,9 +4309,20 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           glowAlpha: 0.6,
           thickness: 6.0,
           isSelecting: selectionMode,
+          isExpanded: selectionMode,
           selectedBakuganIndex: isMirrored
               ? (rightPlayer == player ? rightBakuganIdx : null)
               : (leftPlayer == player ? leftBakuganIdx : null),
+          onPortraitTap: null,
+          portraitOverlay: _buildProfileAbilityOverlay(
+            index,
+            above:
+                alignment == Alignment.bottomLeft ||
+                alignment == Alignment.bottomRight,
+          ),
+          portraitOverlayAbove:
+              alignment == Alignment.bottomLeft ||
+              alignment == Alignment.bottomRight,
           onBakuganTap: selectionMode
               ? (bIdx) => isMirrored
                     ? _selectRight(player, bIdx)
@@ -3446,9 +4566,9 @@ class _InteractiveCardState extends State<InteractiveCard> {
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.white.withValues(alpha: _isHovered ? 0.8 : 0.6),
-                  blurRadius: _isHovered ? 100 : 80,
-                  spreadRadius: _isHovered ? 25 : 15,
+                  color: Colors.white.withValues(alpha: _isHovered ? 0.3 : 0.2),
+                  blurRadius: _isHovered ? 40 : 25,
+                  spreadRadius: _isHovered ? 8 : 5,
                 ),
               ],
             ),
@@ -3463,19 +4583,87 @@ class _InteractiveCardState extends State<InteractiveCard> {
   }
 }
 
+class _MatchAbilityMiniCard extends StatefulWidget {
+  final String imagePath;
+  final bool isActive;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _MatchAbilityMiniCard({
+    required this.imagePath,
+    required this.isActive,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  State<_MatchAbilityMiniCard> createState() => _MatchAbilityMiniCardState();
+}
+
+class _MatchAbilityMiniCardState extends State<_MatchAbilityMiniCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final opacity = widget.isActive ? 1.0 : 0.48;
+    final glowOpacity = _isHovered ? 0.26 : 0.16;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.08 : 1.0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: opacity,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: glowOpacity),
+                    blurRadius: _isHovered ? 24 : 18,
+                    spreadRadius: _isHovered ? 2 : 1,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.asset(widget.imagePath, width: 90),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class BattleArenaScreen extends StatefulWidget {
   final PlayerData leftPlayer;
   final PlayerData rightPlayer;
+  final int leftPlayerIndex;
+  final int rightPlayerIndex;
   final BakuganVariant leftBakugan;
   final BakuganVariant rightBakugan;
   final int usedGateCardsInAllPiles;
+  final List<List<MatchPresentedAbility?>> presentedMatchAbilities;
 
   const BattleArenaScreen({
     super.key,
     required this.leftPlayer,
     required this.rightPlayer,
+    required this.leftPlayerIndex,
+    required this.rightPlayerIndex,
     required this.leftBakugan,
     required this.rightBakugan,
+    required this.presentedMatchAbilities,
     this.usedGateCardsInAllPiles = 0,
   });
 
@@ -3485,23 +4673,37 @@ class BattleArenaScreen extends StatefulWidget {
 
 class _BattleArenaScreenState extends State<BattleArenaScreen>
     with SingleTickerProviderStateMixin {
+  List<MatchPresentedAbility?> get _leftAbilitySlots =>
+      widget.presentedMatchAbilities[widget.leftPlayerIndex];
+
+  List<MatchPresentedAbility?> get _rightAbilitySlots =>
+      widget.presentedMatchAbilities[widget.rightPlayerIndex];
+
+  final Set<int> _leftAppliedAbilitySlots = {};
+  final Set<int> _rightAppliedAbilitySlots = {};
+  AbilityCard? get _focusedLeftAbilityCard =>
+      _focusedLeftAbilitySlotIndex == null
+          ? null
+          : _leftAbilitySlots[_focusedLeftAbilitySlotIndex!]?.card;
+
+  AbilityCard? get _focusedRightAbilityCard =>
+      _focusedRightAbilitySlotIndex == null
+          ? null
+          : _rightAbilitySlots[_focusedRightAbilitySlotIndex!]?.card;
   final TextEditingController _cardNameController = TextEditingController();
   final FocusNode _cardNameFocusNode = FocusNode();
 
   late final AnimationController _powerAnimationController;
   late final AudioPlayer _powerStartPlayer;
   late final AudioPlayer _countTickPlayer;
+  late final AudioPlayer _revealSfxPlayer;
   Map<String, GateCard> _gateCards = {};
   Map<String, AbilityCard> _abilityCards = {};
   bool _isLoadingGateCards = true;
   bool _isLoadingAbilityCards = true;
   GateCard? _revealedCard;
-  final List<AbilityCard> _leftAbilityCards = [];
-  final List<AbilityCard> _rightAbilityCards = [];
-  int _leftAppliedAbilityCount = 0;
-  int _rightAppliedAbilityCount = 0;
-  AbilityCard? _focusedLeftAbilityCard;
-  AbilityCard? _focusedRightAbilityCard;
+  int? _focusedLeftAbilitySlotIndex;
+  int? _focusedRightAbilitySlotIndex;
   bool _showLeftAbilityPresentation = false;
   bool _showRightAbilityPresentation = false;
   bool _showLeftAbilityFlash = false;
@@ -3531,6 +4733,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _rightAnimationStartGPower = _rightCurrentGPower;
     _powerStartPlayer = AudioPlayer();
     _countTickPlayer = AudioPlayer();
+    _revealSfxPlayer = AudioPlayer();
     _powerAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
@@ -3607,6 +4810,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   Future<void> _playAfterAbilityMusic() async {
     await _playBattleMusicTrack('music/battle/after_ability.flac');
+  }
+
+  Future<void> _playBattleRevealSfx(String assetName) async {
+    try {
+      await _revealSfxPlayer.stop();
+      await _revealSfxPlayer.play(AssetSource('sound/$assetName'));
+    } catch (_) {}
   }
 
   Future<void> _animatePowerChange({
@@ -4427,6 +5637,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     try {
       await precacheImage(AssetImage(card.imagePath), context);
     } catch (_) {}
+    _playBattleRevealSfx('gate_reveal.wav');
     _stopPowerTickLoop();
     _powerAnimationController.stop();
 
@@ -4469,6 +5680,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _presentAbilityCard(bool isLeft, AbilityCard card) async {
+    final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
+    final int slotIndex = slots.indexWhere((slot) => slot == null);
+
+    if (slotIndex == -1) return;
+
     final pendingBonus = card.calculateBonus(
       isLeft ? widget.leftBakugan : widget.rightBakugan,
     );
@@ -4477,18 +5693,23 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       await precacheImage(AssetImage(card.imagePath), context);
     } catch (_) {}
 
+    _playBattleRevealSfx('ability_reveal.wav');
+
     setState(() {
-      _winnerText = null;
+      slots[slotIndex] = MatchPresentedAbility(card: card, isActive: true);
+
       if (isLeft) {
-        _leftAbilityCards.add(card);
-        _focusedLeftAbilityCard = card;
+        _focusedLeftAbilitySlotIndex = slotIndex;
       } else {
-        _rightAbilityCards.add(card);
-        _focusedRightAbilityCard = card;
+        _focusedRightAbilitySlotIndex = slotIndex;
       }
     });
 
-    _showAbilityPresentation(isLeft, withFlash: true);
+    _showAbilityPresentation(
+      isLeft,
+      withFlash: true,
+      slotIndex: slotIndex,
+    );
 
     await Future<void>.delayed(const Duration(milliseconds: 220));
     if (!mounted) return;
@@ -4515,53 +5736,74 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Future<void> _applyQueuedAbilityCards() async {
     if (_isResolvingCard || _revealedCard == null) return;
 
-    final leftPendingCards = _leftAbilityCards.skip(_leftAppliedAbilityCount);
-    final rightPendingCards = _rightAbilityCards.skip(
-      _rightAppliedAbilityCount,
-    );
-    final leftBonus = leftPendingCards.fold<int>(
-      0,
-      (sum, card) => sum + card.calculateBonus(widget.leftBakugan),
-    );
-    final rightBonus = rightPendingCards.fold<int>(
-      0,
-      (sum, card) => sum + card.calculateBonus(widget.rightBakugan),
-    );
+    int leftBonus = 0;
+    int rightBonus = 0;
+    final List<int> newlyAppliedLeft = [];
+    final List<int> newlyAppliedRight = [];
 
-    if (leftBonus <= 0 && rightBonus <= 0) {
-      setState(() {
-        _leftAppliedAbilityCount = _leftAbilityCards.length;
-        _rightAppliedAbilityCount = _rightAbilityCards.length;
-      });
-      return;
+    for (int i = 0; i < _leftAbilitySlots.length; i++) {
+      final slot = _leftAbilitySlots[i];
+      if (slot != null && slot.isActive && !_leftAppliedAbilitySlots.contains(i)) {
+        leftBonus += slot.card.calculateBonus(widget.leftBakugan);
+        newlyAppliedLeft.add(i);
+      }
     }
+
+    for (int i = 0; i < _rightAbilitySlots.length; i++) {
+      final slot = _rightAbilitySlots[i];
+      if (slot != null && slot.isActive && !_rightAppliedAbilitySlots.contains(i)) {
+        rightBonus += slot.card.calculateBonus(widget.rightBakugan);
+        newlyAppliedRight.add(i);
+      }
+    }
+
+    if (leftBonus <= 0 && rightBonus <= 0) return;
 
     await _animatePowerChange(
       leftTarget: _leftCurrentGPower + leftBonus,
       rightTarget: _rightCurrentGPower + rightBonus,
-      leftBonus: leftBonus,
-      rightBonus: rightBonus,
+      leftBonus: leftBonus > 0 ? leftBonus : null,
+      rightBonus: rightBonus > 0 ? rightBonus : null,
     );
 
     if (!mounted) return;
+
     setState(() {
-      if (leftBonus > 0) _leftAppliedAbilityCount = _leftAbilityCards.length;
-      if (rightBonus > 0) _rightAppliedAbilityCount = _rightAbilityCards.length;
+      _leftAppliedAbilitySlots.addAll(newlyAppliedLeft);
+      _rightAppliedAbilitySlots.addAll(newlyAppliedRight);
+
+      for (final i in newlyAppliedLeft) {
+        final slot = _leftAbilitySlots[i];
+        if (slot != null) {
+          _leftAbilitySlots[i] = slot.copyWith(isActive: false);
+        }
+      }
+
+      for (final i in newlyAppliedRight) {
+        final slot = _rightAbilitySlots[i];
+        if (slot != null) {
+          _rightAbilitySlots[i] = slot.copyWith(isActive: false);
+        }
+      }
     });
   }
 
   void _showAbilityPresentation(
-    bool isLeft, {
-    bool withFlash = false,
-    AbilityCard? card,
-  }) {
+      bool isLeft, {
+        bool withFlash = false,
+        int? slotIndex,
+      }) {
     setState(() {
       if (isLeft) {
-        _focusedLeftAbilityCard = card ?? _focusedLeftAbilityCard;
+        if (slotIndex != null) {
+          _focusedLeftAbilitySlotIndex = slotIndex;
+        }
         _showLeftAbilityPresentation = true;
         _showLeftAbilityFlash = withFlash;
       } else {
-        _focusedRightAbilityCard = card ?? _focusedRightAbilityCard;
+        if (slotIndex != null) {
+          _focusedRightAbilitySlotIndex = slotIndex;
+        }
         _showRightAbilityPresentation = true;
         _showRightAbilityFlash = withFlash;
       }
@@ -4581,13 +5823,30 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   void _endFight() {
-    if (_leftCurrentGPower > _rightCurrentGPower) {
-      Navigator.of(context).pop(0);
-      return;
-    }
-    if (_rightCurrentGPower > _leftCurrentGPower) {
-      Navigator.of(context).pop(1);
-      return;
+    bool lowestWins = _revealedCard?.lowestTotalGPowerWins(
+          leftPrintedGPower: widget.leftBakugan.gPower,
+          rightPrintedGPower: widget.rightBakugan.gPower,
+        ) ??
+        false;
+
+    if (lowestWins) {
+      if (_leftCurrentGPower < _rightCurrentGPower) {
+        Navigator.of(context).pop(0);
+        return;
+      }
+      if (_rightCurrentGPower < _leftCurrentGPower) {
+        Navigator.of(context).pop(1);
+        return;
+      }
+    } else {
+      if (_leftCurrentGPower > _rightCurrentGPower) {
+        Navigator.of(context).pop(0);
+        return;
+      }
+      if (_rightCurrentGPower > _leftCurrentGPower) {
+        Navigator.of(context).pop(1);
+        return;
+      }
     }
 
     setState(() {
@@ -4603,9 +5862,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _powerAnimationController.dispose();
     _powerStartPlayer.dispose();
     _countTickPlayer.dispose();
+    _revealSfxPlayer.dispose();
     _currentBattleMusicAsset = null;
     _battleMusicPlayer.stop();
-    _bgMusicPlayer.resume();
     super.dispose();
   }
 
@@ -4777,10 +6036,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final variant = isLeft ? widget.leftBakugan : widget.rightBakugan;
     final player = isLeft ? widget.leftPlayer : widget.rightPlayer;
     final currentGPower = isLeft ? _leftCurrentGPower : _rightCurrentGPower;
-    final abilityCards = isLeft ? _leftAbilityCards : _rightAbilityCards;
-    final appliedAbilityCount = isLeft
-        ? _leftAppliedAbilityCount
-        : _rightAppliedAbilityCount;
+    final abilitySlots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
     final focusedAbilityCard = isLeft
         ? _focusedLeftAbilityCard
         : _focusedRightAbilityCard;
@@ -4790,9 +6046,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final showAbilityFlash = isLeft
         ? _showLeftAbilityFlash
         : _showRightAbilityFlash;
-    final pendingAbilityBonus = abilityCards
-        .skip(appliedAbilityCount)
-        .fold<int>(0, (sum, card) => sum + card.calculateBonus(variant));
+    final pendingAbilityBonus = abilitySlots
+        .whereType<MatchPresentedAbility>()
+        .where((slot) => slot.isActive)
+        .fold<int>(
+      0,
+          (sum, slot) => sum + slot.card.calculateBonus(
+        isLeft ? widget.leftBakugan : widget.rightBakugan,
+      ),
+    );
     final canPresentAbility = !_isLoadingAbilityCards && !_isResolvingCard;
 
     return SizedBox(
@@ -4817,7 +6079,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             height: 98,
             child: _buildAbilitySlot(
               isLeft: isLeft,
-              abilityCards: abilityCards,
+              abilitySlots: abilitySlots,
               focusedAbilityCard: focusedAbilityCard,
               showAbilityPresentation: showAbilityPresentation,
               canPresent: canPresentAbility,
@@ -5145,7 +6407,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   Widget _buildAbilitySlot({
     required bool isLeft,
-    required List<AbilityCard> abilityCards,
+    required List<MatchPresentedAbility?> abilitySlots,
     required AbilityCard? focusedAbilityCard,
     required bool showAbilityPresentation,
     required bool canPresent,
@@ -5155,52 +6417,59 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         scrollDirection: Axis.horizontal,
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final card in abilityCards)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                width: showAbilityPresentation && card == focusedAbilityCard
-                    ? 0
-                    : 102,
-                margin: EdgeInsets.symmetric(
-                  horizontal:
-                      showAbilityPresentation && card == focusedAbilityCard
-                      ? 0
-                      : 6,
-                ),
-                child: IgnorePointer(
-                  ignoring: showAbilityPresentation && card == focusedAbilityCard,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    opacity: showAbilityPresentation && card == focusedAbilityCard
-                        ? 0
-                        : 1,
-                    child: Align(
-                      alignment: Alignment.center,
+          children: List.generate(3, (index) {
+            final presented = abilitySlots[index];
+            final hasCard = presented != null;
+
+            final isHidden =
+                hasCard &&
+                    showAbilityPresentation &&
+                    focusedAbilityCard == presented.card;
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              width: isHidden ? 0 : 102,
+              margin: EdgeInsets.symmetric(horizontal: isHidden ? 0 : 6),
+              child: IgnorePointer(
+                ignoring: isHidden,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: isHidden ? 0 : 1,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: hasCard
+                        ? AnimatedOpacity(
+                      duration: const Duration(milliseconds: 180),
+                      opacity: presented!.isActive ? 1.0 : 0.45,
                       child: InteractiveCard(
-                        imagePath: card.imagePath,
+                        key: ValueKey(
+                          'battle_${isLeft ? 'L' : 'R'}_${index}_${presented.card.key}',
+                        ),
+                        imagePath: presented.card.imagePath,
                         width: 90,
-                        onTap: () => _showAbilityPresentation(isLeft, card: card),
+                        onTap: () => _showAbilityPresentation(isLeft, slotIndex: index),
+                      ),
+                    )
+                        : Opacity(
+                      opacity: canPresent ? 1.0 : 0.4,
+                      child: IgnorePointer(
+                        ignoring: !canPresent,
+                        child: InteractiveCard(
+                          key: ValueKey(
+                            'battle_anverse_${isLeft ? 'L' : 'R'}_$index',
+                          ),
+                          imagePath: 'assets/images/cards/anverse.png',
+                          width: 90,
+                          onTap: () => _openAbilityCardPrompt(isLeft),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: BakuganButton(
-                text: _isLoadingAbilityCards ? '...' : '+',
-                onPressed: canPresent
-                    ? () => _openAbilityCardPrompt(isLeft)
-                    : () {},
-                width: 74,
-                height: 56,
-                color: canPresent ? null : Colors.grey,
-              ),
-            ),
-          ],
+            );
+          }),
         ),
       ),
     );
