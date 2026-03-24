@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -95,6 +97,25 @@ class PlayerData {
   int get totalGPower => deck.fold(0, (sum, item) => sum + item.gPower);
 }
 
+class GateCardBonusBreakdown {
+  final int baseBonus;
+  final List<int> effectBonusSegments;
+
+  const GateCardBonusBreakdown({
+    required this.baseBonus,
+    this.effectBonusSegments = const [],
+  });
+
+  int get totalBonus =>
+      baseBonus + effectBonusSegments.fold(0, (sum, bonus) => sum + bonus);
+  bool get hasBonusEffect => effectBonusSegments.isNotEmpty;
+
+  List<int> get bonusSegments => [
+    if (baseBonus > 0) baseBonus,
+    ...effectBonusSegments.where((segment) => segment > 0),
+  ];
+}
+
 class GateCard {
   final String key;
   final String name;
@@ -104,6 +125,7 @@ class GateCard {
   final String? descriptionEs;
   final String cardClass;
   final bool hasEffect;
+  final List<dynamic> effects;
 
   const GateCard({
     required this.key,
@@ -114,9 +136,67 @@ class GateCard {
     required this.descriptionEs,
     required this.cardClass,
     required this.hasEffect,
+    this.effects = const [],
   });
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
+
+  GateCardBonusBreakdown bonusBreakdownFor(
+    BakuganVariant variant, {
+    int usedGateCardsInAllPiles = 0,
+  }) {
+    final int baseBonus = bonusFor(variant.attribute);
+    final List<int> effectBonusSegments = [];
+
+    for (final effect in effects) {
+      if (effect is Map && effect['type'] == 'named_bakugan_extra_gate_bonus') {
+        final String? targetBakugan = effect['bakugan'];
+        if (targetBakugan != null &&
+            variant.speciesName.toLowerCase() == targetBakugan.toLowerCase()) {
+          final dynamic extraApplicationsValue =
+              effect['extra_attribute_bonus_applications'];
+          if (extraApplicationsValue is num) {
+            final int extraApplications = extraApplicationsValue.toInt();
+            for (int i = 0; i < extraApplications; i++) {
+              if (baseBonus > 0) {
+                effectBonusSegments.add(baseBonus);
+              }
+            }
+          }
+        }
+      }
+
+      if (effect is Map && effect['type'] == 'named_bakugan_bonus_per_used_gate') {
+        final String? targetBakugan = effect['bakugan'];
+        if (targetBakugan != null &&
+            variant.speciesName.toLowerCase() == targetBakugan.toLowerCase()) {
+          final dynamic valueRaw = effect['value'];
+          if (valueRaw is num) {
+            final int perUsedGateBonus = valueRaw.toInt();
+            final int dynamicBonus = perUsedGateBonus * usedGateCardsInAllPiles;
+            if (dynamicBonus > 0) {
+              effectBonusSegments.add(dynamicBonus);
+            }
+          }
+        }
+      }
+    }
+
+    return GateCardBonusBreakdown(
+      baseBonus: baseBonus,
+      effectBonusSegments: effectBonusSegments,
+    );
+  }
+
+  int calculateBonus(
+    BakuganVariant variant, {
+    int usedGateCardsInAllPiles = 0,
+  }) {
+    return bonusBreakdownFor(
+      variant,
+      usedGateCardsInAllPiles: usedGateCardsInAllPiles,
+    ).totalBonus;
+  }
 }
 
 class AbilityCard {
@@ -128,6 +208,7 @@ class AbilityCard {
   final String? descriptionEs;
   final String cardClass;
   final Set<String> timings;
+  final List<dynamic> effects;
 
   const AbilityCard({
     required this.key,
@@ -138,9 +219,14 @@ class AbilityCard {
     required this.descriptionEs,
     required this.cardClass,
     required this.timings,
+    this.effects = const [],
   });
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
+
+  int calculateBonus(BakuganVariant variant) {
+    return bonusFor(variant.attribute);
+  }
 
   bool get supportsStartOfBattle => timings.contains('start_of_battle');
   bool get supportsDuringBattle {
@@ -340,18 +426,25 @@ Future<void> loadAvailableBakugans() async {
     final AssetManifest manifest = await AssetManifest.loadFromAssetBundle(
       rootBundle,
     );
-    final modelPaths = manifest
+    final bakuganAssetPaths = manifest
         .listAssets()
         .where(
           (String key) =>
-              key.startsWith('assets/models/') && key.endsWith('.glb'),
+              key.startsWith('assets/models/') &&
+              (key.endsWith('.glb') ||
+                  key.endsWith('.gltf') ||
+                  key.endsWith('.png')),
         )
         .toList();
 
     Map<String, List<BakuganVariant>> grouped = {};
 
-    for (var path in modelPaths) {
-      String fileName = path.split('/').last.replaceAll('.glb', '');
+    for (var path in bakuganAssetPaths) {
+      final String fileNameWithExtension = path.split('/').last;
+      final int extensionIndex = fileNameWithExtension.lastIndexOf('.');
+      final String fileName = extensionIndex >= 0
+          ? fileNameWithExtension.substring(0, extensionIndex)
+          : fileNameWithExtension;
       List<String> parts = fileName.split('_');
 
       // Extract G-Power if present (e.g., "550g")
@@ -376,13 +469,13 @@ Future<void> loadAvailableBakugans() async {
       else if (attribute.contains('aquos'))
         color = Colors.blue;
       else if (attribute.contains('subterra'))
-        color = Colors.orange;
+        color = Colors.brown;
       else if (attribute.contains('haos'))
-        color = Colors.white;
+        color = Colors.limeAccent;
       else if (attribute.contains('darkus'))
-        color = Colors.purple;
+        color = Colors.deepPurple;
       else if (attribute.contains('ventus'))
-        color = Colors.green;
+        color = Colors.teal;
 
       grouped
           .putIfAbsent(speciesName, () => [])
@@ -1768,6 +1861,7 @@ class BakuganPreview extends StatefulWidget {
   final bool autoRotate;
   final bool disableInteraction;
   final bool showGPower;
+  final bool mirrorImage;
 
   const BakuganPreview({
     super.key,
@@ -1782,6 +1876,7 @@ class BakuganPreview extends StatefulWidget {
     this.autoRotate = true,
     this.disableInteraction = false,
     this.showGPower = true,
+    this.mirrorImage = false,
   });
 
   @override
@@ -1791,6 +1886,37 @@ class BakuganPreview extends StatefulWidget {
 class _BakuganPreviewState extends State<BakuganPreview>
     with AutomaticKeepAliveClientMixin {
   late Flutter3DController _controller;
+
+  bool get _uses3DViewer {
+    final path = widget.variant.modelPath.toLowerCase();
+    return path.endsWith('.glb') || path.endsWith('.gltf');
+  }
+
+  double get _pngScale {
+    if (widget.isLarge) return 1.12;
+    if (widget.isDeck) return 1.08;
+    return 1.06;
+  }
+
+  Alignment get _pngAlignment {
+    if (widget.isLarge) return const Alignment(0.04, -0.03);
+    if (widget.isDeck) return Alignment.center;
+    return const Alignment(0.16, 0.0);
+  }
+
+  EdgeInsets get _pngPadding {
+    if (widget.isLarge) return const EdgeInsets.fromLTRB(8, 8, 8, 52);
+    return const EdgeInsets.all(8);
+  }
+
+  Widget _wrapPngImage(Widget child) {
+    if (!widget.mirrorImage) return child;
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
+      child: child,
+    );
+  }
 
   @override
   void initState() {
@@ -1820,7 +1946,7 @@ class _BakuganPreviewState extends State<BakuganPreview>
   }
 
   Future<void> _configureModelView({int attempt = 0}) async {
-    if (!mounted) return;
+    if (!mounted || !_uses3DViewer) return;
 
     final double theta = widget.theta ?? (widget.isLarge ? 0 : 30);
     final double phi = widget.phi ?? 75;
@@ -2029,6 +2155,33 @@ class _BakuganPreviewState extends State<BakuganPreview>
 
   // --- MODEL & OVERLAY HELPERS ---
   Widget _buildModel({bool isDeck = false}) {
+    if (!_uses3DViewer) {
+      return IgnorePointer(
+        ignoring: true,
+        child: Padding(
+          padding: _pngPadding,
+          child: Align(
+            alignment: _pngAlignment,
+            child: Transform.scale(
+              scale: _pngScale,
+              child: _wrapPngImage(
+                Image.asset(
+                  widget.variant.modelPath,
+                  key: ValueKey(
+                    'image_${widget.variant.modelPath}_${widget.isLarge}_${widget.mirrorImage}',
+                  ),
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return IgnorePointer(
       ignoring: isDeck || widget.disableInteraction || !widget.isLarge,
       child: Flutter3DViewer(
@@ -2924,6 +3077,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                             rightPlayer: rightPlayer!,
                             leftBakugan: leftBakugan!,
                             rightBakugan: rightBakugan!,
+                            usedGateCardsInAllPiles: scores.fold(
+                              0,
+                              (sum, score) => sum + score,
+                            ),
                           ),
                         ),
                       ).then((winnerIndex) {
@@ -3311,6 +3468,7 @@ class BattleArenaScreen extends StatefulWidget {
   final PlayerData rightPlayer;
   final BakuganVariant leftBakugan;
   final BakuganVariant rightBakugan;
+  final int usedGateCardsInAllPiles;
 
   const BattleArenaScreen({
     super.key,
@@ -3318,6 +3476,7 @@ class BattleArenaScreen extends StatefulWidget {
     required this.rightPlayer,
     required this.leftBakugan,
     required this.rightBakugan,
+    this.usedGateCardsInAllPiles = 0,
   });
 
   @override
@@ -3600,6 +3759,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             attributes: attributes,
             cardClass: cardClass,
             hasEffect: effects.isNotEmpty || rules.isNotEmpty,
+            effects: effects,
           );
         } else if (type == 'ability') {
           final Set<String> timings = <String>{};
@@ -3622,6 +3782,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             attributes: attributes,
             cardClass: cardClass,
             timings: timings,
+            effects: effects,
           );
         } else {
           debugPrint('Skipping card "$key": unknown type "$type"');
@@ -4161,10 +4322,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                 ),
                                 itemBuilder: (context, index) {
                                   final card = matches[index];
-                                  final bonus = card.bonusFor(
+                                  final bonus = card.calculateBonus(
                                     isLeft
-                                        ? widget.leftBakugan.attribute
-                                        : widget.rightBakugan.attribute,
+                                        ? widget.leftBakugan
+                                        : widget.rightBakugan,
                                   );
                                   return InkWell(
                                     onTap: () => onSelected(card),
@@ -4255,8 +4416,14 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Future<void> _revealGateCard(GateCard card) async {
     if (_isResolvingCard) return;
 
-    final leftBonus = card.bonusFor(widget.leftBakugan.attribute);
-    final rightBonus = card.bonusFor(widget.rightBakugan.attribute);
+    final leftBreakdown = card.bonusBreakdownFor(
+      widget.leftBakugan,
+      usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+    );
+    final rightBreakdown = card.bonusBreakdownFor(
+      widget.rightBakugan,
+      usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+    );
     try {
       await precacheImage(AssetImage(card.imagePath), context);
     } catch (_) {}
@@ -4280,19 +4447,30 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _showRevealFlash = false;
     });
 
-    await _animatePowerChange(
-      leftTarget: widget.leftBakugan.gPower + leftBonus,
-      rightTarget: widget.rightBakugan.gPower + rightBonus,
-      leftBonus: leftBonus,
-      rightBonus: rightBonus,
-    );
+    final leftSegments = leftBreakdown.bonusSegments;
+    final rightSegments = rightBreakdown.bonusSegments;
+    final maxSegments = max(leftSegments.length, rightSegments.length);
+
+    for (int i = 0; i < maxSegments; i++) {
+      final leftSegment = i < leftSegments.length ? leftSegments[i] : 0;
+      final rightSegment = i < rightSegments.length ? rightSegments[i] : 0;
+
+      if (leftSegment <= 0 && rightSegment <= 0) continue;
+
+      await _animatePowerChange(
+        leftTarget: _leftCurrentGPower + leftSegment,
+        rightTarget: _rightCurrentGPower + rightSegment,
+        leftBonus: leftSegment > 0 ? leftSegment : null,
+        rightBonus: rightSegment > 0 ? rightSegment : null,
+      );
+    }
 
     await _applyQueuedAbilityCards();
   }
 
   Future<void> _presentAbilityCard(bool isLeft, AbilityCard card) async {
-    final pendingBonus = card.bonusFor(
-      isLeft ? widget.leftBakugan.attribute : widget.rightBakugan.attribute,
+    final pendingBonus = card.calculateBonus(
+      isLeft ? widget.leftBakugan : widget.rightBakugan,
     );
 
     try {
@@ -4343,11 +4521,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
     final leftBonus = leftPendingCards.fold<int>(
       0,
-      (sum, card) => sum + card.bonusFor(widget.leftBakugan.attribute),
+      (sum, card) => sum + card.calculateBonus(widget.leftBakugan),
     );
     final rightBonus = rightPendingCards.fold<int>(
       0,
-      (sum, card) => sum + card.bonusFor(widget.rightBakugan.attribute),
+      (sum, card) => sum + card.calculateBonus(widget.rightBakugan),
     );
 
     if (leftBonus <= 0 && rightBonus <= 0) {
@@ -4586,7 +4764,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   Widget _buildGateDescriptionPanel(GateCard card) {
     return _buildLocalizedDescriptionPanel(
-      width: 560,
+      width: 700,
       title: card.name,
       esText: card.descriptionEs ?? card.descriptionEn ?? '',
       maxHeight: 132,
@@ -4614,7 +4792,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         : _showRightAbilityFlash;
     final pendingAbilityBonus = abilityCards
         .skip(appliedAbilityCount)
-        .fold<int>(0, (sum, card) => sum + card.bonusFor(variant.attribute));
+        .fold<int>(0, (sum, card) => sum + card.calculateBonus(variant));
     final canPresentAbility = !_isLoadingAbilityCards && !_isResolvingCard;
 
     return SizedBox(
@@ -4703,6 +4881,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               disableInteraction: true,
               speciesName: variant.speciesName,
               showGPower: false,
+              mirrorImage: isLeft,
             ),
           ),
         ),
@@ -4839,13 +5018,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }) {
     const double panelSkew = -0.12;
     const double textInnerSkew = -0.04;
+    final bool hasTitle = (title ?? '').trim().isNotEmpty;
+    final int bodyMaxLines = hasTitle ? 3 : 4;
 
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.skewX(panelSkew),
       child: Container(
         width: width,
-        padding: const EdgeInsets.all(3), // el marco
+        padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
@@ -4882,7 +5063,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                   ),
                 ),
               ),
-
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -4898,7 +5078,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                 child: Transform(
@@ -4908,7 +5087,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if ((title ?? '').trim().isNotEmpty) ...[
+                      if (hasTitle) ...[
                         Text(
                           title!.toUpperCase(),
                           maxLines: 1,
@@ -4933,9 +5112,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                         ),
                         const SizedBox(height: 12),
                       ],
-                      Text(
+                      AutoSizeText(
                         esText,
-                        maxLines: 4,
+                        maxLines: bodyMaxLines,
+                        minFontSize: 10,
+                        stepGranularity: 0.5,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.96),

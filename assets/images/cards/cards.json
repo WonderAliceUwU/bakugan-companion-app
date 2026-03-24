@@ -4550,7 +4550,7 @@
       "effects": [],
       "rules": []
     },
-    "whirlpool": {
+    "whirlpool_d": {
       "set_number": "6/48d",
       "file": "BA297_GA_whirlpool_06d.png",
       "name": "Whirlpool",

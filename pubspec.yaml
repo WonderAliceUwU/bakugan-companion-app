@@ -15,6 +15,7 @@ dependencies:
   audioplayers: ^5.2.1
   flutter_svg: ^2.0.10+1
   flutter_3d_controller: ^2.3.0
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -86,3 +87,19 @@ flutter:
     - assets/models/stinglash/
     - assets/models/tentaclear/
     - assets/models/juggernoid/
+    - assets/models/neo_dragonoid/
+    - assets/models/bee_striker/
+    - assets/models/cosmic_ingram/
+    - assets/models/nemus/
+    - assets/models/wired/
+    - assets/models/apollonir/
+    - assets/models/clayf/
+    - assets/models/el_condor/
+    - assets/models/fencer/
+    - assets/models/lars_lion/
+    - assets/models/leefram/
+    - assets/models/limulus/
+    - assets/models/naga/
+    - assets/models/oberus/
+    - assets/models/spin_ravenoid/
+    - assets/models/warius/
