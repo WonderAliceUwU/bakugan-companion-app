@@ -377,7 +377,7 @@
       },
       "effects": [
         {
-          "type": "gain_per_distinct_bakugan_type_in_team",
+          "type": "gain_per_distinct_bakugan_attribute_in_team",
           "target": "each_bakugan",
           "value": 50
         }
@@ -2198,7 +2198,7 @@
       },
       "effects": [
         {
-          "type": "gain_per_distinct_bakugan_color_in_team",
+          "type": "gain_per_distinct_bakugan_attribute_in_team",
           "target": "each_bakugan",
           "value": 100
         }
@@ -5410,7 +5410,7 @@
       },
       "effects": [
         {
-          "type": "attribute_bonus_self_per_distinct_standing_attribute",
+          "type": "gain_per_distinct_bakugan_attribute_standing",
           "timing": "during_battle"
         }
       ],

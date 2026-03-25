@@ -144,6 +144,7 @@ class GateCard {
   GateCardBonusBreakdown bonusBreakdownFor(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
+    Iterable<BakuganVariant> teamBakugans = const [],
   }) {
     final int baseBonus = bonusFor(variant.attribute);
     final List<int> effectBonusSegments = [];
@@ -180,6 +181,23 @@ class GateCard {
           }
         }
       }
+
+      if (effect is Map &&
+          effect['type'] == 'gain_per_distinct_bakugan_attribute_in_team') {
+        final dynamic valueRaw = effect['value'];
+        final String target = (effect['target'] ?? '').toString().toLowerCase();
+        if (valueRaw is num && target == 'each_bakugan') {
+          final distinctAttributeCount = teamBakugans
+              .map((bakugan) => bakugan.attribute.toLowerCase())
+              .where((attribute) => attribute.isNotEmpty)
+              .toSet()
+              .length;
+          final int dynamicBonus = valueRaw.toInt() * distinctAttributeCount;
+          if (dynamicBonus > 0) {
+            effectBonusSegments.add(dynamicBonus);
+          }
+        }
+      }
     }
 
     return GateCardBonusBreakdown(
@@ -191,10 +209,12 @@ class GateCard {
   int calculateBonus(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
+    Iterable<BakuganVariant> teamBakugans = const [],
   }) {
     return bonusBreakdownFor(
       variant,
       usedGateCardsInAllPiles: usedGateCardsInAllPiles,
+      teamBakugans: teamBakugans,
     ).totalBonus;
   }
 
@@ -288,7 +308,6 @@ const double _gateCardWidth = _gateCardHeight * _gateCardAspectRatio;
 const Offset _battleBonusAnchor = Offset(-40, 0);
 const Offset _battlePendingBonusOffset = Offset(0, -10);
 const double _battleBonusRiseStart = 42;
-const double _descriptionPanelSkew = 22;
 const Map<String, List<Color>> _gateDescriptionBorderGradients = {
   'copper': [
     Color(0xFF6B432B),
@@ -2166,8 +2185,12 @@ class _BakuganPreviewState extends State<BakuganPreview>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
+                  child: AutoSizeText(
                     widget.speciesName!.toUpperCase(),
+                    maxLines: 1,
+                    minFontSize: 18,
+                    stepGranularity: 0.5,
+                    overflow: TextOverflow.visible,
                     style: TextStyle(
                       fontFamily: 'title_font',
                       fontSize: 38,
@@ -4446,14 +4469,18 @@ class GPowerBadge extends StatelessWidget {
                     right: 25,
                     top: 8,
                     bottom: 0,
-                    width: 200,
+                    width: 170,
                     child: Container(
                       alignment: Alignment.centerRight,
                       child: Transform(
                         alignment: Alignment.center,
                         transform: Matrix4.skewX(0.15),
-                        child: Text(
+                        child: AutoSizeText(
                           '$gPower',
+                          maxLines: 1,
+                          minFontSize: 28,
+                          stepGranularity: 0.5,
+                          overflow: TextOverflow.visible,
                           style: const TextStyle(
                             fontSize: 55,
                             height: 1.0,
@@ -5001,12 +5028,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
       debugPrint('Loaded gate cards: ${loadedCards.length}');
       debugPrint('Loaded ability cards: ${loadedAbilityCards.length}');
-      debugPrint(
-        'Gate names: ${loadedCards.values.map((c) => c.name).take(10).toList()}',
-      );
-      debugPrint(
-        'Ability names: ${loadedAbilityCards.values.map((c) => c.name).take(10).toList()}',
-      );
 
       if (!mounted) return;
       setState(() {
@@ -5629,10 +5650,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final leftBreakdown = card.bonusBreakdownFor(
       widget.leftBakugan,
       usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+      teamBakugans: widget.leftPlayer.deck,
     );
     final rightBreakdown = card.bonusBreakdownFor(
       widget.rightBakugan,
       usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+      teamBakugans: widget.rightPlayer.deck,
     );
     try {
       await precacheImage(AssetImage(card.imagePath), context);
