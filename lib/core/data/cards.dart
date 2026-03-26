@@ -180,12 +180,11 @@ class AbilityCard {
     return bonusFor(variant.attribute);
   }
 
-  bool get supportsStartOfBattle => timings.contains('start_of_battle');
+  bool get supportsBeforeBattle => timings.contains('start_of_battle');
 
-  bool get supportsDuringBattle {
-    if (timings.isEmpty) return true;
-    return timings.any((timing) => timing != 'start_of_battle');
-  }
+  bool get supportsDuringBattle => timings.contains('during_battle');
+
+  bool get isMatchStageCard => !supportsBeforeBattle && !supportsDuringBattle;
 }
 
 class MatchPresentedAbility {

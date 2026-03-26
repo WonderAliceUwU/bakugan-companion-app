@@ -321,8 +321,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 
   bool _isMatchStageAbilityCard(AbilityCard card) {
-    return !card.timings.contains('start_of_battle') &&
-        !card.timings.contains('during_battle');
+    return card.isMatchStageCard;
   }
 
   List<AbilityCard> _rankMatchAbilityCardMatches(String input) {
@@ -636,6 +635,19 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     });
   }
 
+  void _returnFocusedMatchAbilityToUnusedPile() {
+    final playerIndex = _focusedMatchAbilityPlayerIndex;
+    final abilityIndex = _focusedMatchAbilityIndex;
+    if (playerIndex == null || abilityIndex == null) return;
+
+    setState(() {
+      _presentedMatchAbilities[playerIndex][abilityIndex] = null;
+      _focusedMatchAbilityCard = null;
+      _focusedMatchAbilityPlayerIndex = null;
+      _focusedMatchAbilityIndex = null;
+    });
+  }
+
   Widget _buildArenaPlaylistBar() {
     final trackLabel = _arenaPlaylist.isEmpty
         ? 'LOADING...'
@@ -787,107 +799,18 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         _abilityDescriptionAccentColors[card.cardClass] ??
         _abilityDescriptionAccentColors['blue']!;
 
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.skewX(-0.12),
-      child: Container(
-        width: 560,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors:
-                _abilityDescriptionBorderGradients[card.cardClass] ??
-                _abilityDescriptionBorderGradients['blue']!,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  (_abilityDescriptionAccentColors[card.cardClass] ??
-                          _abilityDescriptionAccentColors['blue']!)
-                      .withValues(alpha: 0.18),
-              blurRadius: 16,
-              spreadRadius: 1,
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.65),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFF05080D),
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: GridPainter(
-                    color: accentColor.withValues(alpha: 0.07),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.03),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.10),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                child: Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.skewX(0.12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        card.name.toUpperCase(),
-                        style: TextStyle(
-                          color: accentColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: 1.6,
-                        ),
-                      ),
-                      Container(
-                        height: 1.2,
-                        color: accentColor.withValues(alpha: 0.28),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        card.descriptionEs ?? card.descriptionEn ?? '',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.96),
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          height: 1.28,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return FramedDescriptionPanel(
+      width: 620,
+      title: card.name,
+      esText: card.descriptionEs ?? card.descriptionEn ?? '',
+      maxHeight: 300,
+      frameGradient:
+          _abilityDescriptionBorderGradients[card.cardClass] ??
+          _abilityDescriptionBorderGradients['blue']!,
+      accentColor: accentColor,
+      headerAction: DescriptionHeaderActionButton(
+        accentColor: accentColor,
+        onTap: _returnFocusedMatchAbilityToUnusedPile,
       ),
     );
   }

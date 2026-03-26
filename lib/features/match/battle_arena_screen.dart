@@ -438,6 +438,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         } else if (type == 'ability') {
           final Set<String> timings = <String>{};
 
+          for (final rule in rules) {
+            if (rule is Map) {
+              final timing = rule['timing']?.toString().toLowerCase();
+              if (timing != null && timing.isNotEmpty) {
+                timings.add(timing);
+              }
+            }
+          }
+
           for (final effect in effects) {
             if (effect is Map) {
               final timing = effect['timing']?.toString().toLowerCase();
@@ -541,11 +550,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     required bool beforeGateReveal,
   }) {
     final query = _normalizeCardLookup(input);
-    if (query.isEmpty) return const [];
-
     final candidateCards = beforeGateReveal
-        ? _abilityCards.values.where((card) => card.supportsStartOfBattle)
+        ? _abilityCards.values.where((card) => card.supportsBeforeBattle)
         : _abilityCards.values.where((card) => card.supportsDuringBattle);
+
+    if (query.isEmpty) {
+      return candidateCards.take(limit).toList();
+    }
 
     final ranked =
         candidateCards
@@ -1283,6 +1294,30 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     });
   }
 
+  void _returnFocusedBattleAbilityToUnusedPile(bool isLeft) {
+    setState(() {
+      if (isLeft) {
+        final slotIndex = _focusedLeftAbilitySlotIndex;
+        if (slotIndex != null) {
+          _leftAbilitySlots[slotIndex] = null;
+          _leftAppliedAbilitySlots.remove(slotIndex);
+        }
+        _showLeftAbilityPresentation = false;
+        _showLeftAbilityFlash = false;
+        _focusedLeftAbilitySlotIndex = null;
+      } else {
+        final slotIndex = _focusedRightAbilitySlotIndex;
+        if (slotIndex != null) {
+          _rightAbilitySlots[slotIndex] = null;
+          _rightAppliedAbilitySlots.remove(slotIndex);
+        }
+        _showRightAbilityPresentation = false;
+        _showRightAbilityFlash = false;
+        _focusedRightAbilitySlotIndex = null;
+      }
+    });
+  }
+
   void _showWinnerScreen(int sideIndex) {
     setState(() {
       _winnerSideIndex = sideIndex;
@@ -1797,7 +1832,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 ),
               ),
               const SizedBox(height: _abilityPresentationGap),
-              _buildAbilityOverlayDescription(card),
+              _buildAbilityOverlayDescription(card, isLeft: isLeft),
             ],
           ),
         ),
@@ -1805,7 +1840,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
-  Widget _buildAbilityOverlayDescription(AbilityCard card) {
+  Widget _buildAbilityOverlayDescription(AbilityCard card, {required bool isLeft}) {
     final hasDescription =
         (card.descriptionEn?.trim().isNotEmpty ?? false) ||
         (card.descriptionEs?.trim().isNotEmpty ?? false);
@@ -1819,6 +1854,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       maxHeight: 260,
       frameGradient: _abilityDescriptionGradient(card.cardClass),
       accentColor: _abilityDescriptionAccentColor(card.cardClass),
+      headerAction: DescriptionHeaderActionButton(
+        accentColor: _abilityDescriptionAccentColor(card.cardClass),
+        onTap: () => _returnFocusedBattleAbilityToUnusedPile(isLeft),
+      ),
     );
   }
 
@@ -1849,131 +1888,16 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     required List<Color> frameGradient,
     required Color accentColor,
     String? title,
+    Widget? headerAction,
   }) {
-    const double panelSkew = -0.12;
-    const double textInnerSkew = -0.04;
-    final bool hasTitle = (title ?? '').trim().isNotEmpty;
-    final int bodyMaxLines = hasTitle ? 3 : 4;
-
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.skewX(panelSkew),
-      child: Container(
-        width: width,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: frameGradient,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.18),
-              blurRadius: 16,
-              spreadRadius: 1,
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.65),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          decoration: BoxDecoration(
-            color: const Color(0xFF05080D),
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: GridPainter(
-                    color: accentColor.withValues(alpha: 0.07),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.03),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.10),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                child: Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.skewX(textInnerSkew),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (hasTitle) ...[
-                        Text(
-                          title!.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: accentColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            fontStyle: FontStyle.italic,
-                            letterSpacing: 1.6,
-                            shadows: [
-                              Shadow(
-                                color: accentColor.withValues(alpha: 0.30),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          height: 1.2,
-                          color: accentColor.withValues(alpha: 0.28),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      AutoSizeText(
-                        esText,
-                        maxLines: bodyMaxLines,
-                        minFontSize: 10,
-                        stepGranularity: 0.5,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.96),
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          height: 1.28,
-                          shadows: const [
-                            Shadow(
-                              color: Colors.black87,
-                              offset: Offset(1, 1),
-                              blurRadius: 3,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return FramedDescriptionPanel(
+      width: width,
+      title: title,
+      esText: esText,
+      maxHeight: maxHeight,
+      frameGradient: frameGradient,
+      accentColor: accentColor,
+      headerAction: headerAction,
     );
   }
 

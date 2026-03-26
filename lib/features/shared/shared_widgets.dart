@@ -768,6 +768,208 @@ class GridPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
+class DescriptionHeaderActionButton extends StatelessWidget {
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  const DescriptionHeaderActionButton({
+    super.key,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.skewX(0.16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: accentColor.withValues(alpha: 0.16),
+            border: Border.all(
+              color: accentColor,
+              width: 1.8,
+            ),
+          ),
+          child: Icon(
+            Icons.restart_alt_rounded,
+            color: accentColor,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FramedDescriptionPanel extends StatelessWidget {
+  final double width;
+  final String esText;
+  final double maxHeight;
+  final List<Color> frameGradient;
+  final Color accentColor;
+  final String? title;
+  final Widget? headerAction;
+
+  const FramedDescriptionPanel({
+    super.key,
+    required this.width,
+    required this.esText,
+    required this.maxHeight,
+    required this.frameGradient,
+    required this.accentColor,
+    this.title,
+    this.headerAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const double panelSkew = -0.12;
+    const double textInnerSkew = -0.04;
+    final bool hasTitle = (title ?? '').trim().isNotEmpty;
+    final int bodyMaxLines = hasTitle ? 3 : 4;
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.skewX(panelSkew),
+      child: Container(
+        width: width,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: frameGradient,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.18),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.65),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          decoration: BoxDecoration(
+            color: const Color(0xFF05080D),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: GridPainter(
+                    color: accentColor.withValues(alpha: 0.07),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.03),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.10),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(textInnerSkew),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasTitle) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title!.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: accentColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  fontStyle: FontStyle.italic,
+                                  letterSpacing: 1.6,
+                                  shadows: [
+                                    Shadow(
+                                      color: accentColor.withValues(alpha: 0.30),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (headerAction != null) ...[
+                              const SizedBox(width: 12),
+                              Transform.translate(
+                                offset: const Offset(0, -4),
+                                child: headerAction!,
+                              ),
+                            ],
+                          ],
+                        ),
+                        Container(
+                          height: 1.2,
+                          color: accentColor.withValues(alpha: 0.28),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      AutoSizeText(
+                        esText,
+                        maxLines: bodyMaxLines,
+                        minFontSize: 10,
+                        stepGranularity: 0.5,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.96),
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          height: 1.28,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black87,
+                              offset: Offset(1, 1),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class BakuganButton extends StatefulWidget {
   final IconData? icon;
   final bool iconOnly;
