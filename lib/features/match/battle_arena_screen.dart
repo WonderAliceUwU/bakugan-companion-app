@@ -157,12 +157,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   int _rightCurrentGPower = 0;
   int _leftTargetGPower = 0;
   int _rightTargetGPower = 0;
+  int _leftBattlePrintedGPower = 0;
+  int _rightBattlePrintedGPower = 0;
   int _leftAnimationStartGPower = 0;
   int _rightAnimationStartGPower = 0;
   int? _leftFloatingBonus;
   int? _rightFloatingBonus;
   String? _winnerText;
   int? _winnerSideIndex;
+  bool _isTieResult = false;
   Timer? _powerTickTimer;
   String? _currentBattleMusicAsset;
 
@@ -173,6 +176,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _rightCurrentGPower = widget.rightBakugan.gPower;
     _leftTargetGPower = _leftCurrentGPower;
     _rightTargetGPower = _rightCurrentGPower;
+    _leftBattlePrintedGPower = widget.leftBakugan.gPower;
+    _rightBattlePrintedGPower = widget.rightBakugan.gPower;
     _leftAnimationStartGPower = _leftCurrentGPower;
     _rightAnimationStartGPower = _rightCurrentGPower;
     _powerStartPlayer = AudioPlayer();
@@ -185,7 +190,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
     _battleMusicCompleteSub = _battleMusicPlayer.onPlayerComplete.listen((_) {
       if (!mounted) return;
-      if (_winnerSideIndex != null) {
+      if (_winnerSideIndex != null || _isTieResult) {
         _returnToMatch();
       }
     });
@@ -268,6 +273,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     try {
       await _revealSfxPlayer.stop();
       await _revealSfxPlayer.play(AssetSource('sound/$assetName'));
+    } catch (_) {}
+  }
+
+  Future<void> _playGPowerSwapSound() async {
+    try {
+      await _revealSfxPlayer.stop();
+      await _revealSfxPlayer.play(AssetSource('sound/g_power_swap.wav'));
     } catch (_) {}
   }
 
@@ -1129,6 +1141,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _rightCurrentGPower = widget.rightBakugan.gPower;
       _leftTargetGPower = _leftCurrentGPower;
       _rightTargetGPower = _rightCurrentGPower;
+      _leftBattlePrintedGPower = widget.leftBakugan.gPower;
+      _rightBattlePrintedGPower = widget.rightBakugan.gPower;
     });
 
     await Future<void>.delayed(const Duration(milliseconds: 240));
@@ -1137,6 +1151,23 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     setState(() {
       _showRevealFlash = false;
     });
+
+    if (card.swapsPrintedGPower) {
+      final swappedLeftGPower = _rightBattlePrintedGPower;
+      final swappedRightGPower = _leftBattlePrintedGPower;
+
+      await _playGPowerSwapSound();
+      await _animatePowerChange(
+        leftTarget: swappedLeftGPower,
+        rightTarget: swappedRightGPower,
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _leftBattlePrintedGPower = swappedLeftGPower;
+        _rightBattlePrintedGPower = swappedRightGPower;
+      });
+    }
 
     final leftSegments = leftBreakdown.bonusSegments;
     final rightSegments = rightBreakdown.bonusSegments;
@@ -1328,6 +1359,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   void _showWinnerScreen(int sideIndex) {
     setState(() {
+      _isTieResult = false;
       _winnerSideIndex = sideIndex;
       _winnerText = sideIndex == 0
           ? '${widget.leftPlayer.name} WINS!'
@@ -1342,8 +1374,25 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     unawaited(_playBattleWinSound());
   }
 
+  Future<void> _showTieResult() async {
+    setState(() {
+      _isTieResult = true;
+      _winnerSideIndex = null;
+      _winnerText = 'TIE!';
+      _showLeftAbilityPresentation = false;
+      _showRightAbilityPresentation = false;
+      _showLeftAbilityFlash = false;
+      _showRightAbilityFlash = false;
+      _leftFloatingBonus = null;
+      _rightFloatingBonus = null;
+    });
+    unawaited(_playBattleWinSound());
+  }
+
   void _returnToMatch() {
-    if (_winnerSideIndex == null || _hasReturnedToMatch) return;
+    if ((_winnerSideIndex == null && !_isTieResult) || _hasReturnedToMatch) {
+      return;
+    }
     _hasReturnedToMatch = true;
     Navigator.of(context).pop(_winnerSideIndex);
   }
@@ -1351,8 +1400,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   void _endFight() {
     bool lowestWins =
         _revealedCard?.lowestTotalGPowerWins(
-          leftPrintedGPower: widget.leftBakugan.gPower,
-          rightPrintedGPower: widget.rightBakugan.gPower,
+          leftPrintedGPower: _leftBattlePrintedGPower,
+          rightPrintedGPower: _rightBattlePrintedGPower,
         ) ??
         false;
 
@@ -1376,9 +1425,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       }
     }
 
-    setState(() {
-      _winnerText = 'The fight ends in a draw.';
-    });
+    unawaited(_showTieResult());
   }
 
   @override
@@ -1399,7 +1446,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   @override
   Widget build(BuildContext context) {
     final canEndFight = _revealedCard != null && !_isResolvingCard;
-    final hasWinner = _winnerSideIndex != null;
+    final hasWinner = _winnerSideIndex != null || _isTieResult;
 
     return Scaffold(
       body: Stack(
@@ -1454,20 +1501,20 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       child: _buildGateDescriptionPanel(_revealedCard!),
                     ),
                   ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 28,
-                  child: Center(
-                    child: BakuganButton(
-                      text: 'END BRAWL',
-                      onPressed: canEndFight ? _endFight : () {},
-                      width: 300,
-                      height: 70,
-                      color: canEndFight ? null : Colors.grey,
+                if (canEndFight)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 28,
+                    child: Center(
+                      child: BakuganButton(
+                        text: 'END BRAWL',
+                        onPressed: _endFight,
+                        width: 300,
+                        height: 70,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
         ],
@@ -1476,6 +1523,107 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Widget _buildWinnerScreen() {
+    if (_isTieResult) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _returnToMatch,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TweenAnimationBuilder<Offset>(
+                tween: Tween<Offset>(
+                  begin: const Offset(-1.2, 0),
+                  end: Offset.zero,
+                ),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                builder: (context, offset, child) {
+                  return Transform.translate(
+                    offset: Offset(offset.dx * 480, 0),
+                    child: child,
+                  );
+                },
+                child: const Text(
+                  'TIE!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 72,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                    letterSpacing: 2,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        offset: Offset(4, 4),
+                        blurRadius: 10,
+                      ),
+                      Shadow(color: Colors.white24, blurRadius: 28),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 36),
+              SizedBox(
+                width: 560,
+                height: 560,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, progress, child) {
+                    final flashOpacity = (1 - (progress * 2 - 1).abs()).clamp(
+                      0.0,
+                      1.0,
+                    );
+                    final showAnverse = progress >= 0.5;
+                    final imagePath = showAnverse
+                        ? 'assets/images/cards/anverse.png'
+                        : (_revealedCard?.imagePath ??
+                              'assets/images/cards/anverse.png');
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Transform.scale(
+                          scale: lerpDouble(1.05, 1.0, progress) ?? 1.0,
+                          child: InteractiveCard(
+                            key: ValueKey('tie_gate_$imagePath'),
+                            imagePath: imagePath,
+                            onTap: () {},
+                          ),
+                        ),
+                        IgnorePointer(
+                          child: Opacity(
+                            opacity: flashOpacity.toDouble(),
+                            child: Container(
+                              width: _gateCardWidth,
+                              height: _gateCardHeight,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.white,
+                                    blurRadius: 50,
+                                    spreadRadius: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final winnerIsLeft = _winnerSideIndex == 0;
     final winnerPlayer = winnerIsLeft ? widget.leftPlayer : widget.rightPlayer;
     final winnerBakugan = winnerIsLeft

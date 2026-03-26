@@ -142,6 +142,10 @@ class GateCard {
     ).totalBonus;
   }
 
+  bool get swapsPrintedGPower => effects.any(
+    (effect) => effect is Map && effect['type'] == 'swap_printed_g_power',
+  );
+
   bool lowestTotalGPowerWins({
     required int leftPrintedGPower,
     required int rightPrintedGPower,
