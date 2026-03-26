@@ -1105,6 +1105,8 @@ class PlayerArenaInfo extends StatelessWidget {
   final double? thickness;
   final int? selectedBakuganIndex;
   final Function(int)? onBakuganTap;
+  final Function(int)? onBakuganLongPress;
+  final List<MatchBakuganPileState>? bakuganPileStates;
   final bool isSelecting;
   final bool isExpanded;
   final VoidCallback? onPortraitTap;
@@ -1122,6 +1124,8 @@ class PlayerArenaInfo extends StatelessWidget {
     this.thickness,
     this.selectedBakuganIndex,
     this.onBakuganTap,
+    this.onBakuganLongPress,
+    this.bakuganPileStates,
     this.isSelecting = false,
     this.isExpanded = false,
     this.onPortraitTap,
@@ -1140,6 +1144,16 @@ class PlayerArenaInfo extends StatelessWidget {
       Colors.blueAccent,
       Colors.cyan,
       Colors.blue.shade900,
+    ];
+    final List<Color> standingGradient = [
+      const Color(0xFF7BE6C2),
+      const Color(0xFFD9F59A),
+      const Color(0xFF2B7F6A),
+    ];
+    final List<Color> usedGradient = [
+      const Color(0xFF565C68),
+      const Color(0xFF2E3138),
+      const Color(0xFF15171B),
     ];
 
     final double portraitWidth = isExpanded ? 230 : 180;
@@ -1202,74 +1216,89 @@ class PlayerArenaInfo extends StatelessWidget {
               final hasBakugan = i < player.deck.length;
               final variant = hasBakugan ? player.deck[i] : null;
               final isPicked = selectedBakuganIndex == i;
+              final pileState =
+                  bakuganPileStates != null && i < bakuganPileStates!.length
+                  ? bakuganPileStates![i]
+                  : MatchBakuganPileState.unused;
+              final isStanding = pileState == MatchBakuganPileState.standing;
+              final isUsed = pileState == MatchBakuganPileState.used;
+              final borderGradient = isPicked
+                  ? activeGradient
+                  : isStanding
+                  ? standingGradient
+                  : isUsed
+                  ? usedGradient
+                  : idleGradient;
 
               return Transform(
                 alignment: Alignment.center,
                 transform: Matrix4.skewX(-0.15),
                 child: GestureDetector(
                   onTap: hasBakugan ? () => onBakuganTap?.call(i) : null,
+                  onLongPress: hasBakugan
+                      ? () => onBakuganLongPress?.call(i)
+                      : null,
                   behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    width: slotSize,
-                    height: slotSize,
-                    margin: EdgeInsets.only(
-                      right: isMirrored ? 0 : slotGap,
-                      left: isMirrored ? slotGap : 0,
-                    ),
-                    padding: EdgeInsets.all(isPicked ? 4 : 2),
-                    // The "Border" thickness
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      // --- THE GRADIENT BORDER ---
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isPicked ? activeGradient : idleGradient,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: isUsed ? 0.48 : 1.0,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      width: slotSize,
+                      height: slotSize,
+                      margin: EdgeInsets.only(
+                        right: isMirrored ? 0 : slotGap,
+                        left: isMirrored ? slotGap : 0,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              (isPicked ? activeGradient[0] : idleGradient[0])
-                                  .withValues(alpha: 0.5),
-                          blurRadius: isPicked ? 15 : 8,
-                          spreadRadius: isPicked ? 2 : 0,
-                        ),
-                      ],
-                    ),
-                    child: Container(
-                      // This inner container "cuts out" the center to show the 3D model
+                      padding: EdgeInsets.all(isPicked || isStanding ? 4 : 2),
                       decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: borderGradient,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: borderGradient.first.withValues(
+                              alpha: isPicked || isStanding ? 0.58 : 0.34,
+                            ),
+                            blurRadius:
+                                isPicked || isStanding ? 15 : (isUsed ? 4 : 8),
+                            spreadRadius:
+                                isPicked || isStanding ? 2 : (isUsed ? 0 : 1),
+                          ),
+                        ],
                       ),
-                      child: Stack(
-                        children: [
-                          if (hasBakugan)
-                            Positioned.fill(
-                              child: Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.skewX(
-                                  0.15,
-                                ), // Un-skew the model
-                                child: IgnorePointer(
-                                  ignoring: true,
-                                  child: BakuganPreview(
-                                    variant: variant!,
-                                    isDeck: true,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Stack(
+                          children: [
+                            if (hasBakugan)
+                              Positioned.fill(
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.skewX(0.15),
+                                  child: IgnorePointer(
+                                    ignoring: true,
+                                    child: BakuganPreview(
+                                      variant: variant!,
+                                      isDeck: true,
+                                    ),
                                   ),
                                 ),
                               ),
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.white.withValues(alpha: 0.01),
+                              ),
                             ),
-
-                          // HIT TEST OVERLAY
-                          Positioned.fill(
-                            child: Container(
-                              color: Colors.white.withValues(alpha: 0.01),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1290,6 +1319,9 @@ class PlayerArenaInfo extends StatelessWidget {
 
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: isMirrored
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         if (portraitOverlayAbove && portraitOverlay != null) ...[
           portraitOverlay!,
@@ -1301,6 +1333,73 @@ class PlayerArenaInfo extends StatelessWidget {
           portraitOverlay!,
         ],
       ],
+    );
+  }
+}
+
+class BattleResultShowcase extends StatelessWidget {
+  final String title;
+  final Widget previewChild;
+  final VoidCallback? onTap;
+
+  const BattleResultShowcase({
+    super.key,
+    required this.title,
+    required this.previewChild,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TweenAnimationBuilder<Offset>(
+              tween: Tween<Offset>(
+                begin: const Offset(-1.2, 0),
+                end: Offset.zero,
+              ),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (context, offset, child) {
+                return Transform.translate(
+                  offset: Offset(offset.dx * 480, 0),
+                  child: child,
+                );
+              },
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 72,
+                  fontWeight: FontWeight.w900,
+                  fontStyle: FontStyle.italic,
+                  letterSpacing: 2,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black,
+                      offset: Offset(4, 4),
+                      blurRadius: 10,
+                    ),
+                    Shadow(color: Colors.white24, blurRadius: 28),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
+            SizedBox(
+              width: 560,
+              height: 560,
+              child: previewChild,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -5,12 +5,16 @@ class BattleArenaScreen extends StatefulWidget {
   final PlayerData rightPlayer;
   final int leftPlayerIndex;
   final int rightPlayerIndex;
+  final int leftBakuganDeckIndex;
+  final int rightBakuganDeckIndex;
   final BakuganVariant leftBakugan;
   final BakuganVariant rightBakugan;
   final int usedGateCardsInAllPiles;
   final int leftUsedGateCards;
   final int rightUsedGateCards;
   final List<List<MatchPresentedAbility?>> presentedMatchAbilities;
+  final List<int> leftUnusedBakuganIndices;
+  final List<int> rightUnusedBakuganIndices;
 
   const BattleArenaScreen({
     super.key,
@@ -18,9 +22,13 @@ class BattleArenaScreen extends StatefulWidget {
     required this.rightPlayer,
     required this.leftPlayerIndex,
     required this.rightPlayerIndex,
+    required this.leftBakuganDeckIndex,
+    required this.rightBakuganDeckIndex,
     required this.leftBakugan,
     required this.rightBakugan,
     required this.presentedMatchAbilities,
+    this.leftUnusedBakuganIndices = const [],
+    this.rightUnusedBakuganIndices = const [],
     this.usedGateCardsInAllPiles = 0,
     this.leftUsedGateCards = 0,
     this.rightUsedGateCards = 0,
@@ -152,6 +160,19 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   bool _showLeftAbilityFlash = false;
   bool _showRightAbilityFlash = false;
   bool _showRevealFlash = false;
+  bool _showBattleBackground = false;
+  late BakuganVariant _leftBattleBakugan;
+  late BakuganVariant _rightBattleBakugan;
+  late int _leftBattleBakuganIndex;
+  late int _rightBattleBakuganIndex;
+  List<int> _leftReplacementOptions = const [];
+  List<int> _rightReplacementOptions = const [];
+  bool _showLeftReplacementChooser = false;
+  bool _showRightReplacementChooser = false;
+  bool _showLeftNoUnusedNotice = false;
+  bool _showRightNoUnusedNotice = false;
+  Completer<int?>? _leftReplacementCompleter;
+  Completer<int?>? _rightReplacementCompleter;
   bool _isResolvingCard = false;
   int _leftCurrentGPower = 0;
   int _rightCurrentGPower = 0;
@@ -170,15 +191,22 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Timer? _powerTickTimer;
   String? _currentBattleMusicAsset;
 
+  BakuganVariant get _leftBakuganVariant => _leftBattleBakugan;
+  BakuganVariant get _rightBakuganVariant => _rightBattleBakugan;
+
   @override
   void initState() {
     super.initState();
-    _leftCurrentGPower = widget.leftBakugan.gPower;
-    _rightCurrentGPower = widget.rightBakugan.gPower;
+    _leftBattleBakugan = widget.leftBakugan;
+    _rightBattleBakugan = widget.rightBakugan;
+    _leftBattleBakuganIndex = widget.leftBakuganDeckIndex;
+    _rightBattleBakuganIndex = widget.rightBakuganDeckIndex;
+    _leftCurrentGPower = _leftBattleBakugan.gPower;
+    _rightCurrentGPower = _rightBattleBakugan.gPower;
     _leftTargetGPower = _leftCurrentGPower;
     _rightTargetGPower = _rightCurrentGPower;
-    _leftBattlePrintedGPower = widget.leftBakugan.gPower;
-    _rightBattlePrintedGPower = widget.rightBakugan.gPower;
+    _leftBattlePrintedGPower = _leftBattleBakugan.gPower;
+    _rightBattlePrintedGPower = _rightBattleBakugan.gPower;
     _leftAnimationStartGPower = _leftCurrentGPower;
     _rightAnimationStartGPower = _rightCurrentGPower;
     _powerStartPlayer = AudioPlayer();
@@ -196,6 +224,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       }
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _showBattleBackground = true;
+      });
+    });
     _startBattleMusic();
     _loadBattleCards();
   }
@@ -290,6 +324,128 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       await _battleMusicPlayer.setReleaseMode(ReleaseMode.stop);
       await _battleMusicPlayer.play(AssetSource('sound/win_battle.flac'));
     } catch (_) {}
+  }
+
+  GateCardBonusBreakdown _gateBreakdownFor(bool isLeft) {
+    final card = _revealedCard;
+    if (card == null) {
+      return GateCardBonusBreakdown(baseBonus: 0);
+    }
+
+    return card.bonusBreakdownFor(
+      isLeft ? _leftBakuganVariant : _rightBakuganVariant,
+      usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+      ownerUsedGateCards: isLeft
+          ? widget.leftUsedGateCards
+          : widget.rightUsedGateCards,
+      opponentUsedGateCards: isLeft
+          ? widget.rightUsedGateCards
+          : widget.leftUsedGateCards,
+      teamBakugans: isLeft ? widget.leftPlayer.deck : widget.rightPlayer.deck,
+    );
+  }
+
+  int _abilityBonusFor(bool isLeft, BakuganVariant variant) {
+    if (_areAbilityCardsForbidden) return 0;
+    final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
+    return slots.whereType<MatchPresentedAbility>().fold<int>(
+      0,
+      (sum, slot) => sum + slot.card.calculateBonus(variant),
+    );
+  }
+
+  Future<void> _recalculateBattleTotals() async {
+    final leftTarget =
+        _leftBattlePrintedGPower +
+        _gateBreakdownFor(true).totalBonus +
+        _abilityBonusFor(true, _leftBakuganVariant);
+    final rightTarget =
+        _rightBattlePrintedGPower +
+        _gateBreakdownFor(false).totalBonus +
+        _abilityBonusFor(false, _rightBakuganVariant);
+
+    await _animatePowerChange(leftTarget: leftTarget, rightTarget: rightTarget);
+  }
+
+  Future<void> _flashNoUnusedNotice(bool isLeft) async {
+    setState(() {
+      if (isLeft) {
+        _showLeftNoUnusedNotice = true;
+      } else {
+        _showRightNoUnusedNotice = true;
+      }
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    setState(() {
+      if (isLeft) {
+        _showLeftNoUnusedNotice = false;
+      } else {
+        _showRightNoUnusedNotice = false;
+      }
+    });
+  }
+
+  Future<void> _handleGateReplacementEffect() async {
+    final leftOptions = widget.leftUnusedBakuganIndices
+        .where((index) => index != _leftBattleBakuganIndex)
+        .toList();
+    final rightOptions = widget.rightUnusedBakuganIndices
+        .where((index) => index != _rightBattleBakuganIndex)
+        .toList();
+
+    if (leftOptions.isEmpty) {
+      unawaited(_flashNoUnusedNotice(true));
+    }
+    if (rightOptions.isEmpty) {
+      unawaited(_flashNoUnusedNotice(false));
+    }
+    if (leftOptions.isEmpty && rightOptions.isEmpty) {
+      return;
+    }
+
+    _leftReplacementCompleter = leftOptions.isNotEmpty ? Completer<int?>() : null;
+    _rightReplacementCompleter =
+        rightOptions.isNotEmpty ? Completer<int?>() : null;
+
+    setState(() {
+      _leftReplacementOptions = leftOptions;
+      _rightReplacementOptions = rightOptions;
+      _showLeftReplacementChooser = leftOptions.isNotEmpty;
+      _showRightReplacementChooser = rightOptions.isNotEmpty;
+      _showLeftAbilityPresentation = false;
+      _showRightAbilityPresentation = false;
+    });
+
+    final results = await Future.wait<int?>([
+      _leftReplacementCompleter?.future ?? Future<int?>.value(null),
+      _rightReplacementCompleter?.future ?? Future<int?>.value(null),
+    ]);
+    if (!mounted) return;
+
+    final leftChosenIndex = results[0];
+    final rightChosenIndex = results[1];
+
+    setState(() {
+      if (leftChosenIndex != null) {
+        _leftBattleBakuganIndex = leftChosenIndex;
+        _leftBattleBakugan = widget.leftPlayer.deck[leftChosenIndex];
+        _leftBattlePrintedGPower = _leftBattleBakugan.gPower;
+      }
+      if (rightChosenIndex != null) {
+        _rightBattleBakuganIndex = rightChosenIndex;
+        _rightBattleBakugan = widget.rightPlayer.deck[rightChosenIndex];
+        _rightBattlePrintedGPower = _rightBattleBakugan.gPower;
+      }
+      _showLeftReplacementChooser = false;
+      _showRightReplacementChooser = false;
+      _leftReplacementOptions = const [];
+      _rightReplacementOptions = const [];
+      _leftReplacementCompleter = null;
+      _rightReplacementCompleter = null;
+    });
+
+    await _recalculateBattleTotals();
   }
 
   Future<void> _animatePowerChange({
@@ -1021,8 +1177,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                   final card = matches[index];
                                   final bonus = card.calculateBonus(
                                     isLeft
-                                        ? widget.leftBakugan
-                                        : widget.rightBakugan,
+                                        ? _leftBakuganVariant
+                                        : _rightBakuganVariant,
                                   );
                                   return InkWell(
                                     onTap: () => onSelected(card),
@@ -1113,20 +1269,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Future<void> _revealGateCard(GateCard card) async {
     if (_isResolvingCard) return;
 
-    final leftBreakdown = card.bonusBreakdownFor(
-      widget.leftBakugan,
-      usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
-      ownerUsedGateCards: widget.leftUsedGateCards,
-      opponentUsedGateCards: widget.rightUsedGateCards,
-      teamBakugans: widget.leftPlayer.deck,
-    );
-    final rightBreakdown = card.bonusBreakdownFor(
-      widget.rightBakugan,
-      usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
-      ownerUsedGateCards: widget.rightUsedGateCards,
-      opponentUsedGateCards: widget.leftUsedGateCards,
-      teamBakugans: widget.rightPlayer.deck,
-    );
     try {
       await precacheImage(AssetImage(card.imagePath), context);
     } catch (_) {}
@@ -1138,12 +1280,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _winnerText = null;
       _revealedCard = card;
       _showRevealFlash = true;
-      _leftCurrentGPower = widget.leftBakugan.gPower;
-      _rightCurrentGPower = widget.rightBakugan.gPower;
+      _leftCurrentGPower = _leftBakuganVariant.gPower;
+      _rightCurrentGPower = _rightBakuganVariant.gPower;
       _leftTargetGPower = _leftCurrentGPower;
       _rightTargetGPower = _rightCurrentGPower;
-      _leftBattlePrintedGPower = widget.leftBakugan.gPower;
-      _rightBattlePrintedGPower = widget.rightBakugan.gPower;
+      _leftBattlePrintedGPower = _leftBakuganVariant.gPower;
+      _rightBattlePrintedGPower = _rightBakuganVariant.gPower;
       _areAbilityCardsForbidden = false;
     });
 
@@ -1186,8 +1328,17 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       });
     }
 
-    final leftSegments = leftBreakdown.bonusSegments;
-    final rightSegments = rightBreakdown.bonusSegments;
+    if (card.effects.any(
+      (effect) =>
+          effect is Map &&
+          effect['type'] == 'replace_battling_bakugan_with_unused',
+    )) {
+      await _handleGateReplacementEffect();
+      if (!mounted) return;
+    }
+
+    final leftSegments = _gateBreakdownFor(true).bonusSegments;
+    final rightSegments = _gateBreakdownFor(false).bonusSegments;
     final maxSegments = max(leftSegments.length, rightSegments.length);
 
     for (int i = 0; i < maxSegments; i++) {
@@ -1215,7 +1366,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     if (slotIndex == -1) return;
 
     final pendingBonus = card.calculateBonus(
-      isLeft ? widget.leftBakugan : widget.rightBakugan,
+      isLeft ? _leftBakuganVariant : _rightBakuganVariant,
     );
 
     try {
@@ -1273,7 +1424,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       if (slot != null &&
           slot.isActive &&
           !_leftAppliedAbilitySlots.contains(i)) {
-        leftBonus += slot.card.calculateBonus(widget.leftBakugan);
+        leftBonus += slot.card.calculateBonus(_leftBakuganVariant);
         newlyAppliedLeft.add(i);
       }
     }
@@ -1283,7 +1434,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       if (slot != null &&
           slot.isActive &&
           !_rightAppliedAbilitySlots.contains(i)) {
-        rightBonus += slot.card.calculateBonus(widget.rightBakugan);
+        rightBonus += slot.card.calculateBonus(_rightBakuganVariant);
         newlyAppliedRight.add(i);
       }
     }
@@ -1409,12 +1560,40 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     unawaited(_playBattleWinSound());
   }
 
-  void _returnToMatch() {
+  Future<void> _returnToMatch() async {
     if ((_winnerSideIndex == null && !_isTieResult) || _hasReturnedToMatch) {
       return;
     }
     _hasReturnedToMatch = true;
-    Navigator.of(context).pop(_winnerSideIndex);
+    if (mounted) {
+      setState(() {
+        _showBattleBackground = false;
+      });
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    if (!mounted) return;
+    Navigator.of(context).pop({
+      'winnerIndex': _winnerSideIndex,
+      'leftBakuganIndex': _leftBattleBakuganIndex,
+      'rightBakuganIndex': _rightBattleBakuganIndex,
+    });
+  }
+
+  Future<void> _closeBattle() async {
+    if (_hasReturnedToMatch) return;
+    _hasReturnedToMatch = true;
+    if (mounted) {
+      setState(() {
+        _showBattleBackground = false;
+      });
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    if (!mounted) return;
+    Navigator.of(context).pop({
+      'winnerIndex': null,
+      'leftBakuganIndex': _leftBattleBakuganIndex,
+      'rightBakuganIndex': _rightBattleBakuganIndex,
+    });
   }
 
   void _endFight() {
@@ -1465,19 +1644,30 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   @override
   Widget build(BuildContext context) {
-    final canEndFight = _revealedCard != null && !_isResolvingCard;
     final hasWinner = _winnerSideIndex != null || _isTieResult;
 
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-              child: Image.asset('assets/images/menu-2.png', fit: BoxFit.cover),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              opacity: _showBattleBackground ? 1 : 0,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                child: Image.asset('assets/images/menu-2.png', fit: BoxFit.cover),
+              ),
             ),
           ),
-          Positioned.fill(child: Container(color: Colors.black38)),
+          Positioned.fill(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              opacity: _showBattleBackground ? 1 : 0,
+              child: Container(color: Colors.black38),
+            ),
+          ),
           if (hasWinner)
             _buildWinnerScreen()
           else
@@ -1492,7 +1682,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       color: Colors.white,
                       size: 30,
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _closeBattle,
                   ),
                 ),
                 Center(child: _buildGateCardArea()),
@@ -1519,20 +1709,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     bottom: 170,
                     child: Center(
                       child: _buildGateDescriptionPanel(_revealedCard!),
-                    ),
-                  ),
-                if (canEndFight)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 28,
-                    child: Center(
-                      child: BakuganButton(
-                        text: 'END BRAWL',
-                        onPressed: _endFight,
-                        width: 300,
-                        height: 70,
-                      ),
                     ),
                   ),
               ],
@@ -1647,72 +1823,27 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final winnerIsLeft = _winnerSideIndex == 0;
     final winnerPlayer = winnerIsLeft ? widget.leftPlayer : widget.rightPlayer;
     final winnerBakugan = winnerIsLeft
-        ? widget.leftBakugan
-        : widget.rightBakugan;
+        ? _leftBakuganVariant
+        : _rightBakuganVariant;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return BattleResultShowcase(
+      title: '${winnerPlayer.name} WINS!',
       onTap: _returnToMatch,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TweenAnimationBuilder<Offset>(
-              tween: Tween<Offset>(
-                begin: const Offset(-1.2, 0),
-                end: Offset.zero,
-              ),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              builder: (context, offset, child) {
-                return Transform.translate(
-                  offset: Offset(offset.dx * 480, 0),
-                  child: child,
-                );
-              },
-              child: Text(
-                '${winnerPlayer.name} WINS!',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 72,
-                  fontWeight: FontWeight.w900,
-                  fontStyle: FontStyle.italic,
-                  letterSpacing: 2,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black,
-                      offset: Offset(4, 4),
-                      blurRadius: 10,
-                    ),
-                    Shadow(color: Colors.white24, blurRadius: 28),
-                  ],
-                ),
-              ),
+      previewChild: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: _abilityPresentationWidth,
+            height: _abilityPresentationHeight,
+            child: _buildBattlePreviewArea(
+              isLeft: winnerIsLeft,
+              variant: winnerBakugan,
+              focusedAbilityCard: null,
+              showAbilityPresentation: false,
+              showAbilityFlash: false,
             ),
-            const SizedBox(height: 36),
-            SizedBox(
-              width: 560,
-              height: 560,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: _abilityPresentationWidth,
-                    height: _abilityPresentationHeight,
-                    child: _buildBattlePreviewArea(
-                      isLeft: winnerIsLeft,
-                      variant: winnerBakugan,
-                      focusedAbilityCard: null,
-                      showAbilityPresentation: false,
-                      showAbilityFlash: false,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1763,8 +1894,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                               'revealed_${_revealedCard!.key}_${_revealedCard!.imagePath}',
                             ),
                             imagePath: _revealedCard!.imagePath,
-                            onTap:
-                                () {}, // o null si prefieres que no haga nada al click
+                            onTap: !_isResolvingCard ? _endFight : null,
                           ),
                     IgnorePointer(
                       child: AnimatedOpacity(
@@ -1815,7 +1945,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Widget _buildSide(bool isLeft) {
-    final variant = isLeft ? widget.leftBakugan : widget.rightBakugan;
+    final variant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
     final player = isLeft ? widget.leftPlayer : widget.rightPlayer;
     final currentGPower = isLeft ? _leftCurrentGPower : _rightCurrentGPower;
     final abilitySlots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
@@ -1836,7 +1966,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           (sum, slot) =>
               sum +
               slot.card.calculateBonus(
-                isLeft ? widget.leftBakugan : widget.rightBakugan,
+                isLeft ? _leftBakuganVariant : _rightBakuganVariant,
               ),
         );
     final canPresentAbility =
@@ -1916,11 +2046,21 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     required bool showAbilityPresentation,
     required bool showAbilityFlash,
   }) {
+    final replacementOptions = isLeft
+        ? _leftReplacementOptions
+        : _rightReplacementOptions;
+    final showReplacementChooser = isLeft
+        ? _showLeftReplacementChooser
+        : _showRightReplacementChooser;
+    final showNoUnusedNotice = isLeft
+        ? _showLeftNoUnusedNotice
+        : _showRightNoUnusedNotice;
+
     return Stack(
       alignment: Alignment.center,
       children: [
         AnimatedOpacity(
-          opacity: showAbilityPresentation ? 0 : 1,
+          opacity: showAbilityPresentation || showReplacementChooser ? 0 : 1,
           duration: const Duration(milliseconds: 220),
           child: SizedBox(
             key: ValueKey(
@@ -1938,6 +2078,43 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               speciesName: variant.speciesName,
               showGPower: false,
               mirrorImage: isLeft,
+            ),
+          ),
+        ),
+        IgnorePointer(
+          ignoring: !showReplacementChooser,
+          child: AnimatedOpacity(
+            opacity: showReplacementChooser ? 1 : 0,
+            duration: const Duration(milliseconds: 220),
+            child: showReplacementChooser
+                ? _buildReplacementChooser(
+                    isLeft: isLeft,
+                    replacementOptions: replacementOptions,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+        IgnorePointer(
+          ignoring: true,
+          child: AnimatedOpacity(
+            opacity: showNoUnusedNotice ? 1 : 0,
+            duration: const Duration(milliseconds: 180),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white38),
+              ),
+              child: const Text(
+                'NO UNUSED BAKUGAN',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
             ),
           ),
         ),
@@ -1961,6 +2138,140 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReplacementChooser({
+    required bool isLeft,
+    required List<int> replacementOptions,
+  }) {
+    final player = isLeft ? widget.leftPlayer : widget.rightPlayer;
+    final List<Color> idleGradient = [
+      Colors.blueAccent,
+      Colors.cyan,
+      Colors.blue.shade900,
+    ];
+    return Container(
+      width: _abilityPresentationWidth,
+      height: _abilityPresentationHeight,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'CHOOSE UNUSED BAKUGAN',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Flexible(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 8),
+              shrinkWrap: true,
+              itemCount: replacementOptions.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 14),
+              itemBuilder: (context, index) {
+                final deckIndex = replacementOptions[index];
+                final variant = player.deck[deckIndex];
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      final completer = isLeft
+                          ? _leftReplacementCompleter
+                          : _rightReplacementCompleter;
+                      if (completer != null && !completer.isCompleted) {
+                        completer.complete(deckIndex);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.44),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        children: [
+                          Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.skewX(-0.15),
+                            child: Container(
+                              width: 116,
+                              height: 116,
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: idleGradient,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: idleGradient.first.withValues(
+                                      alpha: 0.34,
+                                    ),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.skewX(0.15),
+                                  child: IgnorePointer(
+                                    child: BakuganPreview(
+                                      variant: variant,
+                                      isDeck: true,
+                                      disableInteraction: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 18),
+                          Expanded(
+                            child: Text(
+                              variant.speciesName.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                fontStyle: FontStyle.italic,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
