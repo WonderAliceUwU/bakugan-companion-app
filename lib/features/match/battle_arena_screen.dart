@@ -163,6 +163,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   int _rightAnimationStartGPower = 0;
   int? _leftFloatingBonus;
   int? _rightFloatingBonus;
+  bool _areAbilityCardsForbidden = false;
   String? _winnerText;
   int? _winnerSideIndex;
   bool _isTieResult = false;
@@ -1143,6 +1144,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _rightTargetGPower = _rightCurrentGPower;
       _leftBattlePrintedGPower = widget.leftBakugan.gPower;
       _rightBattlePrintedGPower = widget.rightBakugan.gPower;
+      _areAbilityCardsForbidden = false;
     });
 
     await Future<void>.delayed(const Duration(milliseconds: 240));
@@ -1169,6 +1171,21 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       });
     }
 
+    if (card.forbidsAbilityCards(
+      leftPrintedGPower: _leftBattlePrintedGPower,
+      rightPrintedGPower: _rightBattlePrintedGPower,
+    )) {
+      setState(() {
+        _areAbilityCardsForbidden = true;
+        _showLeftAbilityPresentation = false;
+        _showRightAbilityPresentation = false;
+        _showLeftAbilityFlash = false;
+        _showRightAbilityFlash = false;
+        _focusedLeftAbilitySlotIndex = null;
+        _focusedRightAbilitySlotIndex = null;
+      });
+    }
+
     final leftSegments = leftBreakdown.bonusSegments;
     final rightSegments = rightBreakdown.bonusSegments;
     final maxSegments = max(leftSegments.length, rightSegments.length);
@@ -1191,6 +1208,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _presentAbilityCard(bool isLeft, AbilityCard card) async {
+    if (_areAbilityCardsForbidden) return;
     final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
     final int slotIndex = slots.indexWhere((slot) => slot == null);
 
@@ -1241,7 +1259,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _applyQueuedAbilityCards() async {
-    if (_isResolvingCard || _revealedCard == null) return;
+    if (_isResolvingCard || _revealedCard == null || _areAbilityCardsForbidden) {
+      return;
+    }
 
     int leftBonus = 0;
     int rightBonus = 0;
@@ -1819,7 +1839,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 isLeft ? widget.leftBakugan : widget.rightBakugan,
               ),
         );
-    final canPresentAbility = !_isLoadingAbilityCards && !_isResolvingCard;
+    final canPresentAbility =
+        !_areAbilityCardsForbidden && !_isLoadingAbilityCards && !_isResolvingCard;
 
     return SizedBox(
       width: 600,
@@ -1839,15 +1860,21 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             ),
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: 98,
-            child: _buildAbilitySlot(
-              isLeft: isLeft,
-              abilitySlots: abilitySlots,
-              focusedAbilityCard: focusedAbilityCard,
-              showAbilityPresentation: showAbilityPresentation,
-              canPresent: canPresentAbility,
-            ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            child: _areAbilityCardsForbidden
+                ? const SizedBox.shrink()
+                : SizedBox(
+                    height: 98,
+                    child: _buildAbilitySlot(
+                      isLeft: isLeft,
+                      abilitySlots: abilitySlots,
+                      focusedAbilityCard: focusedAbilityCard,
+                      showAbilityPresentation: showAbilityPresentation,
+                      canPresent: canPresentAbility,
+                    ),
+                  ),
           ),
           const Spacer(),
           SizedBox(
@@ -1865,7 +1892,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _AnimatedBattleGPowerBadge(
             gPower: currentGPower,
             bonusDelta: isLeft ? _leftFloatingBonus : _rightFloatingBonus,
-            pendingBonusDelta: _revealedCard == null && pendingAbilityBonus > 0
+            pendingBonusDelta:
+                !_areAbilityCardsForbidden &&
+                    _revealedCard == null &&
+                    pendingAbilityBonus > 0
                 ? pendingAbilityBonus
                 : null,
             attribute: variant.attribute,

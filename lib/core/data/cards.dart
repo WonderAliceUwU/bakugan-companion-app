@@ -146,6 +146,30 @@ class GateCard {
     (effect) => effect is Map && effect['type'] == 'swap_printed_g_power',
   );
 
+  bool forbidsAbilityCards({
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+  }) {
+    for (final effect in effects) {
+      if (effect is! Map || effect['type'] != 'forbid_ability_cards') {
+        continue;
+      }
+
+      final condition = effect['condition'];
+      if (condition is! Map) {
+        return true;
+      }
+
+      final dynamic thresholdRaw = condition['printed_g_power_difference_gte'];
+      if (thresholdRaw is num &&
+          (leftPrintedGPower - rightPrintedGPower).abs() >=
+              thresholdRaw.toInt()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool lowestTotalGPowerWins({
     required int leftPrintedGPower,
     required int rightPrintedGPower,
