@@ -48,6 +48,8 @@ class GateCard {
   GateCardBonusBreakdown bonusBreakdownFor(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
+    int ownerUsedGateCards = 0,
+    int opponentUsedGateCards = 0,
     Iterable<BakuganVariant> teamBakugans = const [],
   }) {
     final int baseBonus = bonusFor(variant.attribute);
@@ -103,6 +105,19 @@ class GateCard {
           }
         }
       }
+
+      if (effect is Map && effect['type'] == 'fewest_used_gate_gets_bonus') {
+        final String target = (effect['target'] ?? '').toString().toLowerCase();
+        final dynamic valueRaw = effect['value'];
+        if (target == 'owner_bakugan' &&
+            valueRaw is num &&
+            ownerUsedGateCards < opponentUsedGateCards) {
+          final int dynamicBonus = valueRaw.toInt();
+          if (dynamicBonus > 0) {
+            effectBonusSegments.add(dynamicBonus);
+          }
+        }
+      }
     }
 
     return GateCardBonusBreakdown(
@@ -114,11 +129,15 @@ class GateCard {
   int calculateBonus(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
+    int ownerUsedGateCards = 0,
+    int opponentUsedGateCards = 0,
     Iterable<BakuganVariant> teamBakugans = const [],
   }) {
     return bonusBreakdownFor(
       variant,
       usedGateCardsInAllPiles: usedGateCardsInAllPiles,
+      ownerUsedGateCards: ownerUsedGateCards,
+      opponentUsedGateCards: opponentUsedGateCards,
       teamBakugans: teamBakugans,
     ).totalBonus;
   }
@@ -129,22 +148,20 @@ class GateCard {
   }) {
     for (final effect in effects) {
       if (effect is! Map) continue;
-      if (effect['type'] == 'lowest_total_g_power_wins_battle') {
+      if (effect['type'] != 'lowest_total_g_power_wins_battle') {
+        continue;
+      }
+
+      final condition = effect['condition'];
+      if (condition is! Map) {
         return true;
       }
-      if (effect['type'] ==
-          'lowest_total_g_power_wins_battle_if_printed_gap_gte') {
-        final condition = effect['condition'];
-        if (condition is Map) {
-          final dynamic thresholdRaw =
-              condition['printed_g_power_difference_gte'];
-          if (thresholdRaw is num) {
-            final int threshold = thresholdRaw.toInt();
-            if ((leftPrintedGPower - rightPrintedGPower).abs() >= threshold) {
-              return true;
-            }
-          }
-        }
+
+      final dynamic thresholdRaw = condition['printed_g_power_difference_gte'];
+      if (thresholdRaw is num &&
+          (leftPrintedGPower - rightPrintedGPower).abs() >=
+              thresholdRaw.toInt()) {
+        return true;
       }
     }
     return false;

@@ -8,6 +8,8 @@ class BattleArenaScreen extends StatefulWidget {
   final BakuganVariant leftBakugan;
   final BakuganVariant rightBakugan;
   final int usedGateCardsInAllPiles;
+  final int leftUsedGateCards;
+  final int rightUsedGateCards;
   final List<List<MatchPresentedAbility?>> presentedMatchAbilities;
 
   const BattleArenaScreen({
@@ -20,6 +22,8 @@ class BattleArenaScreen extends StatefulWidget {
     required this.rightBakugan,
     required this.presentedMatchAbilities,
     this.usedGateCardsInAllPiles = 0,
+    this.leftUsedGateCards = 0,
+    this.rightUsedGateCards = 0,
   });
 
   @override
@@ -1099,11 +1103,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final leftBreakdown = card.bonusBreakdownFor(
       widget.leftBakugan,
       usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+      ownerUsedGateCards: widget.leftUsedGateCards,
+      opponentUsedGateCards: widget.rightUsedGateCards,
       teamBakugans: widget.leftPlayer.deck,
     );
     final rightBreakdown = card.bonusBreakdownFor(
       widget.rightBakugan,
       usedGateCardsInAllPiles: widget.usedGateCardsInAllPiles,
+      ownerUsedGateCards: widget.rightUsedGateCards,
+      opponentUsedGateCards: widget.leftUsedGateCards,
       teamBakugans: widget.rightPlayer.deck,
     );
     try {

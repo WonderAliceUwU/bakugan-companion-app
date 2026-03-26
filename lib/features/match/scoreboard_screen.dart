@@ -1483,6 +1483,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                 final rightPlayerIndex = widget.players.indexOf(
                                   rightPlayer!,
                                 );
+                                final leftScoreIndex = _scoreIndexForPlayer(
+                                  leftPlayer!,
+                                );
+                                final rightScoreIndex = _scoreIndexForPlayer(
+                                  rightPlayer!,
+                                );
 
                                 _pauseArenaPlaylist();
                                 Navigator.push(
@@ -1499,6 +1505,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                         0,
                                         (sum, score) => sum + score,
                                       ),
+                                      leftUsedGateCards: scores[leftScoreIndex],
+                                      rightUsedGateCards:
+                                          scores[rightScoreIndex],
                                       presentedMatchAbilities:
                                           _presentedMatchAbilities,
                                     ),

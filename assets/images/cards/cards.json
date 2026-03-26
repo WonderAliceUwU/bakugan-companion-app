@@ -1714,8 +1714,6 @@
       ],
       "rules": []
     },
-
-
     "earthen_mound": {
       "set_number": "1/48b",
       "file": "BA196_GA_SM_earthen_mound.png",
@@ -3070,8 +3068,6 @@
       ],
       "rules": []
     },
-
-
     "aquos_vortex": {
       "set_number": "1/48c",
       "file": "BK_PD_Card244.png",
@@ -3387,7 +3383,7 @@
           "type": "named_bakugan_gain_per_opponent_used_ability_after_battle",
           "bakugan": "Rattleoid",
           "value": 50,
-          "timing": "end_of_battle"
+          "timing": "after_battle"
         }
       ],
       "rules": []
@@ -4444,7 +4440,6 @@
       ],
       "rules": []
     },
-
     "spitting_fire": {
       "set_number": "1/48d",
       "file": "Spitting_Fire(NA).png",
@@ -4769,14 +4764,14 @@
       },
       "effects": [
         {
-          "type": "forbid_ability_cards_if_printed_gap_gte",
+          "type": "forbid_ability_cards",
           "target": "battle",
           "condition": {
             "printed_g_power_difference_gte": 200
           }
         },
         {
-          "type": "lowest_total_g_power_wins_battle_if_printed_gap_gte",
+          "type": "lowest_total_g_power_wins_battle",
           "target": "battle",
           "condition": {
             "printed_g_power_difference_gte": 200
@@ -4805,7 +4800,7 @@
       },
       "effects": [
         {
-          "type": "forbid_ability_cards_if_printed_gap_gte",
+          "type": "forbid_ability_cards",
           "target": "battle",
           "condition": {
             "printed_g_power_difference_gte": 200
