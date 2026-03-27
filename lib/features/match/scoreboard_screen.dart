@@ -1520,15 +1520,40 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
       _playClick();
       setState(() {
-        if (isMirrored) {
-          rightPlayer = player;
-          rightBakugan = player.deck[bakuganIndex];
-          rightBakuganIdx = bakuganIndex;
-        } else {
+        final isLeftSelected =
+            leftPlayer == player && leftBakuganIdx == bakuganIndex;
+        final isRightSelected =
+            rightPlayer == player && rightBakuganIdx == bakuganIndex;
+
+        if (isLeftSelected) {
+          leftPlayer = null;
+          leftBakugan = null;
+          leftBakuganIdx = null;
+          return;
+        }
+        if (isRightSelected) {
+          rightPlayer = null;
+          rightBakugan = null;
+          rightBakuganIdx = null;
+          return;
+        }
+
+        if (leftPlayer == null) {
           leftPlayer = player;
           leftBakugan = player.deck[bakuganIndex];
           leftBakuganIdx = bakuganIndex;
+          return;
         }
+        if (rightPlayer == null) {
+          rightPlayer = player;
+          rightBakugan = player.deck[bakuganIndex];
+          rightBakuganIdx = bakuganIndex;
+          return;
+        }
+
+        leftPlayer = player;
+        leftBakugan = player.deck[bakuganIndex];
+        leftBakuganIdx = bakuganIndex;
       });
       return;
     }
@@ -1816,6 +1841,37 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           MatchBakuganPileState.unused &&
                                       index != rightBakuganIdx,
                                 ).toList();
+                                final leftUsedBakuganIndices = List.generate(
+                                  _bakuganPileStates[leftPlayerIndex].length,
+                                  (index) => index,
+                                ).where(
+                                  (index) =>
+                                      _bakuganPileStates[leftPlayerIndex][index] ==
+                                          MatchBakuganPileState.used &&
+                                      index != leftBakuganIdx,
+                                ).toList();
+                                final rightUsedBakuganIndices = List.generate(
+                                  _bakuganPileStates[rightPlayerIndex].length,
+                                  (index) => index,
+                                ).where(
+                                  (index) =>
+                                      _bakuganPileStates[rightPlayerIndex][index] ==
+                                          MatchBakuganPileState.used &&
+                                      index != rightBakuganIdx,
+                                ).toList();
+                                final usedBakuganIndicesByPlayer = {
+                                  for (int playerIndex = 0;
+                                      playerIndex < _bakuganPileStates.length;
+                                      playerIndex++)
+                                    playerIndex: List.generate(
+                                      _bakuganPileStates[playerIndex].length,
+                                      (index) => index,
+                                    ).where(
+                                      (index) =>
+                                          _bakuganPileStates[playerIndex][index] ==
+                                          MatchBakuganPileState.used,
+                                    ).toList(),
+                                };
 
                                 _pauseArenaPlaylist();
                                 Navigator.push(
@@ -1824,6 +1880,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                     BattleArenaScreen(
                                       leftPlayer: leftPlayer!,
                                       rightPlayer: rightPlayer!,
+                                      matchPlayers: widget.players,
                                       leftPlayerIndex: leftPlayerIndex,
                                       rightPlayerIndex: rightPlayerIndex,
                                       leftBakuganDeckIndex: leftBakuganIdx!,
@@ -1834,6 +1891,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           leftUnusedBakuganIndices,
                                       rightUnusedBakuganIndices:
                                           rightUnusedBakuganIndices,
+                                      leftUsedBakuganIndices:
+                                          leftUsedBakuganIndices,
+                                      rightUsedBakuganIndices:
+                                          rightUsedBakuganIndices,
+                                      usedBakuganIndicesByPlayer:
+                                          usedBakuganIndicesByPlayer,
                                       usedGateCardsInAllPiles: scores.fold(
                                         0,
                                         (sum, score) => sum + score,
@@ -1971,6 +2034,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       selectedBakuganIndex: isMirrored
           ? (rightPlayer == player ? rightBakuganIdx : null)
           : (leftPlayer == player ? leftBakuganIdx : null),
+      selectedBakuganIndices: {
+        if (leftPlayer == player && leftBakuganIdx != null) leftBakuganIdx!,
+        if (rightPlayer == player && rightBakuganIdx != null) rightBakuganIdx!,
+      },
       onPortraitTap: null,
       portraitOverlay: _buildProfileAbilityOverlay(index, above: false),
       portraitOverlayAbove: false,
@@ -2005,6 +2072,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           selectedBakuganIndex: isMirrored
               ? (rightPlayer == player ? rightBakuganIdx : null)
               : (leftPlayer == player ? leftBakuganIdx : null),
+          selectedBakuganIndices: {
+            if (leftPlayer == player && leftBakuganIdx != null) leftBakuganIdx!,
+            if (rightPlayer == player && rightBakuganIdx != null) rightBakuganIdx!,
+          },
           onPortraitTap: null,
           portraitOverlay: _buildProfileAbilityOverlay(
             index,

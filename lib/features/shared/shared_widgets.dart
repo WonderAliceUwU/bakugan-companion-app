@@ -1104,6 +1104,7 @@ class PlayerArenaInfo extends StatelessWidget {
   final double? glowAlpha;
   final double? thickness;
   final int? selectedBakuganIndex;
+  final Set<int> selectedBakuganIndices;
   final Function(int)? onBakuganTap;
   final Function(int)? onBakuganLongPress;
   final List<MatchBakuganPileState>? bakuganPileStates;
@@ -1123,6 +1124,7 @@ class PlayerArenaInfo extends StatelessWidget {
     this.glowAlpha,
     this.thickness,
     this.selectedBakuganIndex,
+    this.selectedBakuganIndices = const {},
     this.onBakuganTap,
     this.onBakuganLongPress,
     this.bakuganPileStates,
@@ -1135,6 +1137,10 @@ class PlayerArenaInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveSelectedBakuganIndices = <int>{
+      ...selectedBakuganIndices,
+      ...[selectedBakuganIndex].whereType<int>(),
+    };
     final List<Color> activeGradient = [
       Colors.redAccent,
       Colors.orange,
@@ -1197,7 +1203,7 @@ class PlayerArenaInfo extends StatelessWidget {
         children: [
           const SizedBox(height: 15),
           // --- BAKUGAN SLOTS ---
-          if (isSelecting && selectedBakuganIndex == null)
+          if (isSelecting && effectiveSelectedBakuganIndices.isEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
@@ -1215,7 +1221,7 @@ class PlayerArenaInfo extends StatelessWidget {
             children: List.generate(3, (i) {
               final hasBakugan = i < player.deck.length;
               final variant = hasBakugan ? player.deck[i] : null;
-              final isPicked = selectedBakuganIndex == i;
+              final isPicked = effectiveSelectedBakuganIndices.contains(i);
               final pileState =
                   bakuganPileStates != null && i < bakuganPileStates!.length
                   ? bakuganPileStates![i]

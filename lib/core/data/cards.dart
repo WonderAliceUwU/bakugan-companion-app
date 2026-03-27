@@ -48,8 +48,10 @@ class GateCard {
   GateCardBonusBreakdown bonusBreakdownFor(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
+    int ownerUsedAbilityCards = 0,
     int ownerUsedGateCards = 0,
     int opponentUsedGateCards = 0,
+    bool ownerHasAttributeBonusContext = true,
     Iterable<BakuganVariant> teamBakugans = const [],
   }) {
     final int baseBonus = bonusFor(variant.attribute);
@@ -118,6 +120,17 @@ class GateCard {
           }
         }
       }
+
+      if (effect is Map && effect['type'] == 'gate_bonus_plus_per_used_ability') {
+        final dynamic valueRaw = effect['value'];
+        if (valueRaw is num && ownerUsedAbilityCards > 0) {
+          final int dynamicBonus =
+              valueRaw.toInt() * ownerUsedAbilityCards;
+          if (dynamicBonus > 0) {
+            effectBonusSegments.add(dynamicBonus);
+          }
+        }
+      }
     }
 
     return GateCardBonusBreakdown(
@@ -129,21 +142,32 @@ class GateCard {
   int calculateBonus(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
+    int ownerUsedAbilityCards = 0,
     int ownerUsedGateCards = 0,
     int opponentUsedGateCards = 0,
+    bool ownerHasAttributeBonusContext = true,
     Iterable<BakuganVariant> teamBakugans = const [],
   }) {
     return bonusBreakdownFor(
       variant,
       usedGateCardsInAllPiles: usedGateCardsInAllPiles,
+      ownerUsedAbilityCards: ownerUsedAbilityCards,
       ownerUsedGateCards: ownerUsedGateCards,
       opponentUsedGateCards: opponentUsedGateCards,
+      ownerHasAttributeBonusContext: ownerHasAttributeBonusContext,
       teamBakugans: teamBakugans,
     ).totalBonus;
   }
 
   bool get swapsPrintedGPower => effects.any(
     (effect) => effect is Map && effect['type'] == 'swap_printed_g_power',
+  );
+
+  bool get requiresOwnerSelection => effects.any(
+    (effect) =>
+        effect is Map &&
+        effect['type'] ==
+            'lowest_lose_bonus_if_owner_has_attribute',
   );
 
   bool forbidsAbilityCards({

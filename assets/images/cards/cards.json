@@ -563,7 +563,7 @@
       },
       "effects": [
         {
-          "type": "lowest_printed_may_lose_gate_bonus_if_duplicate_attribute_in_used",
+          "type": "lowest_lose_bonus_if_owner_has_attribute",
           "target": "lowest_printed_bakugan"
         }
       ],
