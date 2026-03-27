@@ -117,7 +117,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
 
   void _playClick() async {
     await _sfxPlayer.stop();
-    await _sfxPlayer.play(AssetSource('sound/select.wav'));
+    await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
   }
 
   void _playCancel() async {
@@ -384,7 +384,6 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
   }
 
   void _onOkPressed() {
-    _playClick();
     final currentPlayer = _currentSelectedPlayer;
     if (currentPlayer == null) {
       _showCharacterSelectMessage('Select, invite, or register a player first.');

@@ -1437,7 +1437,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   void _playClick() async {
     await _sfxPlayer.stop();
-    await _sfxPlayer.play(AssetSource('sound/select.wav'));
+    await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
   }
 
   Future<void> _playBakuganStaySound() async {
@@ -1788,6 +1788,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                   rightBakuganIdx = null;
                                 });
                               },
+                              useCancelSound: true,
                               width: 180,
                               height: 85,
                             ),
@@ -1801,7 +1802,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       : 'CHOOSE...'),
                             onPressed: () {
                               if (!selectionMode) {
-                                _playClick();
                                 setState(() {
                                   selectionMode = true;
                                   leftBakugan = null;

@@ -163,6 +163,10 @@ class GateCard {
     (effect) => effect is Map && effect['type'] == 'swap_printed_g_power',
   );
 
+  bool get returnsAllUsedAbilityCards => effects.any(
+    (effect) => effect is Map && effect['type'] == 'return_all_used_ability_cards',
+  );
+
   bool get requiresOwnerSelection => effects.any(
     (effect) =>
         effect is Map &&

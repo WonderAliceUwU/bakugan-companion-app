@@ -31,7 +31,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
 
   void _playClick() async {
     await _sfxPlayer.stop();
-    await _sfxPlayer.play(AssetSource('sound/select.wav'));
+    await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
   }
 
   bool _isVariantTaken(BakuganVariant variant) {
@@ -47,7 +47,6 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
 
     if (_isVariantTaken(variant)) return;
 
-    _playClick();
     final p = widget.players[currentPlayerIndex];
     if (p.deck.length < 3) {
       setState(() => p.deck.add(variant));
@@ -63,7 +62,6 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   }
 
   void _nextPlayer() {
-    _playClick();
     if (currentPlayerIndex < widget.players.length - 1) {
       setState(() {
         currentPlayerIndex++;
@@ -120,7 +118,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                   size: 30,
                 ),
                 onPressed: () {
-                  _playClick();
+                  unawaited(_playUiCancelSound());
                   Navigator.of(context).pop();
                 },
               ),

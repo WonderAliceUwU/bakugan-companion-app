@@ -977,6 +977,7 @@ class BakuganButton extends StatefulWidget {
   final VoidCallback onPressed;
   final double width, height;
   final Color? color;
+  final bool useCancelSound;
 
   const BakuganButton({
     super.key,
@@ -987,6 +988,7 @@ class BakuganButton extends StatefulWidget {
     this.color,
     this.icon,
     this.iconOnly = false,
+    this.useCancelSound = false,
   });
 
   @override
@@ -1025,6 +1027,11 @@ class _BakuganButtonState extends State<BakuganButton>
         child: GestureDetector(
           onTap: () {
             _pulse.forward();
+            unawaited(
+              widget.useCancelSound
+                  ? _playUiCancelSound()
+                  : _playUiConfirmSound(),
+            );
             widget.onPressed();
           },
           child: Container(

@@ -59,7 +59,7 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
   Future<void> _handleTap() async {
     try {
       await _sfxPlayer.stop();
-      await _sfxPlayer.play(AssetSource('sound/select.wav'));
+      await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
     } catch (_) {}
     _startTransition();
   }
@@ -133,21 +133,11 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     } catch (_) {}
   }
 
-  Future<void> _playClick() async {
-    try {
-      await _sfxPlayer.setVolume(0.5);
-      await _sfxPlayer.stop();
-      await _sfxPlayer.play(AssetSource('sound/select.wav'));
-    } catch (_) {}
-  }
-
   void _navigateToBattleMode() async {
-    _playClick();
     await Navigator.of(context).push(_fadeRoute(const BattleModeScreen()));
   }
 
   void _navigateToLeaderboard() async {
-    _playClick();
     await Navigator.of(context).push(_fadeRoute(const LeaderboardScreen()));
   }
 
@@ -257,7 +247,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        _playUiCancelSound();
+                        Navigator.of(context).pop();
+                      },
                       icon: const Icon(
                         Icons.arrow_back_ios,
                         color: Colors.white,
@@ -673,11 +666,6 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
     _sfxPlayer = AudioPlayer();
   }
 
-  void _playClick() async {
-    await _sfxPlayer.stop();
-    await _sfxPlayer.play(AssetSource('sound/select.wav'));
-  }
-
   void _playCancel() async {
     await _sfxPlayer.stop();
     await _sfxPlayer.play(AssetSource('sound/cancel.wav'));
@@ -746,7 +734,6 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
                   BakuganButton(
                     text: 'BATTLE\nROYALE',
                     onPressed: () {
-                      _playClick();
                       Navigator.push(
                         context,
                         _fadeRoute(
@@ -761,7 +748,6 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
                   BakuganButton(
                     text: 'TEAM\nBATTLE',
                     onPressed: () {
-                      _playClick();
                       Navigator.push(
                         context,
                         _fadeRoute(

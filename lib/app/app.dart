@@ -6,7 +6,7 @@ class BakuganApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bakugan Companion',
+      title: 'Bakugan Stadium App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,

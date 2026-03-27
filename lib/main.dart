@@ -27,11 +27,28 @@ part 'features/match/battle_arena_screen.dart';
 
 final AudioPlayer _bgMusicPlayer = AudioPlayer();
 final AudioPlayer _battleMusicPlayer = AudioPlayer();
+final AudioPlayer _uiConfirmPlayer = AudioPlayer();
+final AudioPlayer _uiCancelPlayer = AudioPlayer();
+
+Future<void> _playUiConfirmSound() async {
+  try {
+    await _uiConfirmPlayer.stop();
+    await _uiConfirmPlayer.play(AssetSource('sound/select.wav'));
+  } catch (_) {}
+}
+
+Future<void> _playUiCancelSound() async {
+  try {
+    await _uiCancelPlayer.stop();
+    await _uiCancelPlayer.play(AssetSource('sound/cancel.wav'));
+  } catch (_) {}
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await _bgMusicPlayer.stop();
   } catch (_) {}
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   runApp(const BakuganApp());
 }

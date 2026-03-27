@@ -1831,6 +1831,31 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     }
   }
 
+  void _returnBattlingPlayersAbilityCardsToUnused() {
+    for (int i = 0; i < _leftAbilitySlots.length; i++) {
+      _leftAbilitySlots[i] = null;
+    }
+    for (int i = 0; i < _rightAbilitySlots.length; i++) {
+      _rightAbilitySlots[i] = null;
+    }
+    _leftAppliedAbilitySlots.clear();
+    _rightAppliedAbilitySlots.clear();
+    _focusedLeftAbilitySlotIndex = null;
+    _focusedRightAbilitySlotIndex = null;
+    _showLeftAbilityPresentation = false;
+    _showRightAbilityPresentation = false;
+    _showLeftAbilityFlash = false;
+    _showRightAbilityFlash = false;
+  }
+
+  void _finalizeBattleAbilitySlots() {
+    if (_revealedCard?.returnsAllUsedAbilityCards ?? false) {
+      _returnBattlingPlayersAbilityCardsToUnused();
+      return;
+    }
+    _markResolvedBattleAbilitiesAsUsed();
+  }
+
   void _showAbilityPresentation(
     bool isLeft, {
     bool withFlash = false,
@@ -1928,7 +1953,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _hasReturnedToMatch = true;
     if (mounted) {
       setState(() {
-        _markResolvedBattleAbilitiesAsUsed();
+        _finalizeBattleAbilitySlots();
         _showBattleBackground = false;
       });
     }
@@ -1946,7 +1971,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _hasReturnedToMatch = true;
     if (mounted) {
       setState(() {
-        _markResolvedBattleAbilitiesAsUsed();
+        _finalizeBattleAbilitySlots();
         _showBattleBackground = false;
       });
     }
@@ -2045,7 +2070,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       color: Colors.white,
                       size: 30,
                     ),
-                    onPressed: _closeBattle,
+                    onPressed: () {
+                      _playBattleRevealSfx('cancel.wav');
+                      _closeBattle();
+                    },
                   ),
                 ),
                 Center(child: _buildGateCardArea()),
