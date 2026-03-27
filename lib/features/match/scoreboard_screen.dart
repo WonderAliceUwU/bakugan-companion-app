@@ -1393,6 +1393,143 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     }
   }
 
+  void _removePoint(int index) {
+    setState(() {
+      if (index >= 0 && index < scores.length && scores[index] > 0) {
+        scores[index]--;
+      }
+    });
+  }
+
+  Future<void> _showMatchInfoModal({
+    required String title,
+    String? subtitle,
+    required String message,
+    String buttonText = 'OK',
+  }) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 32,
+            vertical: 24,
+          ),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(-0.10),
+            child: Container(
+              width: 560,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.34),
+                    Colors.white.withValues(alpha: 0.14),
+                    Colors.white.withValues(alpha: 0.26),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    blurRadius: 22,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(19),
+                child: Container(
+                  color: const Color(0xFF05080D),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: GridPainter(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                      ),
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.skewX(0.10),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 26, 28, 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 29,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  fontStyle: FontStyle.italic,
+                                  letterSpacing: 1.15,
+                                ),
+                              ),
+                              if (subtitle != null && subtitle.trim().isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.68),
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.8,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 18),
+                              Text(
+                                message,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white.withValues(alpha: 0.84),
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.35,
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                              Center(
+                                child: BakuganButton(
+                                  text: buttonText,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  width: 180,
+                                  height: 78,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showUsedGateRemovalReminder() {
+    return _showMatchInfoModal(
+      title: 'REMOVE GATE EFFECT',
+      subtitle: 'MATCH REMINDER',
+      message:
+          'If the gate card removed had an effect, remove it by holding the card.',
+    );
+  }
+
   int _scoreIndexForPlayer(PlayerData player) {
     final playerIndex = widget.players.indexOf(player);
     if (playerIndex < 0) return 0;
@@ -1918,6 +2055,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           : const <String, dynamic>{};
                                   final int? winnerIndex =
                                       resultMap['winnerIndex'] as int?;
+                                  final int? usedGatePenaltySideIndex =
+                                      resultMap['usedGatePenaltySideIndex']
+                                          as int?;
                                   final int leftReturnedBakuganIndex =
                                       resultMap['leftBakuganIndex'] is int
                                       ? resultMap['leftBakuganIndex'] as int
@@ -1932,6 +2072,18 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                     leftBakuganIndex: leftReturnedBakuganIndex,
                                     rightBakuganIndex: rightReturnedBakuganIndex,
                                   );
+                                  if (usedGatePenaltySideIndex != null) {
+                                    final penalizedPlayer =
+                                        usedGatePenaltySideIndex == 0
+                                        ? previousLeftPlayer
+                                        : previousRightPlayer;
+                                    if (penalizedPlayer != null) {
+                                      _removePoint(
+                                        _scoreIndexForPlayer(penalizedPlayer),
+                                      );
+                                      unawaited(_showUsedGateRemovalReminder());
+                                    }
+                                  }
                                   if (winnerIndex == null) return;
                                   final sideWinner = winnerIndex;
                                   final winningPlayer = sideWinner == 0

@@ -563,8 +563,11 @@
       },
       "effects": [
         {
-          "type": "lowest_lose_bonus_if_owner_has_attribute",
-          "target": "lowest_printed_bakugan"
+          "type": "suppress_gate_bonus",
+          "target": "lowest_printed_bakugan",
+          "condition": {
+            "owner_has_attribute_matching_target": true
+          }
         }
       ],
       "rules": []
@@ -1141,8 +1144,11 @@
       },
       "effects": [
         {
-          "type": "replace_your_aquos_with_any_unused",
-          "timing": "start_of_battle"
+          "type": "replace_with_any_unused",
+          "timing": "start_of_battle",
+          "condition": {
+            "your_attribute": "aquos"
+          }
         }
       ],
       "rules": []
@@ -1167,12 +1173,13 @@
       },
       "effects": [
         {
-          "type": "suppress_opponent_gate_bonus_if_small_printed_lead",
+          "type": "suppress_gate_bonus",
+          "target": "opponent_bakugan",
           "timing": "during_battle",
           "condition": {
             "your_attribute": "darkus",
-            "printed_lead_lt": 70,
-            "printed_lead_gt": 0
+            "printed_g_power_ahead_lt": 70,
+            "printed_g_power_ahead_gt": 0
           }
         }
       ],

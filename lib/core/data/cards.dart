@@ -171,7 +171,8 @@ class GateCard {
   bool get requiresOwnerSelection => effects.any(
     (effect) =>
         effect is Map &&
-        effect['type'] == 'lowest_lose_bonus_if_owner_has_attribute',
+        effect['type'] == 'suppress_gate_bonus' &&
+        effect['target'] == 'lowest_printed_bakugan',
   );
 
   bool forbidsAbilityCards({
@@ -276,6 +277,13 @@ class AbilityCard {
 
   bool get setsAllPrintedGPowerToZero => effects.any(
     (effect) => effect is Map && effect['type'] == 'set_all_printed_g_power_to_zero',
+  );
+
+  bool get returnsOneUsedGateToOwnerIfOpponentHasMoreUsedGates => effects.any(
+    (effect) =>
+        effect is Map &&
+        effect['type'] ==
+            'return_one_used_gate_to_owner_if_opponent_has_more_used_gates',
   );
 
   bool get supportsBeforeBattle => timings.contains('start_of_battle');

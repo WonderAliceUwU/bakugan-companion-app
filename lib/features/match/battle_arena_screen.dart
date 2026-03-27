@@ -224,8 +224,16 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   late int _rightBattleBakuganIndex;
   String? _leftPendingPreyasPrimaryAttribute;
   String? _rightPendingPreyasPrimaryAttribute;
+  List<String> _leftPendingAttributeChoices = const [];
+  List<String> _rightPendingAttributeChoices = const [];
+  String? _leftPendingAttributeTitle;
+  String? _rightPendingAttributeTitle;
+  String? _leftPendingAttributeSubtitle;
+  String? _rightPendingAttributeSubtitle;
   Completer<void>? _leftPreyasChoiceCompleter;
   Completer<void>? _rightPreyasChoiceCompleter;
+  Completer<String?>? _leftAttributeChoiceCompleter;
+  Completer<String?>? _rightAttributeChoiceCompleter;
   List<int> _leftReplacementOptions = const [];
   List<int> _rightReplacementOptions = const [];
   bool _showLeftReplacementChooser = false;
@@ -257,9 +265,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   BakuganVariant get _leftBakuganVariant => _leftBattleBakugan;
   BakuganVariant get _rightBakuganVariant => _rightBattleBakugan;
-  bool get _isAwaitingAnyPreyasChoice =>
+  bool get _isAwaitingAnyAttributeChoice =>
       _leftPendingPreyasPrimaryAttribute != null ||
-      _rightPendingPreyasPrimaryAttribute != null;
+      _rightPendingPreyasPrimaryAttribute != null ||
+      _leftPendingAttributeChoices.isNotEmpty ||
+      _rightPendingAttributeChoices.isNotEmpty;
 
   @override
   void initState() {
@@ -344,6 +354,180 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
+  static const List<String> _allBattleAttributes = [
+    'pyrus',
+    'aquos',
+    'subterra',
+    'haos',
+    'darkus',
+    'ventus',
+  ];
+
+  ({String title, String subtitle, List<String> choices})?
+  _attributeSelectionRequestForCard({
+    required bool isLeft,
+    required AbilityCard card,
+  }) {
+    final variant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
+    final player = isLeft ? widget.leftPlayer : widget.rightPlayer;
+    final ownPrinted = isLeft
+        ? _leftBattlePrintedGPower
+        : _rightBattlePrintedGPower;
+    final opponentPrinted = isLeft
+        ? _rightBattlePrintedGPower
+        : _leftBattlePrintedGPower;
+
+    for (final effect in card.effects) {
+      if (effect is! Map) continue;
+
+      if (effect['type'] == 'change_attribute') {
+        final target = (effect['target'] ?? '').toString().toLowerCase();
+        if (target != 'your_bakugan' && target != 'your_siege') {
+          continue;
+        }
+
+        final condition = effect['condition'];
+        if (condition is Map &&
+            condition['your_printed_g_power_is_lowest'] == true &&
+            ownPrinted >= opponentPrinted) {
+          continue;
+        }
+
+        final newAttribute = (effect['new_attribute'] ?? '')
+            .toString()
+            .toLowerCase();
+        final choices = switch (newAttribute) {
+          'chosen' => _allBattleAttributes,
+          'chosen_from_your_team' => player.deck
+              .map((bakugan) => bakugan.attribute.toLowerCase())
+              .where((attribute) => attribute.isNotEmpty)
+              .toSet()
+              .toList(),
+          _ => const <String>[],
+        };
+        if (choices.isEmpty) continue;
+
+        return (
+          title: card.name.toUpperCase(),
+          subtitle: 'SELECT ATTRIBUTE',
+          choices: choices,
+        );
+      }
+
+      if (effect['type'] == 'allow_named_bakugan_change_attribute') {
+        final targetBakugan = (effect['bakugan'] ?? '').toString().toLowerCase();
+        if (targetBakugan.isEmpty ||
+            variant.speciesName.toLowerCase() != targetBakugan) {
+          continue;
+        }
+
+        final newAttribute = (effect['new_attribute'] ?? '')
+            .toString()
+            .toLowerCase();
+        final choices = newAttribute == 'chosen'
+            ? _allBattleAttributes
+            : const <String>[];
+        if (choices.isEmpty) continue;
+
+        return (
+          title: card.name.toUpperCase(),
+          subtitle: 'SELECT ATTRIBUTE',
+          choices: choices,
+        );
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _queueBattleAttributeChoiceIfNeeded({
+    required bool isLeft,
+    required AbilityCard card,
+  }) async {
+    final request = _attributeSelectionRequestForCard(
+      isLeft: isLeft,
+      card: card,
+    );
+    if (request == null) return;
+
+    final choices = request.choices.toSet().toList();
+    if (choices.isEmpty) return;
+
+    if (choices.length == 1) {
+      await _applyBattleAttributeChoice(isLeft: isLeft, attribute: choices.first);
+      return;
+    }
+
+    final completer = Completer<String?>();
+    if (!mounted) return;
+    setState(() {
+      if (isLeft) {
+        _leftPendingAttributeTitle = request.title;
+        _leftPendingAttributeSubtitle = request.subtitle;
+        _leftPendingAttributeChoices = choices;
+        _leftAttributeChoiceCompleter = completer;
+      } else {
+        _rightPendingAttributeTitle = request.title;
+        _rightPendingAttributeSubtitle = request.subtitle;
+        _rightPendingAttributeChoices = choices;
+        _rightAttributeChoiceCompleter = completer;
+      }
+    });
+
+    await completer.future;
+  }
+
+  Future<void> _applyBattleAttributeChoice({
+    required bool isLeft,
+    required String attribute,
+  }) async {
+    await _playBattleRevealSfx('select_2.wav');
+    if (!mounted) return;
+
+    final shouldRecalculateResolvedBaseline = _revealedCard != null;
+
+    setState(() {
+      if (isLeft) {
+        _leftBattleBakugan = _variantWithBattleAttribute(
+          _leftBattleBakugan,
+          attribute,
+        );
+        _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
+        _leftPendingAttributeChoices = const [];
+        _leftPendingAttributeTitle = null;
+        _leftPendingAttributeSubtitle = null;
+        if (_revealedCard == null) {
+          _leftCurrentGPower = _leftBattlePrintedGPower;
+          _leftTargetGPower = _leftCurrentGPower;
+          _leftAnimationStartGPower = _leftCurrentGPower;
+        }
+        _leftAttributeChoiceCompleter?.complete(attribute);
+        _leftAttributeChoiceCompleter = null;
+      } else {
+        _rightBattleBakugan = _variantWithBattleAttribute(
+          _rightBattleBakugan,
+          attribute,
+        );
+        _rightBattlePrintedGPower =
+            _initialPrintedGPowerFor(_rightBattleBakugan);
+        _rightPendingAttributeChoices = const [];
+        _rightPendingAttributeTitle = null;
+        _rightPendingAttributeSubtitle = null;
+        if (_revealedCard == null) {
+          _rightCurrentGPower = _rightBattlePrintedGPower;
+          _rightTargetGPower = _rightCurrentGPower;
+          _rightAnimationStartGPower = _rightCurrentGPower;
+        }
+        _rightAttributeChoiceCompleter?.complete(attribute);
+        _rightAttributeChoiceCompleter = null;
+      }
+    });
+
+    if (shouldRecalculateResolvedBaseline) {
+      await _recalculateResolvedBattleBaseline();
+    }
+  }
+
   Future<void> _resolveInitialPreyasChoices() async {
     await Future.wait<void>([
       _queuePreyasDiabloChoiceIfNeeded(
@@ -415,8 +599,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _leftTargetGPower = _leftCurrentGPower;
         _leftAnimationStartGPower = _leftCurrentGPower;
         _leftPendingPreyasPrimaryAttribute = null;
+        _leftPendingAttributeChoices = const [];
+        _leftPendingAttributeTitle = null;
+        _leftPendingAttributeSubtitle = null;
         _leftPreyasChoiceCompleter?.complete();
         _leftPreyasChoiceCompleter = null;
+        _leftAttributeChoiceCompleter = null;
       } else {
         _rightBattleBakugan = _variantWithBattleAttribute(
           _rightBattleBakugan,
@@ -428,8 +616,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _rightTargetGPower = _rightCurrentGPower;
         _rightAnimationStartGPower = _rightCurrentGPower;
         _rightPendingPreyasPrimaryAttribute = null;
+        _rightPendingAttributeChoices = const [];
+        _rightPendingAttributeTitle = null;
+        _rightPendingAttributeSubtitle = null;
         _rightPreyasChoiceCompleter?.complete();
         _rightPreyasChoiceCompleter = null;
+        _rightAttributeChoiceCompleter = null;
       }
     });
   }
@@ -711,7 +903,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       teamBakugans: isLeft ? widget.leftPlayer.deck : widget.rightPlayer.deck,
     );
 
-    if (_shouldSuppressLowestPrintedGateBonus(isLeft, card, variant)) {
+    if (_isGateBaseBonusSuppressedByGateCard(isLeft, card, variant)) {
       return GateCardBonusBreakdown(
         baseBonus: 0,
         effectBonusSegments: breakdown.effectBonusSegments,
@@ -721,39 +913,171 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return breakdown;
   }
 
-  bool _shouldSuppressLowestPrintedGateBonus(
+  bool _gateEffectConditionMatches({
+    required bool sourceIsLeft,
+    required Map effect,
+  }) {
+    final condition = effect['condition'];
+    if (condition is! Map) return true;
+
+    final requiredAttribute = condition['your_attribute']
+        ?.toString()
+        .toLowerCase();
+    if (requiredAttribute != null && requiredAttribute.isNotEmpty) {
+      final sourceVariant = sourceIsLeft ? _leftBakuganVariant : _rightBakuganVariant;
+      if (sourceVariant.attribute.toLowerCase() != requiredAttribute) {
+        return false;
+      }
+    }
+
+    final ownPrinted = sourceIsLeft
+        ? _leftBattlePrintedGPower
+        : _rightBattlePrintedGPower;
+    final opponentPrinted = sourceIsLeft
+        ? _rightBattlePrintedGPower
+        : _leftBattlePrintedGPower;
+    final lead = ownPrinted - opponentPrinted;
+
+    final aheadLt = condition['printed_g_power_ahead_lt'];
+    if (aheadLt is num && lead >= aheadLt.toInt()) {
+      return false;
+    }
+
+    final aheadGt = condition['printed_g_power_ahead_gt'];
+    if (aheadGt is num && lead <= aheadGt.toInt()) {
+      return false;
+    }
+
+    final behindLt = condition['printed_g_power_behind_lt'];
+    if (behindLt is num && -lead >= behindLt.toInt()) {
+      return false;
+    }
+
+    final behindGt = condition['printed_g_power_behind_gt'];
+    if (behindGt is num && -lead <= behindGt.toInt()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isGateBaseBonusSuppressedByGateCard(
     bool isLeft,
     GateCard card,
     BakuganVariant variant,
   ) {
-    final hasEffect = card.effects.any(
-      (effect) =>
-          effect is Map &&
-          effect['type'] == 'lowest_lose_bonus_if_owner_has_attribute',
+    for (final effect in card.effects) {
+      if (effect is! Map || effect['type'] != 'suppress_gate_bonus') continue;
+      final target = (effect['target'] ?? '').toString().toLowerCase();
+      if (target != 'lowest_printed_bakugan') continue;
+
+      final ownPrinted = isLeft
+          ? _leftBattlePrintedGPower
+          : _rightBattlePrintedGPower;
+      final opponentPrinted = isLeft
+          ? _rightBattlePrintedGPower
+          : _leftBattlePrintedGPower;
+      if (ownPrinted >= opponentPrinted) {
+        return false;
+      }
+
+      final condition = effect['condition'];
+      if (condition is Map &&
+          condition['owner_has_attribute_matching_target'] == true) {
+        final ownerIndex = _gateOwnerMatchPlayerIndex;
+        if (ownerIndex == null ||
+            ownerIndex < 0 ||
+            ownerIndex >= widget.matchPlayers.length) {
+          return false;
+        }
+        final attribute = variant.attribute.toLowerCase();
+        final deck = widget.matchPlayers[ownerIndex].deck;
+        return deck.any(
+          (bakugan) => bakugan.attribute.toLowerCase() == attribute,
+        );
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  int _suppressedGateBonusFromAbilityCard({
+    required bool sourceIsLeft,
+    required bool targetIsLeft,
+    required AbilityCard card,
+  }) {
+    for (final effect in card.effects) {
+      if (effect is! Map || effect['type'] != 'suppress_gate_bonus') continue;
+      final target = (effect['target'] ?? '').toString().toLowerCase();
+      if (target != 'opponent_bakugan') continue;
+      if (targetIsLeft == sourceIsLeft) continue;
+      if (!_gateEffectConditionMatches(
+        sourceIsLeft: sourceIsLeft,
+        effect: effect,
+      )) {
+        continue;
+      }
+      return _gateBreakdownFor(targetIsLeft).totalBonus;
+    }
+    return 0;
+  }
+
+  ({int leftDelta, int rightDelta}) _battleAbilityDeltasForCard(
+    bool sourceIsLeft,
+    AbilityCard card,
+  ) {
+    int leftDelta = 0;
+    int rightDelta = 0;
+
+    final sourceVariant = sourceIsLeft ? _leftBakuganVariant : _rightBakuganVariant;
+    final sourceBonus = _calculateBattleAbilityBonusForCard(
+      sourceIsLeft,
+      card,
+      sourceVariant,
     );
-    if (!hasEffect) return false;
-
-    final ownerIndex = _gateOwnerMatchPlayerIndex;
-    if (ownerIndex == null) return false;
-
-    final ownPrinted = isLeft
-        ? _leftBattlePrintedGPower
-        : _rightBattlePrintedGPower;
-    final opponentPrinted = isLeft
-        ? _rightBattlePrintedGPower
-        : _leftBattlePrintedGPower;
-    if (ownPrinted >= opponentPrinted) {
-      return false;
+    if (sourceIsLeft) {
+      leftDelta += sourceBonus;
+    } else {
+      rightDelta += sourceBonus;
     }
 
-    if (ownerIndex < 0 || ownerIndex >= widget.matchPlayers.length) {
-      return false;
-    }
+    final suppressLeft = _suppressedGateBonusFromAbilityCard(
+      sourceIsLeft: sourceIsLeft,
+      targetIsLeft: true,
+      card: card,
+    );
+    final suppressRight = _suppressedGateBonusFromAbilityCard(
+      sourceIsLeft: sourceIsLeft,
+      targetIsLeft: false,
+      card: card,
+    );
+    leftDelta -= suppressLeft;
+    rightDelta -= suppressRight;
 
-    final deck = widget.matchPlayers[ownerIndex].deck;
-    final attribute = variant.attribute.toLowerCase();
+    return (leftDelta: leftDelta, rightDelta: rightDelta);
+  }
 
-    return deck.any((bakugan) => bakugan.attribute.toLowerCase() == attribute);
+  ({bool leftSuppressed, bool rightSuppressed})
+  _gateSuppressionTargetsForAbilityCard(
+    bool sourceIsLeft,
+    AbilityCard card,
+  ) {
+    final suppressLeft = _suppressedGateBonusFromAbilityCard(
+      sourceIsLeft: sourceIsLeft,
+      targetIsLeft: true,
+      card: card,
+    );
+    final suppressRight = _suppressedGateBonusFromAbilityCard(
+      sourceIsLeft: sourceIsLeft,
+      targetIsLeft: false,
+      card: card,
+    );
+    return (
+      leftSuppressed: suppressLeft > 0,
+      rightSuppressed: suppressRight > 0,
+    );
   }
 
   Future<void> _showSuppressedGateBonusFeedback({
@@ -778,38 +1102,44 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   int _abilityBonusFor(bool isLeft, BakuganVariant variant) {
     if (_areAbilityCardsForbidden) return 0;
-    final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
-    return slots.whereType<MatchPresentedAbility>().fold<int>(
-          0,
-          (sum, slot) => sum + _calculateBattleAbilityBonusForCard(
-            isLeft,
-            slot.card,
-            variant,
-          ),
-        ) +
-        _externalBattleAbilityBonusFor(isLeft, variant);
+    int total = 0;
+    for (final slot in _leftAbilitySlots.whereType<MatchPresentedAbility>()) {
+      final deltas = _battleAbilityDeltasForCard(true, slot.card);
+      total += isLeft ? deltas.leftDelta : deltas.rightDelta;
+    }
+    for (final slot in _rightAbilitySlots.whereType<MatchPresentedAbility>()) {
+      final deltas = _battleAbilityDeltasForCard(false, slot.card);
+      total += isLeft ? deltas.leftDelta : deltas.rightDelta;
+    }
+    return total + _externalBattleAbilityBonusFor(isLeft, variant);
   }
 
   int _appliedAbilityBonusFor(bool isLeft, BakuganVariant variant) {
     if (_areAbilityCardsForbidden) return 0;
-    final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
-    final appliedSlots = isLeft
-        ? _leftAppliedAbilitySlots
-        : _rightAppliedAbilitySlots;
-    final localApplied = appliedSlots.fold<int>(0, (sum, index) {
-      if (index < 0 || index >= slots.length) return sum;
-      final slot = slots[index];
+    final leftApplied = _leftAppliedAbilitySlots.fold<int>(0, (sum, index) {
+      if (index < 0 || index >= _leftAbilitySlots.length) return sum;
+      final slot = _leftAbilitySlots[index];
       if (slot == null) return sum;
-      return sum +
-          _calculateBattleAbilityBonusForCard(isLeft, slot.card, variant);
+      final deltas = _battleAbilityDeltasForCard(true, slot.card);
+      return sum + (isLeft ? deltas.leftDelta : deltas.rightDelta);
+    });
+    final rightApplied = _rightAppliedAbilitySlots.fold<int>(0, (sum, index) {
+      if (index < 0 || index >= _rightAbilitySlots.length) return sum;
+      final slot = _rightAbilitySlots[index];
+      if (slot == null) return sum;
+      final deltas = _battleAbilityDeltasForCard(false, slot.card);
+      return sum + (isLeft ? deltas.leftDelta : deltas.rightDelta);
     });
     final externalApplied = _externalBattleAbilityEntries.fold<int>(0, (sum, entry) {
       final key = '${entry.playerIndex}:${entry.slotIndex}';
       if (!_appliedExternalAbilitySlots.contains(key)) return sum;
-      return sum +
-          _calculateBattleAbilityBonusForCard(isLeft, entry.slot.card, variant);
+      final deltas = _battleAbilityDeltasForCard(
+        entry.playerIndex == widget.leftPlayerIndex,
+        entry.slot.card,
+      );
+      return sum + (isLeft ? deltas.leftDelta : deltas.rightDelta);
     });
-    return localApplied + externalApplied;
+    return leftApplied + rightApplied + externalApplied;
   }
 
   int _calculateBattleAbilityBonusForCard(
@@ -864,6 +1194,33 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
+  Future<void> _recalculateResolvedBattleBaseline() async {
+    final leftTarget =
+        _leftBattlePrintedGPower +
+        _gateBreakdownFor(true).totalBonus +
+        _appliedAbilityBonusFor(true, _leftBakuganVariant);
+    final rightTarget =
+        _rightBattlePrintedGPower +
+        _gateBreakdownFor(false).totalBonus +
+        _appliedAbilityBonusFor(false, _rightBakuganVariant);
+
+    if (leftTarget == _leftCurrentGPower &&
+        rightTarget == _rightCurrentGPower) {
+      return;
+    }
+
+    await _animatePowerChange(
+      leftTarget: leftTarget,
+      rightTarget: rightTarget,
+      leftBonus: leftTarget == _leftCurrentGPower
+          ? null
+          : leftTarget - _leftCurrentGPower,
+      rightBonus: rightTarget == _rightCurrentGPower
+          ? null
+          : rightTarget - _rightCurrentGPower,
+    );
+  }
+
   bool _isCenteredBattleAbilityCard(AbilityCard card) {
     return card.effects.any(
       (effect) =>
@@ -876,9 +1233,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     if (_areAbilityCardsForbidden) return 0;
     return _externalBattleAbilityEntries.fold<int>(
       0,
-      (sum, entry) =>
-          sum +
-          _calculateBattleAbilityBonusForCard(isLeft, entry.slot.card, variant),
+      (sum, entry) {
+        final deltas = _battleAbilityDeltasForCard(
+          entry.playerIndex == widget.leftPlayerIndex,
+          entry.slot.card,
+        );
+        return sum + (isLeft ? deltas.leftDelta : deltas.rightDelta);
+      },
     );
   }
 
@@ -916,6 +1277,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         (includeGateBonuses ? _gateBreakdownFor(false).totalBonus : 0) +
         _abilityBonusFor(false, _rightBakuganVariant);
 
+    if (leftTarget == _leftCurrentGPower &&
+        rightTarget == _rightCurrentGPower) {
+      return;
+    }
+
     await _animatePowerChange(leftTarget: leftTarget, rightTarget: rightTarget);
   }
 
@@ -939,8 +1305,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     await _animatePowerChange(
       leftTarget: leftTarget,
       rightTarget: rightTarget,
-      leftBonus: leftBonus > 0 ? leftBonus : null,
-      rightBonus: rightBonus > 0 ? rightBonus : null,
+      leftBonus: leftBonus != 0 ? leftBonus : null,
+      rightBonus: rightBonus != 0 ? rightBonus : null,
     );
   }
 
@@ -961,6 +1327,111 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _showRightNoUnusedNotice = false;
       }
     });
+  }
+
+  bool _matchesOwnAttributeCondition(bool isLeft, Map effect) {
+    final condition = effect['condition'];
+    if (condition is! Map) return true;
+    final requiredAttribute = condition['your_attribute']
+        ?.toString()
+        .toLowerCase();
+    if (requiredAttribute == null || requiredAttribute.isEmpty) {
+      return true;
+    }
+    final variant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
+    return variant.attribute.toLowerCase() == requiredAttribute;
+  }
+
+  Future<int?> _promptSingleBattleReplacement({
+    required bool isLeft,
+    required List<int> replacementOptions,
+  }) async {
+    if (replacementOptions.isEmpty) {
+      unawaited(_flashNoUnusedNotice(isLeft));
+      return null;
+    }
+
+    final completer = Completer<int?>();
+    if (!mounted) return null;
+
+    setState(() {
+      if (isLeft) {
+        _leftReplacementOptions = replacementOptions;
+        _showLeftReplacementChooser = true;
+        _showLeftAbilityPresentation = false;
+        _leftReplacementCompleter = completer;
+      } else {
+        _rightReplacementOptions = replacementOptions;
+        _showRightReplacementChooser = true;
+        _showRightAbilityPresentation = false;
+        _rightReplacementCompleter = completer;
+      }
+    });
+
+    final chosenIndex = await completer.future;
+    if (!mounted || chosenIndex == null) return chosenIndex;
+
+    setState(() {
+      if (isLeft) {
+        _leftBattleBakuganIndex = chosenIndex;
+        _leftBattleBakugan = widget.leftPlayer.deck[chosenIndex];
+        _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
+        _leftCurrentGPower = _leftBattlePrintedGPower;
+        _leftTargetGPower = _leftBattlePrintedGPower;
+        _leftReplacementOptions = const [];
+        _showLeftReplacementChooser = false;
+        _leftReplacementCompleter = null;
+      } else {
+        _rightBattleBakuganIndex = chosenIndex;
+        _rightBattleBakugan = widget.rightPlayer.deck[chosenIndex];
+        _rightBattlePrintedGPower =
+            _initialPrintedGPowerFor(_rightBattleBakugan);
+        _rightCurrentGPower = _rightBattlePrintedGPower;
+        _rightTargetGPower = _rightBattlePrintedGPower;
+        _rightReplacementOptions = const [];
+        _showRightReplacementChooser = false;
+        _rightReplacementCompleter = null;
+      }
+    });
+
+    await _queuePreyasDiabloChoiceIfNeeded(
+      isLeft: isLeft,
+      variant: isLeft
+          ? widget.leftPlayer.deck[chosenIndex]
+          : widget.rightPlayer.deck[chosenIndex],
+    );
+    if (!mounted) return chosenIndex;
+
+    await _applyPrintedGPowerOverrideIfNeeded();
+    return chosenIndex;
+  }
+
+  Future<void> _queueBattleReplacementIfNeeded({
+    required bool isLeft,
+    required AbilityCard card,
+  }) async {
+    if (_revealedCard != null) return;
+
+    for (final effect in card.effects) {
+      if (effect is! Map) continue;
+      if (effect['type'] != 'replace_with_any_unused') continue;
+      if (!_matchesOwnAttributeCondition(isLeft, effect)) continue;
+
+      final options = (isLeft
+              ? widget.leftUnusedBakuganIndices
+              : widget.rightUnusedBakuganIndices)
+          .where(
+            (index) =>
+                index !=
+                (isLeft ? _leftBattleBakuganIndex : _rightBattleBakuganIndex),
+          )
+          .toList();
+      await _promptSingleBattleReplacement(
+        isLeft: isLeft,
+        replacementOptions: options,
+      );
+      return;
+    }
   }
 
   Future<void> _handleGateReplacementEffect() async {
@@ -1069,6 +1540,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     int? leftBonus,
     int? rightBonus,
   }) async {
+    if (leftTarget == _leftCurrentGPower &&
+        rightTarget == _rightCurrentGPower) {
+      return;
+    }
+
     _stopPowerTickLoop();
     _powerAnimationController.stop();
 
@@ -1078,10 +1554,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _rightAnimationStartGPower = _rightCurrentGPower;
       _leftTargetGPower = leftTarget;
       _rightTargetGPower = rightTarget;
-      _leftFloatingBonus = leftBonus != null && leftBonus > 0
+      _leftFloatingBonus = leftBonus != null && leftBonus != 0
           ? leftBonus
           : null;
-      _rightFloatingBonus = rightBonus != null && rightBonus > 0
+      _rightFloatingBonus = rightBonus != null && rightBonus != 0
           ? rightBonus
           : null;
     });
@@ -1400,7 +1876,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _openGateCardPrompt() async {
-    if (_isAwaitingAnyPreyasChoice ||
+    if (_isAwaitingAnyAttributeChoice ||
         _isLoadingGateCards ||
         _isResolvingCard ||
         _revealedCard != null) {
@@ -1638,7 +2114,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _openAbilityCardPrompt(bool isLeft) async {
-    if (_isAwaitingAnyPreyasChoice ||
+    if (_isAwaitingAnyAttributeChoice ||
         _isLoadingAbilityCards ||
         _isResolvingCard) {
       return;
@@ -1973,11 +2449,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final leftSuppressedGateBonus =
         card.bonusFor(_leftBakuganVariant.attribute) > 0 &&
         leftBreakdown.baseBonus == 0 &&
-        _shouldSuppressLowestPrintedGateBonus(true, card, _leftBakuganVariant);
+        _isGateBaseBonusSuppressedByGateCard(
+          true,
+          card,
+          _leftBakuganVariant,
+        );
     final rightSuppressedGateBonus =
         card.bonusFor(_rightBakuganVariant.attribute) > 0 &&
         rightBreakdown.baseBonus == 0 &&
-        _shouldSuppressLowestPrintedGateBonus(
+        _isGateBaseBonusSuppressedByGateCard(
           false,
           card,
           _rightBakuganVariant,
@@ -2035,12 +2515,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
     if (slotIndex == -1) return;
 
-    final pendingBonus = _calculateBattleAbilityBonusForCard(
-      isLeft,
-      card,
-      isLeft ? _leftBakuganVariant : _rightBakuganVariant,
-    );
-
     try {
       await precacheImage(AssetImage(card.imagePath), context);
     } catch (_) {}
@@ -2070,16 +2544,18 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       }
     });
 
+    await _queueBattleAttributeChoiceIfNeeded(isLeft: isLeft, card: card);
+    if (!mounted) return;
+
+    await _queueBattleReplacementIfNeeded(isLeft: isLeft, card: card);
+    if (!mounted) return;
+
     if (_revealedCard != null) {
       _playAfterAbilityMusic();
     }
 
     if (_revealedCard == null) {
       await _applyPrintedGPowerOverrideIfNeeded();
-      return;
-    }
-
-    if (pendingBonus <= 0) {
       return;
     }
 
@@ -2095,6 +2571,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
     int leftBonus = 0;
     int rightBonus = 0;
+    bool leftSuppressed = false;
+    bool rightSuppressed = false;
     final List<int> newlyAppliedLeft = [];
     final List<int> newlyAppliedRight = [];
     final List<String> newlyAppliedExternal = [];
@@ -2104,11 +2582,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       if (slot != null &&
           slot.isActive &&
           !_leftAppliedAbilitySlots.contains(i)) {
-        leftBonus += _calculateBattleAbilityBonusForCard(
-          true,
-          slot.card,
-          _leftBakuganVariant,
-        );
+        final deltas = _battleAbilityDeltasForCard(true, slot.card);
+        final suppressed = _gateSuppressionTargetsForAbilityCard(true, slot.card);
+        leftBonus += deltas.leftDelta;
+        rightBonus += deltas.rightDelta;
+        leftSuppressed = leftSuppressed || suppressed.leftSuppressed;
+        rightSuppressed = rightSuppressed || suppressed.rightSuppressed;
         newlyAppliedLeft.add(i);
       }
     }
@@ -2118,11 +2597,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       if (slot != null &&
           slot.isActive &&
           !_rightAppliedAbilitySlots.contains(i)) {
-        rightBonus += _calculateBattleAbilityBonusForCard(
+        final deltas = _battleAbilityDeltasForCard(false, slot.card);
+        final suppressed = _gateSuppressionTargetsForAbilityCard(
           false,
           slot.card,
-          _rightBakuganVariant,
         );
+        leftBonus += deltas.leftDelta;
+        rightBonus += deltas.rightDelta;
+        leftSuppressed = leftSuppressed || suppressed.leftSuppressed;
+        rightSuppressed = rightSuppressed || suppressed.rightSuppressed;
         newlyAppliedRight.add(i);
       }
     }
@@ -2130,16 +2613,18 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     for (final entry in _externalBattleAbilityEntries) {
       final key = '${entry.playerIndex}:${entry.slotIndex}';
       if (_appliedExternalAbilitySlots.contains(key)) continue;
-      leftBonus += _calculateBattleAbilityBonusForCard(
-        true,
+      final deltas = _battleAbilityDeltasForCard(
+        entry.playerIndex == widget.leftPlayerIndex,
         entry.slot.card,
-        _leftBakuganVariant,
       );
-      rightBonus += _calculateBattleAbilityBonusForCard(
-        false,
+      final suppressed = _gateSuppressionTargetsForAbilityCard(
+        entry.playerIndex == widget.leftPlayerIndex,
         entry.slot.card,
-        _rightBakuganVariant,
       );
+      leftBonus += deltas.leftDelta;
+      rightBonus += deltas.rightDelta;
+      leftSuppressed = leftSuppressed || suppressed.leftSuppressed;
+      rightSuppressed = rightSuppressed || suppressed.rightSuppressed;
       newlyAppliedExternal.add(key);
     }
 
@@ -2149,22 +2634,34 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       return;
     }
 
-    if (leftBonus <= 0 && rightBonus <= 0) {
+    if (leftBonus == 0 && rightBonus == 0) {
       setState(() {
         _leftAppliedAbilitySlots.addAll(newlyAppliedLeft);
         _rightAppliedAbilitySlots.addAll(newlyAppliedRight);
         _appliedExternalAbilitySlots.addAll(newlyAppliedExternal);
       });
 
+      await _showSuppressedGateBonusFeedback(
+        leftSuppressed: leftSuppressed,
+        rightSuppressed: rightSuppressed,
+      );
+      if (!mounted) return;
+
       await _applyDeferredGateEffectBonusesIfNeeded();
       return;
     }
 
+    await _showSuppressedGateBonusFeedback(
+      leftSuppressed: leftSuppressed,
+      rightSuppressed: rightSuppressed,
+    );
+    if (!mounted) return;
+
     await _animatePowerChange(
       leftTarget: _leftCurrentGPower + leftBonus,
       rightTarget: _rightCurrentGPower + rightBonus,
-      leftBonus: leftBonus > 0 ? leftBonus : null,
-      rightBonus: rightBonus > 0 ? rightBonus : null,
+      leftBonus: leftBonus != 0 ? leftBonus : null,
+      rightBonus: rightBonus != 0 ? rightBonus : null,
     );
 
     if (!mounted) return;
@@ -2224,6 +2721,36 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _showLeftAbilityFlash = false;
     _showRightAbilityFlash = false;
     _showExternalAbilityPresentation = false;
+  }
+
+  bool _hasAppliedUsedGateReturnEffect(bool isLeft) {
+    final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
+    final appliedSlots = isLeft
+        ? _leftAppliedAbilitySlots
+        : _rightAppliedAbilitySlots;
+
+    for (final index in appliedSlots) {
+      if (index < 0 || index >= slots.length) continue;
+      final slot = slots[index];
+      if (slot?.card.returnsOneUsedGateToOwnerIfOpponentHasMoreUsedGates ??
+          false) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  int? _usedGatePenaltySideIndex() {
+    if (_hasAppliedUsedGateReturnEffect(true) &&
+        widget.rightUsedGateCards > widget.leftUsedGateCards) {
+      return 1;
+    }
+    if (_hasAppliedUsedGateReturnEffect(false) &&
+        widget.leftUsedGateCards > widget.rightUsedGateCards) {
+      return 0;
+    }
+    return null;
   }
 
   void _finalizeBattleAbilitySlots() {
@@ -2363,6 +2890,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       'winnerIndex': _winnerSideIndex,
       'leftBakuganIndex': _leftBattleBakuganIndex,
       'rightBakuganIndex': _rightBattleBakuganIndex,
+      'usedGatePenaltySideIndex': _usedGatePenaltySideIndex(),
     });
   }
 
@@ -2661,7 +3189,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             child: _buildBattlePreviewArea(
               isLeft: winnerIsLeft,
               variant: winnerBakugan,
-              pendingPreyasPrimaryAttribute: null,
+              isPreyasChooser: false,
+              chooserTitle: null,
+              chooserSubtitle: null,
+              chooserChoices: const [],
+              highlightedAttribute: null,
               focusedAbilityCard: null,
               showAbilityPresentation: false,
               showAbilityFlash: false,
@@ -2853,7 +3385,26 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final pendingPreyasPrimaryAttribute = isLeft
         ? _leftPendingPreyasPrimaryAttribute
         : _rightPendingPreyasPrimaryAttribute;
-    final isAwaitingPreyasChoice = pendingPreyasPrimaryAttribute != null;
+    final pendingAttributeChoices = isLeft
+        ? _leftPendingAttributeChoices
+        : _rightPendingAttributeChoices;
+    final pendingAttributeTitle = isLeft
+        ? _leftPendingAttributeTitle
+        : _rightPendingAttributeTitle;
+    final pendingAttributeSubtitle = isLeft
+        ? _leftPendingAttributeSubtitle
+        : _rightPendingAttributeSubtitle;
+    final chooserChoices = pendingPreyasPrimaryAttribute != null
+        ? <String>[pendingPreyasPrimaryAttribute, 'pyrus']
+        : pendingAttributeChoices;
+    final showPreyasChooser = pendingPreyasPrimaryAttribute != null;
+    final chooserTitle = pendingPreyasPrimaryAttribute != null
+        ? 'PREYAS DIABLO'
+        : pendingAttributeTitle;
+    final chooserSubtitle = pendingPreyasPrimaryAttribute != null
+        ? 'SELECT FORM'
+        : pendingAttributeSubtitle;
+    final isAwaitingAttributeChoice = chooserChoices.isNotEmpty;
     final player = isLeft ? widget.leftPlayer : widget.rightPlayer;
     final currentGPower = isLeft ? _leftCurrentGPower : _rightCurrentGPower;
     final abilitySlots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
@@ -2878,7 +3429,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           ),
         );
     final canPresentAbility =
-        !isAwaitingPreyasChoice &&
+        !isAwaitingAttributeChoice &&
         !_areAbilityCardsForbidden &&
         !_isLoadingAbilityCards &&
         !_isResolvingCard;
@@ -2924,7 +3475,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             child: _buildBattlePreviewArea(
               isLeft: isLeft,
               variant: variant,
-              pendingPreyasPrimaryAttribute: pendingPreyasPrimaryAttribute,
+              isPreyasChooser: showPreyasChooser,
+              chooserTitle: chooserTitle,
+              chooserSubtitle: chooserSubtitle,
+              chooserChoices: chooserChoices,
+              highlightedAttribute: pendingPreyasPrimaryAttribute,
               focusedAbilityCard: focusedAbilityCard,
               showAbilityPresentation: showAbilityPresentation,
               showAbilityFlash: showAbilityFlash,
@@ -2935,10 +3490,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child: isAwaitingPreyasChoice
-                ? _buildPendingPreyasBadge(
+            child: isAwaitingAttributeChoice
+                ? _buildPendingAttributeBadge(
                     isLeft: isLeft,
-                    primaryAttribute: pendingPreyasPrimaryAttribute,
+                    accentAttribute:
+                        pendingPreyasPrimaryAttribute ??
+                        (chooserChoices.isNotEmpty ? chooserChoices.first : null),
+                    label: chooserSubtitle ?? 'SELECT ATTRIBUTE',
                   )
                 : _AnimatedBattleGPowerBadge(
                     key: ValueKey(
@@ -2972,7 +3530,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Widget _buildBattlePreviewArea({
     required bool isLeft,
     required BakuganVariant variant,
-    required String? pendingPreyasPrimaryAttribute,
+    required bool isPreyasChooser,
+    required String? chooserTitle,
+    required String? chooserSubtitle,
+    required List<String> chooserChoices,
+    required String? highlightedAttribute,
     required AbilityCard? focusedAbilityCard,
     required bool showAbilityPresentation,
     required bool showAbilityFlash,
@@ -2986,7 +3548,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final showNoUnusedNotice = isLeft
         ? _showLeftNoUnusedNotice
         : _showRightNoUnusedNotice;
-    final showPreyasChooser = pendingPreyasPrimaryAttribute != null;
+    final showAttributeChooser = chooserChoices.isNotEmpty;
 
     return Stack(
       alignment: Alignment.center,
@@ -2995,7 +3557,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           opacity:
               showAbilityPresentation ||
                   showReplacementChooser ||
-                  showPreyasChooser
+                  showAttributeChooser
               ? 0
               : 1,
           duration: const Duration(milliseconds: 220),
@@ -3019,15 +3581,19 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           ),
         ),
         IgnorePointer(
-          ignoring: !showPreyasChooser,
+          ignoring: !showAttributeChooser,
           child: AnimatedOpacity(
-            opacity: showPreyasChooser ? 1 : 0,
+            opacity: showAttributeChooser ? 1 : 0,
             duration: const Duration(milliseconds: 220),
-            child: showPreyasChooser
-                ? _buildPreyasDiabloAttributeChooser(
+            child: showAttributeChooser
+                ? _buildAttributeChooserPanel(
                     isLeft: isLeft,
                     variant: variant,
-                    primaryAttribute: pendingPreyasPrimaryAttribute,
+                    isPreyasChooser: isPreyasChooser,
+                    title: chooserTitle ?? 'SELECT ATTRIBUTE',
+                    subtitle: chooserSubtitle,
+                    choices: chooserChoices,
+                    highlightedAttribute: highlightedAttribute,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -3231,14 +3797,16 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
-  Widget _buildPreyasDiabloAttributeChooser({
+  Widget _buildAttributeChooserPanel({
     required bool isLeft,
     required BakuganVariant variant,
-    required String? primaryAttribute,
+    required bool isPreyasChooser,
+    required String title,
+    required String? subtitle,
+    required List<String> choices,
+    required String? highlightedAttribute,
   }) {
-    if (primaryAttribute == null) return const SizedBox.shrink();
-
-    final choices = <String>[primaryAttribute, 'pyrus'];
+    if (choices.isEmpty) return const SizedBox.shrink();
     final accent = variant.color;
 
     return Container(
@@ -3262,7 +3830,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'PREYAS DIABLO',
+              title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
@@ -3273,24 +3841,52 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 shadows: [Shadow(color: accent, blurRadius: 20)],
               ),
             ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
             const SizedBox(height: 26),
-            Row(
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
               children: choices
                   .map(
-                    (attribute) => Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          right: attribute == choices.first ? 10 : 0,
-                          left: attribute == choices.last ? 10 : 0,
-                        ),
-                        child: _buildPreyasChoiceCard(
-                          attribute: attribute,
-                          isPrimary: attribute == primaryAttribute,
-                          onTap: () => _selectPreyasDiabloAttribute(
-                            isLeft: isLeft,
-                            attribute: attribute,
-                          ),
-                        ),
+                    (attribute) => SizedBox(
+                      width: choices.length <= 2 ? 220 : 180,
+                      child: _buildPreyasChoiceCard(
+                        attribute: attribute,
+                        isPrimary: attribute == highlightedAttribute,
+                        labelOverride: attribute == highlightedAttribute
+                            ? 'CURRENT'
+                            : null,
+                        onTap: () {
+                          if (isPreyasChooser) {
+                            unawaited(
+                              _selectPreyasDiabloAttribute(
+                                isLeft: isLeft,
+                                attribute: attribute,
+                              ),
+                            );
+                          } else {
+                            unawaited(
+                              _applyBattleAttributeChoice(
+                                isLeft: isLeft,
+                                attribute: attribute,
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ),
                   )
@@ -3305,6 +3901,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Widget _buildPreyasChoiceCard({
     required String attribute,
     required bool isPrimary,
+    String? labelOverride,
     required VoidCallback onTap,
   }) {
     final attributeColor = _colorForAttribute(attribute);
@@ -3415,7 +4012,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      isPrimary ? 'PRIMARY FORM' : 'PYRUS FORM',
+                                      labelOverride ??
+                                          (isPrimary
+                                              ? 'PRIMARY FORM'
+                                              : 'CHOOSE'),
                                       style: TextStyle(
                                         color: attributeColor.withValues(
                                           alpha: 0.95,
@@ -3443,13 +4043,14 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
-  Widget _buildPendingPreyasBadge({
+  Widget _buildPendingAttributeBadge({
     required bool isLeft,
-    required String? primaryAttribute,
+    required String? accentAttribute,
+    required String label,
   }) {
-    final accent = _colorForAttribute(primaryAttribute ?? 'pyrus');
+    final accent = _colorForAttribute(accentAttribute ?? 'pyrus');
     return SizedBox(
-      key: ValueKey('preyas_pending_${isLeft ? 'L' : 'R'}_$primaryAttribute'),
+      key: ValueKey('attribute_pending_${isLeft ? 'L' : 'R'}_$accentAttribute'),
       width: 360,
       height: 150,
       child: Center(
@@ -3468,7 +4069,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             ],
           ),
           child: Text(
-            'SELECT FORM',
+            label,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
@@ -3708,7 +4309,7 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showBonus = bonusDelta != null && bonusDelta! > 0;
+    final showBonus = bonusDelta != null && bonusDelta != 0;
     final risePhase = Curves.easeOut.transform(
       (animationValue / 0.22).clamp(0.0, 1.0),
     );
@@ -3725,6 +4326,12 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
     );
     final opacity = showBonus ? fadeInPhase * (1 - fadeOutPhase) : 0.0;
     final showPending = pendingBonusDelta != null && pendingBonusDelta! > 0;
+    final bonusColor = bonusDelta != null && bonusDelta! < 0
+        ? const Color(0xFFFF8A8A)
+        : Colors.white;
+    final bonusShadowColor = bonusDelta != null && bonusDelta! < 0
+        ? const Color(0xFFFF5A5A)
+        : themeColor;
 
     final badge = SizedBox(
       width: 360,
@@ -3751,15 +4358,15 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
                   child: Transform.translate(
                     offset: _battleBonusAnchor + Offset(0, verticalOffset),
                     child: Text(
-                      '+$bonusDelta',
+                      '${bonusDelta! > 0 ? '+' : ''}$bonusDelta',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: bonusColor,
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
                         fontStyle: FontStyle.italic,
                         shadows: [
                           Shadow(
-                            color: themeColor.withValues(alpha: 0.9),
+                            color: bonusShadowColor.withValues(alpha: 0.9),
                             blurRadius: 18,
                           ),
                           const Shadow(
