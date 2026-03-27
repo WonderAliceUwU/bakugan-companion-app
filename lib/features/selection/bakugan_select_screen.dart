@@ -34,7 +34,20 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
   }
 
+  bool _isVariantBanned(BakuganVariant variant) {
+    final speciesName = variant.speciesName.toLowerCase();
+    final modelPath = variant.modelPath.toLowerCase();
+    return speciesName.contains('banned') || modelPath.contains('banned');
+  }
+
+  bool _isPreyasDiablo(BakuganVariant variant) =>
+      variant.speciesName.trim().toLowerCase() == 'preyas diablo';
+
+  bool _showsPreyasDualAttributeIcon(BakuganVariant variant) =>
+      _isPreyasDiablo(variant) && variant.attribute.toLowerCase() != 'pyrus';
+
   bool _isVariantTaken(BakuganVariant variant) {
+    if (_isVariantBanned(variant)) return true;
     for (var p in widget.players) {
       if (p.deck.any((v) => v.modelPath == variant.modelPath)) return true;
     }
@@ -96,7 +109,11 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     final currentPlayer = widget.players[currentPlayerIndex];
     final currentSpecies = availableBakugans[selectedBakuganIndex];
     final currentVariant = currentSpecies.variants[selectedVariantIndex];
+    final bool currentIsBanned = _isVariantBanned(currentVariant);
     final bool currentIsTaken = _isVariantTaken(currentVariant);
+    final String? currentStatusLabel = currentIsBanned
+        ? 'BANNED'
+        : (currentIsTaken ? 'PICKED' : null);
 
     return Scaffold(
       body: Container(
@@ -457,6 +474,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                   isLarge: true,
                                   speciesName: currentSpecies.name,
                                   isTaken: currentIsTaken,
+                                  statusLabel: currentStatusLabel,
                                 ),
                               ),
                             ),
@@ -609,11 +627,55 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                                           opacity: isTaken
                                                               ? 0.3
                                                               : 1.0,
-                                                          // Dims it instead of greying the whole layer
-                                                          child: Image.asset(
-                                                            'assets/images/attributes/${variant.attribute}_game.png',
-                                                            fit: BoxFit.contain,
-                                                          ),
+                                                          child:
+                                                              _showsPreyasDualAttributeIcon(
+                                                                variant,
+                                                              )
+                                                              ? ClipRect(
+                                                                  child: FittedBox(
+                                                                    fit: BoxFit
+                                                                        .scaleDown,
+                                                                    child: Row(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .center,
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      children: [
+                                                                        Image.asset(
+                                                                          'assets/images/attributes/${variant.attribute}_game.png',
+                                                                          fit: BoxFit
+                                                                              .contain,
+                                                                        ),
+                                                                        const Padding(
+                                                                          padding: EdgeInsets.symmetric(
+                                                                            horizontal:
+                                                                                10,
+                                                                          ),
+                                                                          child: Text(
+                                                                            '|',
+                                                                            style: TextStyle(
+                                                                              color: Colors.white,
+                                                                              fontSize: 18,
+                                                                              fontWeight: FontWeight.w900,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        Image.asset(
+                                                                          'assets/images/attributes/pyrus_game.png',
+                                                                          fit: BoxFit
+                                                                              .contain,
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                )
+                                                              : Image.asset(
+                                                                  'assets/images/attributes/${variant.attribute}_game.png',
+                                                                  fit: BoxFit
+                                                                      .contain,
+                                                                ),
                                                         ),
                                                       ),
                                                       Text(

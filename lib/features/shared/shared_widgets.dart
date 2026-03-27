@@ -14,6 +14,7 @@ class BakuganPreview extends StatefulWidget {
   final bool showGPower;
   final bool mirrorImage;
   final bool centerLargeFooter;
+  final String? statusLabel;
 
   const BakuganPreview({
     super.key,
@@ -30,6 +31,7 @@ class BakuganPreview extends StatefulWidget {
     this.showGPower = true,
     this.mirrorImage = false,
     this.centerLargeFooter = false,
+    this.statusLabel,
   });
 
   @override
@@ -85,7 +87,10 @@ class _BakuganPreviewState extends State<BakuganPreview>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.variant.modelPath != widget.variant.modelPath ||
         oldWidget.isLarge != widget.isLarge ||
-        oldWidget.isDeck != widget.isDeck) {
+        oldWidget.isDeck != widget.isDeck ||
+        oldWidget.theta != widget.theta ||
+        oldWidget.phi != widget.phi ||
+        oldWidget.autoRotate != widget.autoRotate) {
       Future<void>.delayed(const Duration(milliseconds: 120), () {
         if (!mounted) return;
         _configureModelView();
@@ -209,7 +214,8 @@ class _BakuganPreviewState extends State<BakuganPreview>
           ),
         ),
 
-        if (widget.isTaken && widget.isLarge) _buildTakenOverlay(),
+        if (widget.statusLabel != null && widget.isLarge)
+          _buildStatusOverlay(widget.statusLabel!),
       ],
     );
   }
@@ -295,7 +301,7 @@ class _BakuganPreviewState extends State<BakuganPreview>
     );
   }
 
-  Widget _buildTakenOverlay() {
+  Widget _buildStatusOverlay(String label) {
     return Center(
       child: Transform(
         alignment: Alignment.center,
@@ -303,8 +309,8 @@ class _BakuganPreviewState extends State<BakuganPreview>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
           color: Colors.black87,
-          child: const Text(
-            'PICKED',
+          child: Text(
+            label,
             style: TextStyle(
               fontFamily: 'title_font',
               fontSize: 60,
@@ -570,8 +576,8 @@ class PlayerSlot extends StatelessWidget {
                                 color: char == null
                                     ? Colors.white70
                                     : (isSavedProfile
-                                        ? Colors.greenAccent
-                                        : Colors.orangeAccent),
+                                          ? Colors.greenAccent
+                                          : Colors.orangeAccent),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.5,
@@ -791,16 +797,9 @@ class DescriptionHeaderActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: accentColor.withValues(alpha: 0.16),
-            border: Border.all(
-              color: accentColor,
-              width: 1.8,
-            ),
+            border: Border.all(color: accentColor, width: 1.8),
           ),
-          child: Icon(
-            Icons.restart_alt_rounded,
-            color: accentColor,
-            size: 18,
-          ),
+          child: Icon(Icons.restart_alt_rounded, color: accentColor, size: 18),
         ),
       ),
     );
@@ -916,7 +915,9 @@ class FramedDescriptionPanel extends StatelessWidget {
                                   letterSpacing: 1.6,
                                   shadows: [
                                     Shadow(
-                                      color: accentColor.withValues(alpha: 0.30),
+                                      color: accentColor.withValues(
+                                        alpha: 0.30,
+                                      ),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -1277,10 +1278,12 @@ class PlayerArenaInfo extends StatelessWidget {
                             color: borderGradient.first.withValues(
                               alpha: isPicked || isStanding ? 0.58 : 0.34,
                             ),
-                            blurRadius:
-                                isPicked || isStanding ? 15 : (isUsed ? 4 : 8),
-                            spreadRadius:
-                                isPicked || isStanding ? 2 : (isUsed ? 0 : 1),
+                            blurRadius: isPicked || isStanding
+                                ? 15
+                                : (isUsed ? 4 : 8),
+                            spreadRadius: isPicked || isStanding
+                                ? 2
+                                : (isUsed ? 0 : 1),
                           ),
                         ],
                       ),
@@ -1405,11 +1408,7 @@ class BattleResultShowcase extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 36),
-            SizedBox(
-              width: 560,
-              height: 560,
-              child: previewChild,
-            ),
+            SizedBox(width: 560, height: 560, child: previewChild),
           ],
         ),
       ),

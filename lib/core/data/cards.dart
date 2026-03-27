@@ -121,11 +121,11 @@ class GateCard {
         }
       }
 
-      if (effect is Map && effect['type'] == 'gate_bonus_plus_per_used_ability') {
+      if (effect is Map &&
+          effect['type'] == 'gate_bonus_plus_per_used_ability') {
         final dynamic valueRaw = effect['value'];
         if (valueRaw is num && ownerUsedAbilityCards > 0) {
-          final int dynamicBonus =
-              valueRaw.toInt() * ownerUsedAbilityCards;
+          final int dynamicBonus = valueRaw.toInt() * ownerUsedAbilityCards;
           if (dynamicBonus > 0) {
             effectBonusSegments.add(dynamicBonus);
           }
@@ -164,14 +164,14 @@ class GateCard {
   );
 
   bool get returnsAllUsedAbilityCards => effects.any(
-    (effect) => effect is Map && effect['type'] == 'return_all_used_ability_cards',
+    (effect) =>
+        effect is Map && effect['type'] == 'return_all_used_ability_cards',
   );
 
   bool get requiresOwnerSelection => effects.any(
     (effect) =>
         effect is Map &&
-        effect['type'] ==
-            'lowest_lose_bonus_if_owner_has_attribute',
+        effect['type'] == 'lowest_lose_bonus_if_owner_has_attribute',
   );
 
   bool forbidsAbilityCards({
@@ -487,12 +487,22 @@ Future<void> loadAvailableBakugans() async {
           : fileNameWithExtension;
       List<String> parts = fileName.split('_');
 
+      // Allow filenames like `gorem_darkus_520g_banned` without breaking
+      // species grouping or metadata parsing.
+      if (parts.isNotEmpty && parts.last.toLowerCase() == 'banned') {
+        parts.removeLast();
+      }
+
       // Extract G-Power if present (e.g., "550g")
       int gPower = 0;
-      if (parts.last.endsWith('g')) {
+      if (parts.isNotEmpty && parts.last.endsWith('g')) {
         gPower =
             int.tryParse(parts.last.substring(0, parts.last.length - 1)) ?? 0;
         parts.removeLast(); // Remove the gPower part for further processing
+      }
+
+      if (parts.isEmpty) {
+        continue;
       }
 
       String attribute = parts.last.toLowerCase();

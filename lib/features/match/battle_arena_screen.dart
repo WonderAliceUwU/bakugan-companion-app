@@ -173,6 +173,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   late BakuganVariant _rightBattleBakugan;
   late int _leftBattleBakuganIndex;
   late int _rightBattleBakuganIndex;
+  String? _leftPendingPreyasPrimaryAttribute;
+  String? _rightPendingPreyasPrimaryAttribute;
+  Completer<void>? _leftPreyasChoiceCompleter;
+  Completer<void>? _rightPreyasChoiceCompleter;
   List<int> _leftReplacementOptions = const [];
   List<int> _rightReplacementOptions = const [];
   bool _showLeftReplacementChooser = false;
@@ -204,6 +208,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   BakuganVariant get _leftBakuganVariant => _leftBattleBakugan;
   BakuganVariant get _rightBakuganVariant => _rightBattleBakugan;
+  bool get _isAwaitingAnyPreyasChoice =>
+      _leftPendingPreyasPrimaryAttribute != null ||
+      _rightPendingPreyasPrimaryAttribute != null;
 
   @override
   void initState() {
@@ -240,9 +247,141 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         _showBattleBackground = true;
       });
+      unawaited(_resolveInitialPreyasChoices());
     });
     _startBattleMusic();
     _loadBattleCards();
+  }
+
+  bool _isPreyasDiablo(BakuganVariant variant) =>
+      variant.speciesName.trim().toLowerCase() == 'preyas diablo';
+
+  String? _preyasDiabloPrimaryAttribute(BakuganVariant variant) {
+    if (!_isPreyasDiablo(variant)) return null;
+    final attribute = variant.attribute.trim().toLowerCase();
+    if (attribute.isEmpty || attribute == 'pyrus') return null;
+    return attribute;
+  }
+
+  Color _colorForAttribute(String attribute) {
+    switch (attribute.toLowerCase()) {
+      case 'pyrus':
+        return Colors.red;
+      case 'aquos':
+        return Colors.blue;
+      case 'subterra':
+        return Colors.brown;
+      case 'haos':
+        return Colors.limeAccent;
+      case 'darkus':
+        return Colors.deepPurple;
+      case 'ventus':
+        return Colors.teal;
+      default:
+        return Colors.white70;
+    }
+  }
+
+  BakuganVariant _variantWithBattleAttribute(
+    BakuganVariant variant,
+    String attribute,
+  ) {
+    return BakuganVariant(
+      attribute: attribute.toLowerCase(),
+      modelPath: variant.modelPath,
+      color: _colorForAttribute(attribute),
+      gPower: variant.gPower,
+      speciesName: variant.speciesName,
+    );
+  }
+
+  Future<void> _resolveInitialPreyasChoices() async {
+    await Future.wait<void>([
+      _queuePreyasDiabloChoiceIfNeeded(
+        isLeft: true,
+        variant: widget.leftBakugan,
+      ),
+      _queuePreyasDiabloChoiceIfNeeded(
+        isLeft: false,
+        variant: widget.rightBakugan,
+      ),
+    ]);
+  }
+
+  Future<void> _queuePreyasDiabloChoiceIfNeeded({
+    required bool isLeft,
+    required BakuganVariant variant,
+  }) async {
+    final primaryAttribute = _preyasDiabloPrimaryAttribute(variant);
+    if (primaryAttribute == null) {
+      if (!mounted) return;
+      setState(() {
+        if (isLeft) {
+          _leftBattleBakugan = variant;
+          _leftBattlePrintedGPower = variant.gPower;
+          _leftPendingPreyasPrimaryAttribute = null;
+        } else {
+          _rightBattleBakugan = variant;
+          _rightBattlePrintedGPower = variant.gPower;
+          _rightPendingPreyasPrimaryAttribute = null;
+        }
+      });
+      return;
+    }
+
+    final completer = Completer<void>();
+    if (!mounted) return;
+    setState(() {
+      if (isLeft) {
+        _leftBattleBakugan = variant;
+        _leftBattlePrintedGPower = variant.gPower;
+        _leftPendingPreyasPrimaryAttribute = primaryAttribute;
+        _leftPreyasChoiceCompleter = completer;
+      } else {
+        _rightBattleBakugan = variant;
+        _rightBattlePrintedGPower = variant.gPower;
+        _rightPendingPreyasPrimaryAttribute = primaryAttribute;
+        _rightPreyasChoiceCompleter = completer;
+      }
+    });
+
+    await completer.future;
+  }
+
+  Future<void> _selectPreyasDiabloAttribute({
+    required bool isLeft,
+    required String attribute,
+  }) async {
+    await _playBattleRevealSfx('select_2.wav');
+    if (!mounted) return;
+
+    setState(() {
+      if (isLeft) {
+        _leftBattleBakugan = _variantWithBattleAttribute(
+          _leftBattleBakugan,
+          attribute,
+        );
+        _leftBattlePrintedGPower = _leftBattleBakugan.gPower;
+        _leftCurrentGPower = _leftBattleBakugan.gPower;
+        _leftTargetGPower = _leftCurrentGPower;
+        _leftAnimationStartGPower = _leftCurrentGPower;
+        _leftPendingPreyasPrimaryAttribute = null;
+        _leftPreyasChoiceCompleter?.complete();
+        _leftPreyasChoiceCompleter = null;
+      } else {
+        _rightBattleBakugan = _variantWithBattleAttribute(
+          _rightBattleBakugan,
+          attribute,
+        );
+        _rightBattlePrintedGPower = _rightBattleBakugan.gPower;
+        _rightCurrentGPower = _rightBattleBakugan.gPower;
+        _rightTargetGPower = _rightCurrentGPower;
+        _rightAnimationStartGPower = _rightCurrentGPower;
+        _rightPendingPreyasPrimaryAttribute = null;
+        _rightPreyasChoiceCompleter?.complete();
+        _rightPreyasChoiceCompleter = null;
+      }
+    });
   }
 
   int _lerpGPower(int start, int end, double t) {
@@ -345,7 +484,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         return Dialog(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 32,
+            vertical: 24,
+          ),
           child: Transform(
             alignment: Alignment.center,
             transform: Matrix4.skewX(-0.10),
@@ -409,7 +551,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                           child: ListView.separated(
                             shrinkWrap: true,
                             itemCount: widget.matchPlayers.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final player = widget.matchPlayers[index];
                               final isBattlingPlayer =
@@ -427,7 +570,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                       vertical: 16,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.05),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
                                         color: isBattlingPlayer
@@ -541,7 +686,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final ownerIndex = _gateOwnerMatchPlayerIndex;
     if (ownerIndex == null) return false;
 
-    final ownPrinted = isLeft ? _leftBattlePrintedGPower : _rightBattlePrintedGPower;
+    final ownPrinted = isLeft
+        ? _leftBattlePrintedGPower
+        : _rightBattlePrintedGPower;
     final opponentPrinted = isLeft
         ? _rightBattlePrintedGPower
         : _leftBattlePrintedGPower;
@@ -591,7 +738,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   int _appliedAbilityBonusFor(bool isLeft, BakuganVariant variant) {
     if (_areAbilityCardsForbidden) return 0;
     final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
-    final appliedSlots = isLeft ? _leftAppliedAbilitySlots : _rightAppliedAbilitySlots;
+    final appliedSlots = isLeft
+        ? _leftAppliedAbilitySlots
+        : _rightAppliedAbilitySlots;
     return appliedSlots.fold<int>(0, (sum, index) {
       if (index < 0 || index >= slots.length) return sum;
       final slot = slots[index];
@@ -618,7 +767,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return currentGPower > printedGPower + baseBonus;
   }
 
-  Future<void> _recalculateBattleTotals({bool includeGateBonuses = true}) async {
+  Future<void> _recalculateBattleTotals({
+    bool includeGateBonuses = true,
+  }) async {
     final leftTarget =
         _leftBattlePrintedGPower +
         (includeGateBonuses ? _gateBreakdownFor(true).totalBonus : 0) +
@@ -641,7 +792,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _gateBreakdownFor(false).totalBonus +
         _abilityBonusFor(false, _rightBakuganVariant);
 
-    if (leftTarget == _leftCurrentGPower && rightTarget == _rightCurrentGPower) {
+    if (leftTarget == _leftCurrentGPower &&
+        rightTarget == _rightCurrentGPower) {
       return;
     }
 
@@ -692,9 +844,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       return;
     }
 
-    _leftReplacementCompleter = leftOptions.isNotEmpty ? Completer<int?>() : null;
-    _rightReplacementCompleter =
-        rightOptions.isNotEmpty ? Completer<int?>() : null;
+    _leftReplacementCompleter = leftOptions.isNotEmpty
+        ? Completer<int?>()
+        : null;
+    _rightReplacementCompleter = rightOptions.isNotEmpty
+        ? Completer<int?>()
+        : null;
 
     setState(() {
       _leftReplacementOptions = leftOptions;
@@ -744,6 +899,19 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _leftReplacementCompleter = null;
         _rightReplacementCompleter = null;
       });
+    }
+
+    if (leftChosenIndex != null) {
+      await _queuePreyasDiabloChoiceIfNeeded(
+        isLeft: true,
+        variant: widget.leftPlayer.deck[leftChosenIndex],
+      );
+    }
+    if (rightChosenIndex != null) {
+      await _queuePreyasDiabloChoiceIfNeeded(
+        isLeft: false,
+        variant: widget.rightPlayer.deck[rightChosenIndex],
+      );
     }
 
     await _recalculateBattleTotals(includeGateBonuses: false);
@@ -1086,7 +1254,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _openGateCardPrompt() async {
-    if (_isLoadingGateCards || _isResolvingCard || _revealedCard != null) {
+    if (_isAwaitingAnyPreyasChoice ||
+        _isLoadingGateCards ||
+        _isResolvingCard ||
+        _revealedCard != null) {
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -1321,7 +1492,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _openAbilityCardPrompt(bool isLeft) async {
-    if (_isLoadingAbilityCards || _isResolvingCard) {
+    if (_isAwaitingAnyPreyasChoice ||
+        _isLoadingAbilityCards ||
+        _isResolvingCard) {
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -1656,7 +1829,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final rightSuppressedGateBonus =
         card.bonusFor(_rightBakuganVariant.attribute) > 0 &&
         rightBreakdown.baseBonus == 0 &&
-        _shouldSuppressLowestPrintedGateBonus(false, card, _rightBakuganVariant);
+        _shouldSuppressLowestPrintedGateBonus(
+          false,
+          card,
+          _rightBakuganVariant,
+        );
 
     await _showSuppressedGateBonusFeedback(
       leftSuppressed: leftSuppressedGateBonus,
@@ -1683,10 +1860,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
 
     for (int i = 0; i < maxEffectSegments; i++) {
-      final leftSegment =
-          i < leftEffectSegments.length ? leftEffectSegments[i] : 0;
-      final rightSegment =
-          i < rightEffectSegments.length ? rightEffectSegments[i] : 0;
+      final leftSegment = i < leftEffectSegments.length
+          ? leftEffectSegments[i]
+          : 0;
+      final rightSegment = i < rightEffectSegments.length
+          ? rightEffectSegments[i]
+          : 0;
 
       if (leftSegment <= 0 && rightSegment <= 0) continue;
 
@@ -1753,7 +1932,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _applyQueuedAbilityCards() async {
-    if (_isResolvingCard || _revealedCard == null || _areAbilityCardsForbidden) {
+    if (_isResolvingCard ||
+        _revealedCard == null ||
+        _areAbilityCardsForbidden) {
       return;
     }
 
@@ -2044,7 +2225,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               opacity: _showBattleBackground ? 1 : 0,
               child: ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                child: Image.asset('assets/images/menu-2.png', fit: BoxFit.cover),
+                child: Image.asset(
+                  'assets/images/menu-2.png',
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
@@ -2229,6 +2413,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             child: _buildBattlePreviewArea(
               isLeft: winnerIsLeft,
               variant: winnerBakugan,
+              pendingPreyasPrimaryAttribute: null,
               focusedAbilityCard: null,
               showAbilityPresentation: false,
               showAbilityFlash: false,
@@ -2337,6 +2522,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   Widget _buildSide(bool isLeft) {
     final variant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
+    final pendingPreyasPrimaryAttribute = isLeft
+        ? _leftPendingPreyasPrimaryAttribute
+        : _rightPendingPreyasPrimaryAttribute;
+    final isAwaitingPreyasChoice = pendingPreyasPrimaryAttribute != null;
     final player = isLeft ? widget.leftPlayer : widget.rightPlayer;
     final currentGPower = isLeft ? _leftCurrentGPower : _rightCurrentGPower;
     final abilitySlots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
@@ -2361,7 +2550,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               ),
         );
     final canPresentAbility =
-        !_areAbilityCardsForbidden && !_isLoadingAbilityCards && !_isResolvingCard;
+        !isAwaitingPreyasChoice &&
+        !_areAbilityCardsForbidden &&
+        !_isLoadingAbilityCards &&
+        !_isResolvingCard;
 
     return SizedBox(
       width: 600,
@@ -2404,28 +2596,44 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             child: _buildBattlePreviewArea(
               isLeft: isLeft,
               variant: variant,
+              pendingPreyasPrimaryAttribute: pendingPreyasPrimaryAttribute,
               focusedAbilityCard: focusedAbilityCard,
               showAbilityPresentation: showAbilityPresentation,
               showAbilityFlash: showAbilityFlash,
             ),
           ),
           const Spacer(),
-          _AnimatedBattleGPowerBadge(
-            gPower: currentGPower,
-            bonusDelta: isLeft ? _leftFloatingBonus : _rightFloatingBonus,
-            pendingBonusDelta:
-                !_areAbilityCardsForbidden &&
-                    _revealedCard == null &&
-                    pendingAbilityBonus > 0
-                ? pendingAbilityBonus
-                : null,
-            attribute: variant.attribute,
-            themeColor: variant.color,
-            alignLeft: isLeft,
-            animationValue: _powerAnimationController.value,
-            rumble: isLeft
-                ? _showLeftGateBonusSuppressedFeedback
-                : _showRightGateBonusSuppressedFeedback,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: isAwaitingPreyasChoice
+                ? _buildPendingPreyasBadge(
+                    isLeft: isLeft,
+                    primaryAttribute: pendingPreyasPrimaryAttribute,
+                  )
+                : _AnimatedBattleGPowerBadge(
+                    key: ValueKey(
+                      'battle_g_${isLeft ? 'L' : 'R'}_${variant.attribute}',
+                    ),
+                    gPower: currentGPower,
+                    bonusDelta: isLeft
+                        ? _leftFloatingBonus
+                        : _rightFloatingBonus,
+                    pendingBonusDelta:
+                        !_areAbilityCardsForbidden &&
+                            _revealedCard == null &&
+                            pendingAbilityBonus > 0
+                        ? pendingAbilityBonus
+                        : null,
+                    attribute: variant.attribute,
+                    themeColor: variant.color,
+                    alignLeft: isLeft,
+                    animationValue: _powerAnimationController.value,
+                    rumble: isLeft
+                        ? _showLeftGateBonusSuppressedFeedback
+                        : _showRightGateBonusSuppressedFeedback,
+                  ),
           ),
           const SizedBox(height: 100),
         ],
@@ -2436,6 +2644,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Widget _buildBattlePreviewArea({
     required bool isLeft,
     required BakuganVariant variant,
+    required String? pendingPreyasPrimaryAttribute,
     required AbilityCard? focusedAbilityCard,
     required bool showAbilityPresentation,
     required bool showAbilityFlash,
@@ -2449,16 +2658,22 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final showNoUnusedNotice = isLeft
         ? _showLeftNoUnusedNotice
         : _showRightNoUnusedNotice;
+    final showPreyasChooser = pendingPreyasPrimaryAttribute != null;
 
     return Stack(
       alignment: Alignment.center,
       children: [
         AnimatedOpacity(
-          opacity: showAbilityPresentation || showReplacementChooser ? 0 : 1,
+          opacity:
+              showAbilityPresentation ||
+                  showReplacementChooser ||
+                  showPreyasChooser
+              ? 0
+              : 1,
           duration: const Duration(milliseconds: 220),
           child: SizedBox(
             key: ValueKey(
-              'battle_arena_${isLeft ? 'L' : 'R'}_${variant.modelPath}',
+              'battle_arena_${isLeft ? 'L' : 'R'}_${variant.modelPath}_${variant.attribute}',
             ),
             width: 500,
             height: 500,
@@ -2473,6 +2688,20 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               showGPower: false,
               mirrorImage: isLeft,
             ),
+          ),
+        ),
+        IgnorePointer(
+          ignoring: !showPreyasChooser,
+          child: AnimatedOpacity(
+            opacity: showPreyasChooser ? 1 : 0,
+            duration: const Duration(milliseconds: 220),
+            child: showPreyasChooser
+                ? _buildPreyasDiabloAttributeChooser(
+                    isLeft: isLeft,
+                    variant: variant,
+                    primaryAttribute: pendingPreyasPrimaryAttribute,
+                  )
+                : const SizedBox.shrink(),
           ),
         ),
         IgnorePointer(
@@ -2674,6 +2903,259 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
+  Widget _buildPreyasDiabloAttributeChooser({
+    required bool isLeft,
+    required BakuganVariant variant,
+    required String? primaryAttribute,
+  }) {
+    if (primaryAttribute == null) return const SizedBox.shrink();
+
+    final choices = <String>[primaryAttribute, 'pyrus'];
+    final accent = variant.color;
+
+    return Container(
+      width: _abilityPresentationWidth,
+      height: _abilityPresentationHeight,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white24, width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.28),
+            blurRadius: 26,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'PREYAS DIABLO',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2,
+                fontStyle: FontStyle.italic,
+                shadows: [Shadow(color: accent, blurRadius: 20)],
+              ),
+            ),
+            const SizedBox(height: 26),
+            Row(
+              children: choices
+                  .map(
+                    (attribute) => Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: attribute == choices.first ? 10 : 0,
+                          left: attribute == choices.last ? 10 : 0,
+                        ),
+                        child: _buildPreyasChoiceCard(
+                          attribute: attribute,
+                          isPrimary: attribute == primaryAttribute,
+                          onTap: () => _selectPreyasDiabloAttribute(
+                            isLeft: isLeft,
+                            attribute: attribute,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreyasChoiceCard({
+    required String attribute,
+    required bool isPrimary,
+    required VoidCallback onTap,
+  }) {
+    final attributeColor = _colorForAttribute(attribute);
+    final label = attribute.toUpperCase();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.skewX(-0.12),
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                attributeColor.withValues(alpha: 0.95),
+                attributeColor.withValues(alpha: 0.45),
+                Colors.black,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: attributeColor.withValues(alpha: 0.35),
+                blurRadius: 18,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: const Color(0xFF050505),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(0.12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: GridPainter(
+                          color: attributeColor.withValues(alpha: 0.14),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                  maxHeight: constraints.maxHeight,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 96,
+                                      height: 96,
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: RadialGradient(
+                                          colors: [
+                                            Colors.white,
+                                            attributeColor.withValues(
+                                              alpha: 0.88,
+                                            ),
+                                            Colors.black,
+                                          ],
+                                        ),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 3,
+                                        ),
+                                      ),
+                                      child: Image.asset(
+                                        'assets/images/attributes/${attribute}_game.png',
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      label,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        fontStyle: FontStyle.italic,
+                                        letterSpacing: 1.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      isPrimary ? 'PRIMARY FORM' : 'PYRUS FORM',
+                                      style: TextStyle(
+                                        color: attributeColor.withValues(
+                                          alpha: 0.95,
+                                        ),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingPreyasBadge({
+    required bool isLeft,
+    required String? primaryAttribute,
+  }) {
+    final accent = _colorForAttribute(primaryAttribute ?? 'pyrus');
+    return SizedBox(
+      key: ValueKey('preyas_pending_${isLeft ? 'L' : 'R'}_$primaryAttribute'),
+      width: 360,
+      height: 150,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: accent.withValues(alpha: 0.72), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.28),
+                blurRadius: 22,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Text(
+            'SELECT FORM',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.6,
+              fontStyle: FontStyle.italic,
+              shadows: [Shadow(color: accent, blurRadius: 18)],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAbilityPresentationPanel({
     required Key key,
     required bool isLeft,
@@ -2736,7 +3218,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
-  Widget _buildAbilityOverlayDescription(AbilityCard card, {required bool isLeft}) {
+  Widget _buildAbilityOverlayDescription(
+    AbilityCard card, {
+    required bool isLeft,
+  }) {
     final hasDescription =
         (card.descriptionEn?.trim().isNotEmpty ?? false) ||
         (card.descriptionEs?.trim().isNotEmpty ?? false);
@@ -2882,6 +3367,7 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
   final bool rumble;
 
   const _AnimatedBattleGPowerBadge({
+    super.key,
     required this.gPower,
     required this.bonusDelta,
     required this.pendingBonusDelta,
@@ -3008,10 +3494,7 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
       duration: const Duration(milliseconds: 420),
       builder: (context, value, child) {
         final wobble = sin(value * pi * 10) * 8 * (1 - value);
-        return Transform.translate(
-          offset: Offset(wobble, 0),
-          child: child,
-        );
+        return Transform.translate(offset: Offset(wobble, 0), child: child);
       },
       child: badge,
     );
