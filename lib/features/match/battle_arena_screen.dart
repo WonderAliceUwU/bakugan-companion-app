@@ -135,6 +135,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   final Set<int> _leftAppliedAbilitySlots = {};
   final Set<int> _rightAppliedAbilitySlots = {};
+  final Set<String> _appliedExternalAbilitySlots = {};
 
   AbilityCard? get _focusedLeftAbilityCard =>
       _focusedLeftAbilitySlotIndex == null
@@ -145,6 +146,52 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _focusedRightAbilitySlotIndex == null
       ? null
       : _rightAbilitySlots[_focusedRightAbilitySlotIndex!]?.card;
+
+  AbilityCard? get _focusedExternalAbilityCard {
+    final focused = _focusedExternalAbilityEntry;
+    if (focused == null) return null;
+    final slots = widget.presentedMatchAbilities[focused.playerIndex];
+    if (focused.slotIndex < 0 || focused.slotIndex >= slots.length) return null;
+    return slots[focused.slotIndex]?.card;
+  }
+
+  List<({int playerIndex, int slotIndex, MatchPresentedAbility slot})>
+  get _externalBattleAbilityEntries {
+    final entries =
+        <({int playerIndex, int slotIndex, MatchPresentedAbility slot})>[];
+    for (int playerIndex = 0;
+        playerIndex < widget.presentedMatchAbilities.length;
+        playerIndex++) {
+      if (playerIndex == widget.leftPlayerIndex ||
+          playerIndex == widget.rightPlayerIndex) {
+        continue;
+      }
+      final slots = widget.presentedMatchAbilities[playerIndex];
+      for (int slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+        final slot = slots[slotIndex];
+        if (slot == null || !slot.isActive) continue;
+        if (!_isCenteredBattleAbilityCard(slot.card)) continue;
+        entries.add((
+          playerIndex: playerIndex,
+          slotIndex: slotIndex,
+          slot: slot,
+        ));
+      }
+    }
+    return entries;
+  }
+
+  Iterable<MatchPresentedAbility> get _allActiveBattleAbilitySlots sync* {
+    yield* _leftAbilitySlots.whereType<MatchPresentedAbility>().where(
+      (slot) => slot.isActive,
+    );
+    yield* _rightAbilitySlots.whereType<MatchPresentedAbility>().where(
+      (slot) => slot.isActive,
+    );
+    for (final entry in _externalBattleAbilityEntries) {
+      yield entry.slot;
+    }
+  }
 
   final TextEditingController _cardNameController = TextEditingController();
   final FocusNode _cardNameFocusNode = FocusNode();
@@ -167,6 +214,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   bool _showRightAbilityPresentation = false;
   bool _showLeftAbilityFlash = false;
   bool _showRightAbilityFlash = false;
+  ({int playerIndex, int slotIndex})? _focusedExternalAbilityEntry;
+  bool _showExternalAbilityPresentation = false;
   bool _showRevealFlash = false;
   bool _showBattleBackground = false;
   late BakuganVariant _leftBattleBakugan;
@@ -219,12 +268,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _rightBattleBakugan = widget.rightBakugan;
     _leftBattleBakuganIndex = widget.leftBakuganDeckIndex;
     _rightBattleBakuganIndex = widget.rightBakuganDeckIndex;
-    _leftCurrentGPower = _leftBattleBakugan.gPower;
-    _rightCurrentGPower = _rightBattleBakugan.gPower;
+    _leftCurrentGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
+    _rightCurrentGPower = _initialPrintedGPowerFor(_rightBattleBakugan);
     _leftTargetGPower = _leftCurrentGPower;
     _rightTargetGPower = _rightCurrentGPower;
-    _leftBattlePrintedGPower = _leftBattleBakugan.gPower;
-    _rightBattlePrintedGPower = _rightBattleBakugan.gPower;
+    _leftBattlePrintedGPower = _leftCurrentGPower;
+    _rightBattlePrintedGPower = _rightCurrentGPower;
     _leftAnimationStartGPower = _leftCurrentGPower;
     _rightAnimationStartGPower = _rightCurrentGPower;
     _powerStartPlayer = AudioPlayer();
@@ -318,11 +367,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         if (isLeft) {
           _leftBattleBakugan = variant;
-          _leftBattlePrintedGPower = variant.gPower;
+          _leftBattlePrintedGPower = _initialPrintedGPowerFor(variant);
           _leftPendingPreyasPrimaryAttribute = null;
         } else {
           _rightBattleBakugan = variant;
-          _rightBattlePrintedGPower = variant.gPower;
+          _rightBattlePrintedGPower = _initialPrintedGPowerFor(variant);
           _rightPendingPreyasPrimaryAttribute = null;
         }
       });
@@ -334,12 +383,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     setState(() {
       if (isLeft) {
         _leftBattleBakugan = variant;
-        _leftBattlePrintedGPower = variant.gPower;
+        _leftBattlePrintedGPower = _initialPrintedGPowerFor(variant);
         _leftPendingPreyasPrimaryAttribute = primaryAttribute;
         _leftPreyasChoiceCompleter = completer;
       } else {
         _rightBattleBakugan = variant;
-        _rightBattlePrintedGPower = variant.gPower;
+        _rightBattlePrintedGPower = _initialPrintedGPowerFor(variant);
         _rightPendingPreyasPrimaryAttribute = primaryAttribute;
         _rightPreyasChoiceCompleter = completer;
       }
@@ -361,8 +410,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _leftBattleBakugan,
           attribute,
         );
-        _leftBattlePrintedGPower = _leftBattleBakugan.gPower;
-        _leftCurrentGPower = _leftBattleBakugan.gPower;
+        _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
+        _leftCurrentGPower = _leftBattlePrintedGPower;
         _leftTargetGPower = _leftCurrentGPower;
         _leftAnimationStartGPower = _leftCurrentGPower;
         _leftPendingPreyasPrimaryAttribute = null;
@@ -373,8 +422,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _rightBattleBakugan,
           attribute,
         );
-        _rightBattlePrintedGPower = _rightBattleBakugan.gPower;
-        _rightCurrentGPower = _rightBattleBakugan.gPower;
+        _rightBattlePrintedGPower =
+            _initialPrintedGPowerFor(_rightBattleBakugan);
+        _rightCurrentGPower = _rightBattlePrintedGPower;
         _rightTargetGPower = _rightCurrentGPower;
         _rightAnimationStartGPower = _rightCurrentGPower;
         _rightPendingPreyasPrimaryAttribute = null;
@@ -730,9 +780,14 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     if (_areAbilityCardsForbidden) return 0;
     final slots = isLeft ? _leftAbilitySlots : _rightAbilitySlots;
     return slots.whereType<MatchPresentedAbility>().fold<int>(
-      0,
-      (sum, slot) => sum + slot.card.calculateBonus(variant),
-    );
+          0,
+          (sum, slot) => sum + _calculateBattleAbilityBonusForCard(
+            isLeft,
+            slot.card,
+            variant,
+          ),
+        ) +
+        _externalBattleAbilityBonusFor(isLeft, variant);
   }
 
   int _appliedAbilityBonusFor(bool isLeft, BakuganVariant variant) {
@@ -741,12 +796,90 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     final appliedSlots = isLeft
         ? _leftAppliedAbilitySlots
         : _rightAppliedAbilitySlots;
-    return appliedSlots.fold<int>(0, (sum, index) {
+    final localApplied = appliedSlots.fold<int>(0, (sum, index) {
       if (index < 0 || index >= slots.length) return sum;
       final slot = slots[index];
       if (slot == null) return sum;
-      return sum + slot.card.calculateBonus(variant);
+      return sum +
+          _calculateBattleAbilityBonusForCard(isLeft, slot.card, variant);
     });
+    final externalApplied = _externalBattleAbilityEntries.fold<int>(0, (sum, entry) {
+      final key = '${entry.playerIndex}:${entry.slotIndex}';
+      if (!_appliedExternalAbilitySlots.contains(key)) return sum;
+      return sum +
+          _calculateBattleAbilityBonusForCard(isLeft, entry.slot.card, variant);
+    });
+    return localApplied + externalApplied;
+  }
+
+  int _calculateBattleAbilityBonusForCard(
+    bool isLeft,
+    AbilityCard card,
+    BakuganVariant variant,
+  ) {
+    return card.calculateBattleBonus(
+      variant,
+      ownPrintedGPower: isLeft
+          ? _leftBattlePrintedGPower
+          : _rightBattlePrintedGPower,
+      opponentPrintedGPower: isLeft
+          ? _rightBattlePrintedGPower
+          : _leftBattlePrintedGPower,
+    );
+  }
+
+  bool _hasPrintedGPowerZeroOverride() {
+    return _allActiveBattleAbilitySlots.any(
+      (slot) => slot.card.setsAllPrintedGPowerToZero,
+    );
+  }
+
+  int _initialPrintedGPowerFor(BakuganVariant variant) {
+    return _hasPrintedGPowerZeroOverride() ? 0 : variant.gPower;
+  }
+
+  Future<void> _applyPrintedGPowerOverrideIfNeeded() async {
+    if (_revealedCard != null) return;
+
+    final leftPrinted = _initialPrintedGPowerFor(_leftBakuganVariant);
+    final rightPrinted = _initialPrintedGPowerFor(_rightBakuganVariant);
+
+    if (leftPrinted == _leftBattlePrintedGPower &&
+        rightPrinted == _rightBattlePrintedGPower &&
+        leftPrinted == _leftCurrentGPower &&
+        rightPrinted == _rightCurrentGPower) {
+      return;
+    }
+
+    setState(() {
+      _leftBattlePrintedGPower = leftPrinted;
+      _rightBattlePrintedGPower = rightPrinted;
+      _leftTargetGPower = leftPrinted;
+      _rightTargetGPower = rightPrinted;
+    });
+
+    await _animatePowerChange(
+      leftTarget: leftPrinted,
+      rightTarget: rightPrinted,
+    );
+  }
+
+  bool _isCenteredBattleAbilityCard(AbilityCard card) {
+    return card.effects.any(
+      (effect) =>
+          effect is Map &&
+          effect['type'] == 'highest_printed_g_power_gets_bonus',
+    );
+  }
+
+  int _externalBattleAbilityBonusFor(bool isLeft, BakuganVariant variant) {
+    if (_areAbilityCardsForbidden) return 0;
+    return _externalBattleAbilityEntries.fold<int>(
+      0,
+      (sum, entry) =>
+          sum +
+          _calculateBattleAbilityBonusForCard(isLeft, entry.slot.card, variant),
+    );
   }
 
   bool _hasResolvedAttributeBonusContext(bool isLeft, BakuganVariant variant) {
@@ -770,6 +903,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   Future<void> _recalculateBattleTotals({
     bool includeGateBonuses = true,
   }) async {
+    if (_hasPrintedGPowerZeroOverride()) {
+      _leftBattlePrintedGPower = 0;
+      _rightBattlePrintedGPower = 0;
+    }
     final leftTarget =
         _leftBattlePrintedGPower +
         (includeGateBonuses ? _gateBreakdownFor(true).totalBonus : 0) +
@@ -865,7 +1002,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         _leftBattleBakuganIndex = chosenIndex;
         _leftBattleBakugan = widget.leftPlayer.deck[chosenIndex];
-        _leftBattlePrintedGPower = _leftBattleBakugan.gPower;
+        _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
+        if (_hasPrintedGPowerZeroOverride()) {
+          _leftCurrentGPower = _leftBattlePrintedGPower;
+          _leftTargetGPower = _leftBattlePrintedGPower;
+        }
         _showLeftReplacementChooser = false;
         _leftReplacementOptions = const [];
         _leftReplacementCompleter = null;
@@ -876,7 +1017,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         _rightBattleBakuganIndex = chosenIndex;
         _rightBattleBakugan = widget.rightPlayer.deck[chosenIndex];
-        _rightBattlePrintedGPower = _rightBattleBakugan.gPower;
+        _rightBattlePrintedGPower =
+            _initialPrintedGPowerFor(_rightBattleBakugan);
+        if (_hasPrintedGPowerZeroOverride()) {
+          _rightCurrentGPower = _rightBattlePrintedGPower;
+          _rightTargetGPower = _rightBattlePrintedGPower;
+        }
         _showRightReplacementChooser = false;
         _rightReplacementOptions = const [];
         _rightReplacementCompleter = null;
@@ -1649,7 +1795,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                 ),
                                 itemBuilder: (context, index) {
                                   final card = matches[index];
-                                  final bonus = card.calculateBonus(
+                                  final bonus = _calculateBattleAbilityBonusForCard(
+                                    isLeft,
+                                    card,
                                     isLeft
                                         ? _leftBakuganVariant
                                         : _rightBakuganVariant,
@@ -1755,12 +1903,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _revealedCard = card;
       _gateOwnerMatchPlayerIndex = null;
       _showRevealFlash = true;
-      _leftCurrentGPower = _leftBakuganVariant.gPower;
-      _rightCurrentGPower = _rightBakuganVariant.gPower;
+      _leftCurrentGPower = _initialPrintedGPowerFor(_leftBakuganVariant);
+      _rightCurrentGPower = _initialPrintedGPowerFor(_rightBakuganVariant);
       _leftTargetGPower = _leftCurrentGPower;
       _rightTargetGPower = _rightCurrentGPower;
-      _leftBattlePrintedGPower = _leftBakuganVariant.gPower;
-      _rightBattlePrintedGPower = _rightBakuganVariant.gPower;
+      _leftBattlePrintedGPower = _leftCurrentGPower;
+      _rightBattlePrintedGPower = _rightCurrentGPower;
       _areAbilityCardsForbidden = false;
     });
 
@@ -1887,7 +2035,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
     if (slotIndex == -1) return;
 
-    final pendingBonus = card.calculateBonus(
+    final pendingBonus = _calculateBattleAbilityBonusForCard(
+      isLeft,
+      card,
       isLeft ? _leftBakuganVariant : _rightBakuganVariant,
     );
 
@@ -1924,7 +2074,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _playAfterAbilityMusic();
     }
 
-    if (_revealedCard == null || pendingBonus <= 0) {
+    if (_revealedCard == null) {
+      await _applyPrintedGPowerOverrideIfNeeded();
+      return;
+    }
+
+    if (pendingBonus <= 0) {
       return;
     }
 
@@ -1942,13 +2097,18 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     int rightBonus = 0;
     final List<int> newlyAppliedLeft = [];
     final List<int> newlyAppliedRight = [];
+    final List<String> newlyAppliedExternal = [];
 
     for (int i = 0; i < _leftAbilitySlots.length; i++) {
       final slot = _leftAbilitySlots[i];
       if (slot != null &&
           slot.isActive &&
           !_leftAppliedAbilitySlots.contains(i)) {
-        leftBonus += slot.card.calculateBonus(_leftBakuganVariant);
+        leftBonus += _calculateBattleAbilityBonusForCard(
+          true,
+          slot.card,
+          _leftBakuganVariant,
+        );
         newlyAppliedLeft.add(i);
       }
     }
@@ -1958,12 +2118,34 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       if (slot != null &&
           slot.isActive &&
           !_rightAppliedAbilitySlots.contains(i)) {
-        rightBonus += slot.card.calculateBonus(_rightBakuganVariant);
+        rightBonus += _calculateBattleAbilityBonusForCard(
+          false,
+          slot.card,
+          _rightBakuganVariant,
+        );
         newlyAppliedRight.add(i);
       }
     }
 
-    if (newlyAppliedLeft.isEmpty && newlyAppliedRight.isEmpty) {
+    for (final entry in _externalBattleAbilityEntries) {
+      final key = '${entry.playerIndex}:${entry.slotIndex}';
+      if (_appliedExternalAbilitySlots.contains(key)) continue;
+      leftBonus += _calculateBattleAbilityBonusForCard(
+        true,
+        entry.slot.card,
+        _leftBakuganVariant,
+      );
+      rightBonus += _calculateBattleAbilityBonusForCard(
+        false,
+        entry.slot.card,
+        _rightBakuganVariant,
+      );
+      newlyAppliedExternal.add(key);
+    }
+
+    if (newlyAppliedLeft.isEmpty &&
+        newlyAppliedRight.isEmpty &&
+        newlyAppliedExternal.isEmpty) {
       return;
     }
 
@@ -1971,6 +2153,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         _leftAppliedAbilitySlots.addAll(newlyAppliedLeft);
         _rightAppliedAbilitySlots.addAll(newlyAppliedRight);
+        _appliedExternalAbilitySlots.addAll(newlyAppliedExternal);
       });
 
       await _applyDeferredGateEffectBonusesIfNeeded();
@@ -1989,6 +2172,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     setState(() {
       _leftAppliedAbilitySlots.addAll(newlyAppliedLeft);
       _rightAppliedAbilitySlots.addAll(newlyAppliedRight);
+      _appliedExternalAbilitySlots.addAll(newlyAppliedExternal);
     });
 
     await _applyDeferredGateEffectBonusesIfNeeded();
@@ -2010,6 +2194,16 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _rightAbilitySlots[i] = slot.copyWith(isActive: false);
       }
     }
+
+    for (final entry in _externalBattleAbilityEntries) {
+      final key = '${entry.playerIndex}:${entry.slotIndex}';
+      if (!_appliedExternalAbilitySlots.contains(key)) continue;
+      final slots = widget.presentedMatchAbilities[entry.playerIndex];
+      final slot = slots[entry.slotIndex];
+      if (slot != null && slot.isActive) {
+        slots[entry.slotIndex] = slot.copyWith(isActive: false);
+      }
+    }
   }
 
   void _returnBattlingPlayersAbilityCardsToUnused() {
@@ -2021,12 +2215,15 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     }
     _leftAppliedAbilitySlots.clear();
     _rightAppliedAbilitySlots.clear();
+    _appliedExternalAbilitySlots.clear();
     _focusedLeftAbilitySlotIndex = null;
     _focusedRightAbilitySlotIndex = null;
+    _focusedExternalAbilityEntry = null;
     _showLeftAbilityPresentation = false;
     _showRightAbilityPresentation = false;
     _showLeftAbilityFlash = false;
     _showRightAbilityFlash = false;
+    _showExternalAbilityPresentation = false;
   }
 
   void _finalizeBattleAbilitySlots() {
@@ -2035,6 +2232,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       return;
     }
     _markResolvedBattleAbilitiesAsUsed();
+    _appliedExternalAbilitySlots.clear();
   }
 
   void _showAbilityPresentation(
@@ -2068,6 +2266,23 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _showRightAbilityPresentation = false;
         _showRightAbilityFlash = false;
       }
+    });
+  }
+
+  void _showExternalAbilityPresentationFor(int playerIndex, int slotIndex) {
+    setState(() {
+      _focusedExternalAbilityEntry = (
+        playerIndex: playerIndex,
+        slotIndex: slotIndex,
+      );
+      _showExternalAbilityPresentation = true;
+    });
+  }
+
+  void _dismissExternalAbilityPresentation() {
+    setState(() {
+      _showExternalAbilityPresentation = false;
+      _focusedExternalAbilityEntry = null;
     });
   }
 
@@ -2106,6 +2321,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _showRightAbilityPresentation = false;
       _showLeftAbilityFlash = false;
       _showRightAbilityFlash = false;
+      _showExternalAbilityPresentation = false;
+      _focusedExternalAbilityEntry = null;
       _leftFloatingBonus = null;
       _rightFloatingBonus = null;
     });
@@ -2121,6 +2338,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       _showRightAbilityPresentation = false;
       _showLeftAbilityFlash = false;
       _showRightAbilityFlash = false;
+      _showExternalAbilityPresentation = false;
+      _focusedExternalAbilityEntry = null;
       _leftFloatingBonus = null;
       _rightFloatingBonus = null;
     });
@@ -2272,6 +2491,35 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                   top: 0,
                   bottom: 0,
                   child: _buildSide(false),
+                ),
+                if (_externalBattleAbilityEntries.isNotEmpty)
+                  Positioned(
+                    top: 120,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: _buildCenteredExternalBattleAbilityCards(),
+                    ),
+                  ),
+                IgnorePointer(
+                  ignoring:
+                      !_showExternalAbilityPresentation ||
+                      _focusedExternalAbilityCard == null,
+                  child: AnimatedOpacity(
+                    opacity:
+                        _showExternalAbilityPresentation &&
+                            _focusedExternalAbilityCard != null
+                        ? 1
+                        : 0,
+                    duration: const Duration(milliseconds: 220),
+                    child: _focusedExternalAbilityCard == null
+                        ? const SizedBox.shrink()
+                        : Center(
+                            child: _buildExternalAbilityPresentationPanel(
+                              card: _focusedExternalAbilityCard!,
+                            ),
+                          ),
+                  ),
                 ),
                 if (_revealedCard != null &&
                     ((_revealedCard!.descriptionEn?.trim().isNotEmpty ??
@@ -2520,6 +2768,86 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
+  Widget _buildCenteredExternalBattleAbilityCards() {
+    return IgnorePointer(
+      ignoring: false,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: _externalBattleAbilityEntries.map((entry) {
+          final isFocused =
+              _showExternalAbilityPresentation &&
+              _focusedExternalAbilityEntry?.playerIndex == entry.playerIndex &&
+              _focusedExternalAbilityEntry?.slotIndex == entry.slotIndex;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              width: isFocused ? 0 : 102,
+              child: IgnorePointer(
+                ignoring: isFocused,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: isFocused ? 0 : (entry.slot.isActive ? 1.0 : 0.45),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: InteractiveCard(
+                      key: ValueKey(
+                        'center_${entry.playerIndex}_${entry.slotIndex}_${entry.slot.card.key}',
+                      ),
+                      imagePath: entry.slot.card.imagePath,
+                      width: 90,
+                      onTap: () => _showExternalAbilityPresentationFor(
+                        entry.playerIndex,
+                        entry.slotIndex,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildExternalAbilityPresentationPanel({required AbilityCard card}) {
+    return SizedBox(
+      width: _abilityPresentationWidth,
+      height: _abilityPresentationHeight,
+      child: Center(
+        child: OverflowBox(
+          maxWidth: double.infinity,
+          maxHeight: double.infinity,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: _abilityPresentationCardHeight,
+                child: InteractiveCard(
+                  imagePath: card.imagePath,
+                  width: _gateCardWidth * _abilityPresentationCardScale,
+                  onTap: _dismissExternalAbilityPresentation,
+                ),
+              ),
+              const SizedBox(height: _abilityPresentationGap),
+              _buildLocalizedDescriptionPanel(
+                width: 550,
+                title: card.name,
+                esText: card.descriptionEs ?? card.descriptionEn ?? '',
+                maxHeight: 260,
+                frameGradient: _abilityDescriptionGradient(card.cardClass),
+                accentColor: _abilityDescriptionAccentColor(card.cardClass),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSide(bool isLeft) {
     final variant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
     final pendingPreyasPrimaryAttribute = isLeft
@@ -2543,11 +2871,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         .where((slot) => slot.isActive)
         .fold<int>(
           0,
-          (sum, slot) =>
-              sum +
-              slot.card.calculateBonus(
-                isLeft ? _leftBakuganVariant : _rightBakuganVariant,
-              ),
+          (sum, slot) => sum + _calculateBattleAbilityBonusForCard(
+            isLeft,
+            slot.card,
+            isLeft ? _leftBakuganVariant : _rightBakuganVariant,
+          ),
         );
     final canPresentAbility =
         !isAwaitingPreyasChoice &&

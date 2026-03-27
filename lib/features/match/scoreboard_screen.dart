@@ -1573,13 +1573,14 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     if (selectionMode) return;
     final player = widget.players[playerIndex];
     if (bakuganIndex >= player.deck.length) return;
-    if (_bakuganPileStates[playerIndex][bakuganIndex] ==
-        MatchBakuganPileState.used) {
-      return;
-    }
+    final currentState = _bakuganPileStates[playerIndex][bakuganIndex];
 
+    _playClick();
     setState(() {
-      _bakuganPileStates[playerIndex][bakuganIndex] = MatchBakuganPileState.used;
+      _bakuganPileStates[playerIndex][bakuganIndex] =
+          currentState == MatchBakuganPileState.used
+          ? MatchBakuganPileState.unused
+          : MatchBakuganPileState.used;
       _bakuganStandOrder[playerIndex][bakuganIndex] = null;
       _clearBattleSelectionForSlot(playerIndex, bakuganIndex);
       _refreshUnusedPileIfNeeded(playerIndex);

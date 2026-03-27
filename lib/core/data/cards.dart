@@ -253,6 +253,31 @@ class AbilityCard {
     return bonusFor(variant.attribute);
   }
 
+  int calculateBattleBonus(
+    BakuganVariant variant, {
+    required int ownPrintedGPower,
+    required int opponentPrintedGPower,
+  }) {
+    int bonus = calculateBonus(variant);
+
+    for (final effect in effects) {
+      if (effect is! Map) continue;
+      if (effect['type'] != 'highest_printed_g_power_gets_bonus') continue;
+      if (ownPrintedGPower <= opponentPrintedGPower) continue;
+
+      final valueRaw = effect['value'];
+      if (valueRaw is num) {
+        bonus += valueRaw.toInt();
+      }
+    }
+
+    return bonus;
+  }
+
+  bool get setsAllPrintedGPowerToZero => effects.any(
+    (effect) => effect is Map && effect['type'] == 'set_all_printed_g_power_to_zero',
+  );
+
   bool get supportsBeforeBattle => timings.contains('start_of_battle');
 
   bool get supportsDuringBattle => timings.contains('during_battle');
