@@ -294,8 +294,16 @@ class AbilityCard {
 
   bool get supportsDuringBattle => timings.contains('during_battle');
 
+  bool get supportsAfterBattle => timings.contains('after_battle');
+
+  bool get preventsGateCaptureAfterCloseLoss => effects.any(
+    (effect) =>
+        effect is Map &&
+        effect['type'] == 'prevent_gate_capture_after_close_loss',
+  );
+
   bool get isMatchStageCard =>
-      !supportsBeforeBattle && !supportsDuringBattle;
+      !supportsBeforeBattle && !supportsDuringBattle && !supportsAfterBattle;
 }
 
 class MatchPresentedAbility {

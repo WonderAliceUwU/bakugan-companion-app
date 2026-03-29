@@ -2972,9 +2972,10 @@
       "effects": [
         {
           "type": "persistent_override_opponent_gate_attribute_bonus",
-          "timing": "after_battle_win",
+          "timing": "after_battle",
           "condition": {
-            "your_attribute": "darkus"
+            "your_attribute": "darkus",
+            "result": "win"
           },
           "duration": "while_in_used_pile"
         }
@@ -3002,9 +3003,10 @@
       "effects": [
         {
           "type": "persistent_override_your_gate_attribute_bonus",
-          "timing": "after_battle_win",
+          "timing": "after_battle",
           "condition": {
-            "your_attribute": "pyrus"
+            "your_attribute": "pyrus",
+            "result": "win"
           },
           "duration": "while_in_used_pile"
         }
@@ -3387,10 +3389,9 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_gain_per_opponent_used_ability_after_battle",
+          "type": "named_bakugan_gain_per_opponent_used_ability",
           "bakugan": "Rattleoid",
-          "value": 50,
-          "timing": "after_battle"
+          "value": 50
         }
       ],
       "rules": []

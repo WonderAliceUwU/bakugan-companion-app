@@ -300,9 +300,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
     _battleMusicCompleteSub = _battleMusicPlayer.onPlayerComplete.listen((_) {
       if (!mounted) return;
-      if (_winnerSideIndex != null || _isTieResult) {
-        _returnToMatch();
-      }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1828,9 +1825,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     String input, {
     int limit = 6,
     required bool beforeGateReveal,
+    bool afterBattleResult = false,
   }) {
     final query = _normalizeCardLookup(input);
-    final candidateCards = beforeGateReveal
+    final candidateCards = afterBattleResult
+        ? _abilityCards.values.where((card) => card.supportsAfterBattle)
+        : beforeGateReveal
         ? _abilityCards.values.where((card) => card.supportsBeforeBattle)
         : _abilityCards.values.where((card) => card.supportsDuringBattle);
 
@@ -1868,6 +1868,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   AbilityCard? _findAbilityCard(
     String input, {
     required bool beforeGateReveal,
+    bool afterBattleResult = false,
   }) {
     final query = _normalizeCardLookup(input);
     if (query.isEmpty) return null;
@@ -1876,6 +1877,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       input,
       limit: 6,
       beforeGateReveal: beforeGateReveal,
+      afterBattleResult: afterBattleResult,
     );
     if (matches.isEmpty) return null;
 
@@ -2138,6 +2140,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     FocusManager.instance.primaryFocus?.unfocus();
     _cardNameController.clear();
     final isBeforeReveal = _revealedCard == null;
+    final isAfterBattleResult = _winnerSideIndex != null || _isTieResult;
 
     final selectedCard = await showDialog<AbilityCard>(
       context: context,
@@ -2150,10 +2153,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               final match = _findAbilityCard(
                 _cardNameController.text,
                 beforeGateReveal: isBeforeReveal,
+                afterBattleResult: isAfterBattleResult,
               );
               if (match == null) {
                 setDialogState(() {
-                  errorText = isBeforeReveal
+                  errorText = isAfterBattleResult
+                      ? 'Ability card not found or not valid after the battle.'
+                      : isBeforeReveal
                       ? 'Ability card not found or not valid before the gate reveal.'
                       : 'Ability card not found or not valid after the gate reveal.';
                 });
@@ -2204,6 +2210,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                         return _rankAbilityCardMatches(
                           textEditingValue.text,
                           beforeGateReveal: isBeforeReveal,
+                          afterBattleResult: isAfterBattleResult,
                         );
                       },
                       onSelected: (option) {
@@ -2566,7 +2573,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     await _queueBattleReplacementIfNeeded(isLeft: isLeft, card: card);
     if (!mounted) return;
 
-    if (_revealedCard != null) {
+    if (_revealedCard != null && _winnerSideIndex == null && !_isTieResult) {
       _playAfterAbilityMusic();
     }
 
@@ -2575,7 +2582,67 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       return;
     }
 
+    if (_winnerSideIndex != null || _isTieResult) {
+      await _resolveAfterBattleAbilityCard(isLeft, card);
+      return;
+    }
+
     await _applyQueuedAbilityCards();
+  }
+
+  Future<void> _resolveAfterBattleAbilityCard(bool isLeft, AbilityCard card) async {
+    if (!card.preventsGateCaptureAfterCloseLoss) {
+      return;
+    }
+    if (_winnerSideIndex == null) {
+      return;
+    }
+
+    final sourceLost = (isLeft && _winnerSideIndex == 1) ||
+        (!isLeft && _winnerSideIndex == 0);
+    if (!sourceLost) {
+      return;
+    }
+
+    final sourceVariant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
+    final lossMargin =
+        (isLeft ? _rightCurrentGPower : _leftCurrentGPower) -
+        (isLeft ? _leftCurrentGPower : _rightCurrentGPower);
+
+    for (final effect in card.effects) {
+      if (effect is! Map ||
+          effect['type'] != 'prevent_gate_capture_after_close_loss') {
+        continue;
+      }
+      final condition = effect['condition'];
+      if (condition is! Map) continue;
+
+      final requiredAttribute =
+          condition['your_attribute']?.toString().toLowerCase();
+      if (requiredAttribute != null &&
+          requiredAttribute.isNotEmpty &&
+          sourceVariant.attribute.toLowerCase() != requiredAttribute) {
+        continue;
+      }
+
+      final threshold = condition['loss_margin_lt'];
+      if (threshold is num && lossMargin >= threshold.toInt()) {
+        continue;
+      }
+
+      setState(() {
+        _isTieResult = true;
+        _winnerSideIndex = null;
+        _winnerText = 'TIE!';
+        _showLeftAbilityFlash = false;
+        _showRightAbilityFlash = false;
+        _showExternalAbilityPresentation = false;
+        _focusedExternalAbilityEntry = null;
+        _leftFloatingBonus = null;
+        _rightFloatingBonus = null;
+      });
+      return;
+    }
   }
 
   Future<void> _applyQueuedAbilityCards() async {
@@ -3032,11 +3099,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               child: Container(color: Colors.black38),
             ),
           ),
-          if (hasWinner)
-            _buildWinnerScreen()
-          else
-            Stack(
-              children: [
+          Stack(
+            children: [
+              if (!hasWinner)
                 Positioned(
                   top: 40,
                   left: 20,
@@ -3052,63 +3117,96 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     },
                   ),
                 ),
-                Center(child: _buildGateCardArea()),
+              if (!hasWinner) Center(child: _buildGateCardArea()),
+              Positioned(
+                left: 50,
+                top: 0,
+                bottom: 0,
+                child: _buildSide(
+                  true,
+                  showBattlePreviewAndPower: !hasWinner,
+                ),
+              ),
+              Positioned(
+                right: 50,
+                top: 0,
+                bottom: 0,
+                child: _buildSide(
+                  false,
+                  showBattlePreviewAndPower: !hasWinner,
+                ),
+              ),
+              if (!hasWinner && _externalBattleAbilityEntries.isNotEmpty)
+                Positioned(
+                  top: 120,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _buildCenteredExternalBattleAbilityCards(),
+                  ),
+                ),
+              IgnorePointer(
+                ignoring:
+                    !_showExternalAbilityPresentation ||
+                    _focusedExternalAbilityCard == null,
+                child: AnimatedOpacity(
+                  opacity:
+                      _showExternalAbilityPresentation &&
+                          _focusedExternalAbilityCard != null
+                      ? 1
+                      : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: _focusedExternalAbilityCard == null
+                      ? const SizedBox.shrink()
+                      : Center(
+                          child: _buildExternalAbilityPresentationPanel(
+                            card: _focusedExternalAbilityCard!,
+                          ),
+                        ),
+                ),
+              ),
+              if (!hasWinner &&
+                  _revealedCard != null &&
+                  ((_revealedCard!.descriptionEn?.trim().isNotEmpty ?? false) ||
+                      (_revealedCard!.descriptionEs?.trim().isNotEmpty ??
+                          false)))
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 170,
+                  child: Center(
+                    child: _buildGateDescriptionPanel(_revealedCard!),
+                  ),
+                ),
+              if (hasWinner) _buildWinnerScreen(),
+              if (hasWinner &&
+                  _showLeftAbilityPresentation &&
+                  _focusedLeftAbilityCard != null)
                 Positioned(
                   left: 50,
                   top: 0,
                   bottom: 0,
-                  child: _buildSide(true),
+                  child: _buildResultAbilityPresentationSide(
+                    isLeft: true,
+                    card: _focusedLeftAbilityCard!,
+                    showFlash: _showLeftAbilityFlash,
+                  ),
                 ),
+              if (hasWinner &&
+                  _showRightAbilityPresentation &&
+                  _focusedRightAbilityCard != null)
                 Positioned(
                   right: 50,
                   top: 0,
                   bottom: 0,
-                  child: _buildSide(false),
-                ),
-                if (_externalBattleAbilityEntries.isNotEmpty)
-                  Positioned(
-                    top: 120,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: _buildCenteredExternalBattleAbilityCards(),
-                    ),
-                  ),
-                IgnorePointer(
-                  ignoring:
-                      !_showExternalAbilityPresentation ||
-                      _focusedExternalAbilityCard == null,
-                  child: AnimatedOpacity(
-                    opacity:
-                        _showExternalAbilityPresentation &&
-                            _focusedExternalAbilityCard != null
-                        ? 1
-                        : 0,
-                    duration: const Duration(milliseconds: 220),
-                    child: _focusedExternalAbilityCard == null
-                        ? const SizedBox.shrink()
-                        : Center(
-                            child: _buildExternalAbilityPresentationPanel(
-                              card: _focusedExternalAbilityCard!,
-                            ),
-                          ),
+                  child: _buildResultAbilityPresentationSide(
+                    isLeft: false,
+                    card: _focusedRightAbilityCard!,
+                    showFlash: _showRightAbilityFlash,
                   ),
                 ),
-                if (_revealedCard != null &&
-                    ((_revealedCard!.descriptionEn?.trim().isNotEmpty ??
-                            false) ||
-                        (_revealedCard!.descriptionEs?.trim().isNotEmpty ??
-                            false)))
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 170,
-                    child: Center(
-                      child: _buildGateDescriptionPanel(_revealedCard!),
-                    ),
-                  ),
-              ],
-            ),
+            ],
+          ),
         ],
       ),
     );
@@ -3116,103 +3214,119 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
 
   Widget _buildWinnerScreen() {
     if (_isTieResult) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _returnToMatch,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TweenAnimationBuilder<Offset>(
-                tween: Tween<Offset>(
-                  begin: const Offset(-1.2, 0),
-                  end: Offset.zero,
-                ),
-                duration: const Duration(milliseconds: 700),
-                curve: Curves.easeOutCubic,
-                builder: (context, offset, child) {
-                  return Transform.translate(
-                    offset: Offset(offset.dx * 480, 0),
-                    child: child,
-                  );
-                },
-                child: const Text(
-                  'TIE!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 72,
-                    fontWeight: FontWeight.w900,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: 2,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        offset: Offset(4, 4),
-                        blurRadius: 10,
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: true,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TweenAnimationBuilder<Offset>(
+                      tween: Tween<Offset>(
+                        begin: const Offset(-1.2, 0),
+                        end: Offset.zero,
                       ),
-                      Shadow(color: Colors.white24, blurRadius: 28),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 36),
-              SizedBox(
-                width: 560,
-                height: 560,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: 1),
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, progress, child) {
-                    final flashOpacity = (1 - (progress * 2 - 1).abs()).clamp(
-                      0.0,
-                      1.0,
-                    );
-                    final showAnverse = progress >= 0.5;
-                    final imagePath = showAnverse
-                        ? 'assets/images/cards/anverse.png'
-                        : (_revealedCard?.imagePath ??
-                              'assets/images/cards/anverse.png');
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Transform.scale(
-                          scale: lerpDouble(1.05, 1.0, progress) ?? 1.0,
-                          child: InteractiveCard(
-                            key: ValueKey('tie_gate_$imagePath'),
-                            imagePath: imagePath,
-                            onTap: () {},
-                          ),
-                        ),
-                        IgnorePointer(
-                          child: Opacity(
-                            opacity: flashOpacity.toDouble(),
-                            child: Container(
-                              width: _gateCardWidth,
-                              height: _gateCardHeight,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.white,
-                                    blurRadius: 50,
-                                    spreadRadius: 16,
-                                  ),
-                                ],
-                              ),
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, offset, child) {
+                        return Transform.translate(
+                          offset: Offset(offset.dx * 480, 0),
+                          child: child,
+                        );
+                      },
+                      child: const Text(
+                        'TIE!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 72,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 2,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              offset: Offset(4, 4),
+                              blurRadius: 10,
                             ),
-                          ),
+                            Shadow(color: Colors.white24, blurRadius: 28),
+                          ],
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+                    SizedBox(
+                      width: 560,
+                      height: 560,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, progress, child) {
+                          final flashOpacity =
+                              (1 - (progress * 2 - 1).abs()).clamp(0.0, 1.0);
+                          final showAnverse = progress >= 0.5;
+                          final imagePath = showAnverse
+                              ? 'assets/images/cards/anverse.png'
+                              : (_revealedCard?.imagePath ??
+                                    'assets/images/cards/anverse.png');
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Transform.scale(
+                                scale: lerpDouble(1.05, 1.0, progress) ?? 1.0,
+                                child: InteractiveCard(
+                                  key: ValueKey('tie_gate_$imagePath'),
+                                  imagePath: imagePath,
+                                  onTap: () {},
+                                ),
+                              ),
+                              IgnorePointer(
+                                child: Opacity(
+                                  opacity: flashOpacity.toDouble(),
+                                  child: Container(
+                                    width: _gateCardWidth,
+                                    height: _gateCardHeight,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.white,
+                                          blurRadius: 50,
+                                          spreadRadius: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 56,
+            child: Center(
+              child: BakuganButton(
+                text: 'OK',
+                onPressed: _returnToMatch,
+                width: 180,
+                height: 78,
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -3222,30 +3336,51 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         ? _leftBakuganVariant
         : _rightBakuganVariant;
 
-    return BattleResultShowcase(
-      title: '${winnerPlayer.name} WINS!',
-      onTap: _returnToMatch,
-      previewChild: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: _abilityPresentationWidth,
-            height: _abilityPresentationHeight,
-            child: _buildBattlePreviewArea(
-              isLeft: winnerIsLeft,
-              variant: winnerBakugan,
-              isPreyasChooser: false,
-              chooserTitle: null,
-              chooserSubtitle: null,
-              chooserChoices: const [],
-              highlightedAttribute: null,
-              focusedAbilityCard: null,
-              showAbilityPresentation: false,
-              showAbilityFlash: false,
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: true,
+            child: BattleResultShowcase(
+              title: '${winnerPlayer.name} WINS!',
+              previewChild: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: _abilityPresentationWidth,
+                    height: _abilityPresentationHeight,
+                    child: _buildBattlePreviewArea(
+                      isLeft: winnerIsLeft,
+                      variant: winnerBakugan,
+                      isPreyasChooser: false,
+                      chooserTitle: null,
+                      chooserSubtitle: null,
+                      chooserChoices: const [],
+                      highlightedAttribute: null,
+                      focusedAbilityCard: null,
+                      showAbilityPresentation: false,
+                      showAbilityFlash: false,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 56,
+          child: Center(
+            child: BakuganButton(
+              text: 'OK',
+              onPressed: _returnToMatch,
+              width: 180,
+              height: 78,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -3425,7 +3560,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     );
   }
 
-  Widget _buildSide(bool isLeft) {
+  Widget _buildSide(bool isLeft, {bool showBattlePreviewAndPower = true}) {
     final variant = isLeft ? _leftBakuganVariant : _rightBakuganVariant;
     final pendingPreyasPrimaryAttribute = isLeft
         ? _leftPendingPreyasPrimaryAttribute
@@ -3512,60 +3647,64 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                     ),
                   ),
           ),
-          const Spacer(),
-          SizedBox(
-            width: _abilityPresentationWidth,
-            height: _abilityPresentationHeight,
-            child: _buildBattlePreviewArea(
-              isLeft: isLeft,
-              variant: variant,
-              isPreyasChooser: showPreyasChooser,
-              chooserTitle: chooserTitle,
-              chooserSubtitle: chooserSubtitle,
-              chooserChoices: chooserChoices,
-              highlightedAttribute: pendingPreyasPrimaryAttribute,
-              focusedAbilityCard: focusedAbilityCard,
-              showAbilityPresentation: showAbilityPresentation,
-              showAbilityFlash: showAbilityFlash,
+          if (showBattlePreviewAndPower) ...[
+            const Spacer(),
+            SizedBox(
+              width: _abilityPresentationWidth,
+              height: _abilityPresentationHeight,
+              child: _buildBattlePreviewArea(
+                isLeft: isLeft,
+                variant: variant,
+                isPreyasChooser: showPreyasChooser,
+                chooserTitle: chooserTitle,
+                chooserSubtitle: chooserSubtitle,
+                chooserChoices: chooserChoices,
+                highlightedAttribute: pendingPreyasPrimaryAttribute,
+                focusedAbilityCard: focusedAbilityCard,
+                showAbilityPresentation: showAbilityPresentation,
+                showAbilityFlash: showAbilityFlash,
+              ),
             ),
-          ),
-          const Spacer(),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: isAwaitingAttributeChoice
-                ? _buildPendingAttributeBadge(
-                    isLeft: isLeft,
-                    accentAttribute:
-                        pendingPreyasPrimaryAttribute ??
-                        (chooserChoices.isNotEmpty ? chooserChoices.first : null),
-                    label: chooserSubtitle ?? 'SELECT ATTRIBUTE',
-                  )
-                : _AnimatedBattleGPowerBadge(
-                    key: ValueKey(
-                      'battle_g_${isLeft ? 'L' : 'R'}_${variant.attribute}',
+            const Spacer(),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: isAwaitingAttributeChoice
+                  ? _buildPendingAttributeBadge(
+                      isLeft: isLeft,
+                      accentAttribute:
+                          pendingPreyasPrimaryAttribute ??
+                          (chooserChoices.isNotEmpty
+                              ? chooserChoices.first
+                              : null),
+                      label: chooserSubtitle ?? 'SELECT ATTRIBUTE',
+                    )
+                  : _AnimatedBattleGPowerBadge(
+                      key: ValueKey(
+                        'battle_g_${isLeft ? 'L' : 'R'}_${variant.attribute}',
+                      ),
+                      gPower: currentGPower,
+                      bonusDelta: isLeft
+                          ? _leftFloatingBonus
+                          : _rightFloatingBonus,
+                      pendingBonusDelta:
+                          !_areAbilityCardsForbidden &&
+                              _revealedCard == null &&
+                              pendingAbilityBonus > 0
+                          ? pendingAbilityBonus
+                          : null,
+                      attribute: variant.attribute,
+                      themeColor: variant.color,
+                      alignLeft: isLeft,
+                      animationValue: _powerAnimationController.value,
+                      rumble: isLeft
+                          ? _showLeftGateBonusSuppressedFeedback
+                          : _showRightGateBonusSuppressedFeedback,
                     ),
-                    gPower: currentGPower,
-                    bonusDelta: isLeft
-                        ? _leftFloatingBonus
-                        : _rightFloatingBonus,
-                    pendingBonusDelta:
-                        !_areAbilityCardsForbidden &&
-                            _revealedCard == null &&
-                            pendingAbilityBonus > 0
-                        ? pendingAbilityBonus
-                        : null,
-                    attribute: variant.attribute,
-                    themeColor: variant.color,
-                    alignLeft: isLeft,
-                    animationValue: _powerAnimationController.value,
-                    rumble: isLeft
-                        ? _showLeftGateBonusSuppressedFeedback
-                        : _showRightGateBonusSuppressedFeedback,
-                  ),
-          ),
-          const SizedBox(height: 100),
+            ),
+            const SizedBox(height: 100),
+          ],
         ],
       ),
     );
@@ -3699,6 +3838,31 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildResultAbilityPresentationSide({
+    required bool isLeft,
+    required AbilityCard card,
+    required bool showFlash,
+  }) {
+    return SizedBox(
+      width: 600,
+      child: Column(
+        children: [
+          const Spacer(flex: 5),
+          _buildAbilityPresentationPanel(
+            key: ValueKey(
+              'result_ability_panel_${isLeft ? 'L' : 'R'}_${card.key}',
+            ),
+            isLeft: isLeft,
+            card: card,
+            showFlash: showFlash,
+          ),
+          const Spacer(flex: 2),
+          const SizedBox(height: 100),
+        ],
+      ),
     );
   }
 
