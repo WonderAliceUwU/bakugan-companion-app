@@ -250,6 +250,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   int _rightCurrentGPower = 0;
   int _leftTargetGPower = 0;
   int _rightTargetGPower = 0;
+  int _leftBasePrintedGPower = 0;
+  int _rightBasePrintedGPower = 0;
   int _leftBattlePrintedGPower = 0;
   int _rightBattlePrintedGPower = 0;
   int _leftAnimationStartGPower = 0;
@@ -282,6 +284,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _rightCurrentGPower = _initialPrintedGPowerFor(_rightBattleBakugan);
     _leftTargetGPower = _leftCurrentGPower;
     _rightTargetGPower = _rightCurrentGPower;
+    _leftBasePrintedGPower = _leftBattleBakugan.gPower;
+    _rightBasePrintedGPower = _rightBattleBakugan.gPower;
     _leftBattlePrintedGPower = _leftCurrentGPower;
     _rightBattlePrintedGPower = _rightCurrentGPower;
     _leftAnimationStartGPower = _leftCurrentGPower;
@@ -492,6 +496,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _leftBattleBakugan,
           attribute,
         );
+        _leftBasePrintedGPower = _leftBattleBakugan.gPower;
         _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
         _leftPendingAttributeChoices = const [];
         _leftPendingAttributeTitle = null;
@@ -508,6 +513,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _rightBattleBakugan,
           attribute,
         );
+        _rightBasePrintedGPower = _rightBattleBakugan.gPower;
         _rightBattlePrintedGPower =
             _initialPrintedGPowerFor(_rightBattleBakugan);
         _rightPendingAttributeChoices = const [];
@@ -551,10 +557,12 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         if (isLeft) {
           _leftBattleBakugan = variant;
+          _leftBasePrintedGPower = _leftBattleBakugan.gPower;
           _leftBattlePrintedGPower = _initialPrintedGPowerFor(variant);
           _leftPendingPreyasPrimaryAttribute = null;
         } else {
           _rightBattleBakugan = variant;
+          _rightBasePrintedGPower = _rightBattleBakugan.gPower;
           _rightBattlePrintedGPower = _initialPrintedGPowerFor(variant);
           _rightPendingPreyasPrimaryAttribute = null;
         }
@@ -567,11 +575,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     setState(() {
       if (isLeft) {
         _leftBattleBakugan = variant;
+        _leftBasePrintedGPower = _leftBattleBakugan.gPower;
         _leftBattlePrintedGPower = _initialPrintedGPowerFor(variant);
         _leftPendingPreyasPrimaryAttribute = primaryAttribute;
         _leftPreyasChoiceCompleter = completer;
       } else {
         _rightBattleBakugan = variant;
+        _rightBasePrintedGPower = _rightBattleBakugan.gPower;
         _rightBattlePrintedGPower = _initialPrintedGPowerFor(variant);
         _rightPendingPreyasPrimaryAttribute = primaryAttribute;
         _rightPreyasChoiceCompleter = completer;
@@ -594,6 +604,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _leftBattleBakugan,
           attribute,
         );
+        _leftBasePrintedGPower = _leftBattleBakugan.gPower;
         _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
         _leftCurrentGPower = _leftBattlePrintedGPower;
         _leftTargetGPower = _leftCurrentGPower;
@@ -610,6 +621,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
           _rightBattleBakugan,
           attribute,
         );
+        _rightBasePrintedGPower = _rightBattleBakugan.gPower;
         _rightBattlePrintedGPower =
             _initialPrintedGPowerFor(_rightBattleBakugan);
         _rightCurrentGPower = _rightBattlePrintedGPower;
@@ -931,11 +943,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     }
 
     final ownPrinted = sourceIsLeft
-        ? _leftBattlePrintedGPower
-        : _rightBattlePrintedGPower;
+        ? _leftBasePrintedGPower
+        : _rightBasePrintedGPower;
     final opponentPrinted = sourceIsLeft
-        ? _rightBattlePrintedGPower
-        : _leftBattlePrintedGPower;
+        ? _rightBasePrintedGPower
+        : _leftBasePrintedGPower;
     final lead = ownPrinted - opponentPrinted;
 
     final aheadLt = condition['printed_g_power_ahead_lt'];
@@ -1375,6 +1387,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       if (isLeft) {
         _leftBattleBakuganIndex = chosenIndex;
         _leftBattleBakugan = widget.leftPlayer.deck[chosenIndex];
+        _leftBasePrintedGPower = _leftBattleBakugan.gPower;
         _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
         _leftCurrentGPower = _leftBattlePrintedGPower;
         _leftTargetGPower = _leftBattlePrintedGPower;
@@ -1384,6 +1397,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       } else {
         _rightBattleBakuganIndex = chosenIndex;
         _rightBattleBakugan = widget.rightPlayer.deck[chosenIndex];
+        _rightBasePrintedGPower = _rightBattleBakugan.gPower;
         _rightBattlePrintedGPower =
             _initialPrintedGPowerFor(_rightBattleBakugan);
         _rightCurrentGPower = _rightBattlePrintedGPower;
@@ -1473,6 +1487,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         _leftBattleBakuganIndex = chosenIndex;
         _leftBattleBakugan = widget.leftPlayer.deck[chosenIndex];
+        _leftBasePrintedGPower = _leftBattleBakugan.gPower;
         _leftBattlePrintedGPower = _initialPrintedGPowerFor(_leftBattleBakugan);
         if (_hasPrintedGPowerZeroOverride()) {
           _leftCurrentGPower = _leftBattlePrintedGPower;
@@ -1488,6 +1503,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       setState(() {
         _rightBattleBakuganIndex = chosenIndex;
         _rightBattleBakugan = widget.rightPlayer.deck[chosenIndex];
+        _rightBasePrintedGPower = _rightBattleBakugan.gPower;
         _rightBattlePrintedGPower =
             _initialPrintedGPowerFor(_rightBattleBakugan);
         if (_hasPrintedGPowerZeroOverride()) {
@@ -2753,6 +2769,31 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return null;
   }
 
+  bool _hasAppliedRemoveLosingBakuganEffect() {
+    for (final index in _leftAppliedAbilitySlots) {
+      if (index < 0 || index >= _leftAbilitySlots.length) continue;
+      final slot = _leftAbilitySlots[index];
+      if (slot?.card.removesLosingBakuganFromGame ?? false) {
+        return true;
+      }
+    }
+    for (final index in _rightAppliedAbilitySlots) {
+      if (index < 0 || index >= _rightAbilitySlots.length) continue;
+      final slot = _rightAbilitySlots[index];
+      if (slot?.card.removesLosingBakuganFromGame ?? false) {
+        return true;
+      }
+    }
+    for (final entry in _externalBattleAbilityEntries) {
+      final key = '${entry.playerIndex}:${entry.slotIndex}';
+      if (!_appliedExternalAbilitySlots.contains(key)) continue;
+      if (entry.slot.card.removesLosingBakuganFromGame) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void _finalizeBattleAbilitySlots() {
     if (_revealedCard?.returnsAllUsedAbilityCards ?? false) {
       _returnBattlingPlayersAbilityCardsToUnused();
@@ -2891,6 +2932,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       'leftBakuganIndex': _leftBattleBakuganIndex,
       'rightBakuganIndex': _rightBattleBakuganIndex,
       'usedGatePenaltySideIndex': _usedGatePenaltySideIndex(),
+      'removedBakuganSideIndex': _winnerSideIndex != null &&
+              _hasAppliedRemoveLosingBakuganEffect()
+          ? (_winnerSideIndex == 0 ? 1 : 0)
+          : null,
     });
   }
 
@@ -3433,7 +3478,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         !_areAbilityCardsForbidden &&
         !_isLoadingAbilityCards &&
         !_isResolvingCard;
-
     return SizedBox(
       width: 600,
       child: Column(

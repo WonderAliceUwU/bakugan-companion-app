@@ -1236,10 +1236,17 @@ class PlayerArenaInfo extends StatelessWidget {
                   : MatchBakuganPileState.unused;
               final isStanding = pileState == MatchBakuganPileState.standing;
               final isUsed = pileState == MatchBakuganPileState.used;
+              final isRemoved = pileState == MatchBakuganPileState.removed;
               final borderGradient = isPicked
                   ? activeGradient
                   : isStanding
                   ? standingGradient
+                  : isRemoved
+                  ? const [
+                      Color(0xFF2A0E0E),
+                      Color(0xFF111111),
+                      Color(0xFF050505),
+                    ]
                   : isUsed
                   ? usedGradient
                   : idleGradient;
@@ -1248,8 +1255,10 @@ class PlayerArenaInfo extends StatelessWidget {
                 alignment: Alignment.center,
                 transform: Matrix4.skewX(-0.15),
                 child: GestureDetector(
-                  onTap: hasBakugan ? () => onBakuganTap?.call(i) : null,
-                  onLongPress: hasBakugan
+                  onTap: hasBakugan && !isRemoved
+                      ? () => onBakuganTap?.call(i)
+                      : null,
+                  onLongPress: hasBakugan && !isRemoved
                       ? () => onBakuganLongPress?.call(i)
                       : null,
                   behavior: HitTestBehavior.opaque,
@@ -1294,7 +1303,7 @@ class PlayerArenaInfo extends StatelessWidget {
                         ),
                         child: Stack(
                           children: [
-                            if (hasBakugan)
+                            if (hasBakugan && !isRemoved)
                               Positioned.fill(
                                 child: Transform(
                                   alignment: Alignment.center,
@@ -1304,6 +1313,27 @@ class PlayerArenaInfo extends StatelessWidget {
                                     child: BakuganPreview(
                                       variant: variant!,
                                       isDeck: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (isRemoved)
+                              Positioned.fill(
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.skewX(0.15),
+                                  child: Center(
+                                    child: Text(
+                                      'OUT',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.32,
+                                        ),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        fontStyle: FontStyle.italic,
+                                        letterSpacing: 2,
+                                      ),
                                     ),
                                   ),
                                 ),

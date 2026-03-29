@@ -286,11 +286,16 @@ class AbilityCard {
             'return_one_used_gate_to_owner_if_opponent_has_more_used_gates',
   );
 
+  bool get removesLosingBakuganFromGame => effects.any(
+    (effect) => effect is Map && effect['type'] == 'remove_loser_bakugan_from_game',
+  );
+
   bool get supportsBeforeBattle => timings.contains('start_of_battle');
 
   bool get supportsDuringBattle => timings.contains('during_battle');
 
-  bool get isMatchStageCard => !supportsBeforeBattle && !supportsDuringBattle;
+  bool get isMatchStageCard =>
+      !supportsBeforeBattle && !supportsDuringBattle;
 }
 
 class MatchPresentedAbility {

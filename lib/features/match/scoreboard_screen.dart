@@ -1,6 +1,6 @@
 part of '../../main.dart';
 
-enum MatchBakuganPileState { unused, standing, used }
+enum MatchBakuganPileState { unused, standing, used, removed }
 
 class ScoreboardScreen extends StatefulWidget {
   final List<PlayerData> players;
@@ -44,6 +44,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   String? _bakuganStayBannerText;
   int? _bakuganStayPlayerIndex;
   int? _bakuganStayBakuganIndex;
+  bool _bakuganStayClosing = false;
   bool _isResolvingBakuganStay = false;
 
   bool selectionMode = false;
@@ -997,45 +998,72 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     }
     final variant = player.deck[bakuganIndex];
     final isMirrored = playerIndex.isOdd;
-    final title = "${player.name.toUpperCase()} STAYS!";
+    final title = text == 'REMOVED'
+        ? '${variant.speciesName.toUpperCase()} REMOVED FROM BATTLE'
+        : "${player.name.toUpperCase()} STAYS!";
 
     return Positioned.fill(
       child: IgnorePointer(
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.72),
-          child: BattleResultShowcase(
-            title: title,
-            previewChild: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: _abilityPresentationWidth,
-                  height: _abilityPresentationHeight,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: SizedBox(
-                      width: 500,
-                      height: 500,
-                      child: BakuganPreview(
-                        variant: variant,
-                        isLarge: true,
-                        autoRotate: false,
-                        theta: isMirrored ? 40 : -40,
-                        phi: 75,
-                        disableInteraction: true,
-                        speciesName: variant.speciesName,
-                        showGPower: false,
-                        mirrorImage: isMirrored,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeInOutCubic,
+          opacity: _bakuganStayClosing ? 0 : 1,
+          child: AnimatedSlide(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeInOutCubic,
+            offset: _bakuganStayClosing ? const Offset(0, -0.08) : Offset.zero,
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.72),
+              child: BattleResultShowcase(
+                title: title,
+                previewChild: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: _abilityPresentationWidth,
+                      height: _abilityPresentationHeight,
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: 500,
+                          height: 500,
+                          child: BakuganPreview(
+                            variant: variant,
+                            isLarge: true,
+                            autoRotate: false,
+                            theta: isMirrored ? 40 : -40,
+                            phi: 75,
+                            disableInteraction: true,
+                            speciesName: variant.speciesName,
+                            showGPower: false,
+                            mirrorImage: isMirrored,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _hideBakuganResultOverlay() async {
+    if (!mounted) return;
+    setState(() {
+      _bakuganStayClosing = true;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 260));
+    if (!mounted) return;
+    setState(() {
+      _bakuganStayBannerText = null;
+      _bakuganStayPlayerIndex = null;
+      _bakuganStayBakuganIndex = null;
+      _bakuganStayClosing = false;
+    });
   }
 
   Future<void> _playCharacterSelectMusic() async {
@@ -1364,12 +1392,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 
   void _addPoint(int index, {bool playPointSound = true}) async {
-    if (playPointSound) {
-      try {
-        await _sfxPlayer.stop();
-        await _sfxPlayer.play(AssetSource('sound/select.wav'));
-      } catch (_) {}
-    }
     bool didWinMatch = false;
     setState(() {
       if (scores[index] < 3) {
@@ -1387,6 +1409,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         }
       }
     });
+    if (playPointSound) {
+      unawaited(_playPointCaptureSound());
+    }
     if (didWinMatch) {
       unawaited(_recordLeaderboardMatch(index));
       await _playMatchWinSound();
@@ -1577,11 +1602,54 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
   }
 
+  Future<void> _playPointCaptureSound() async {
+    try {
+      await _sfxPlayer.stop();
+      await _sfxPlayer.play(AssetSource('sound/select.wav'));
+    } catch (_) {}
+  }
+
   Future<void> _playBakuganStaySound() async {
     try {
       await _sfxPlayer.stop();
       await _sfxPlayer.play(AssetSource('sound/win_battle.flac'));
     } catch (_) {}
+  }
+
+  Future<void> _playBakuganRemovedSound() async {
+    try {
+      await _sfxPlayer.stop();
+      await _sfxPlayer.setReleaseMode(ReleaseMode.stop);
+      await _sfxPlayer.play(AssetSource('sound/lose.flac'));
+    } catch (_) {}
+  }
+
+  Future<void> _showBakuganRemovedOverlay({
+    required int playerIndex,
+    required int bakuganIndex,
+  }) async {
+    if (_matchWinnerIndex != null) return;
+
+    await _pauseArenaPlaylist();
+    setState(() {
+      _bakuganStayBannerText = 'REMOVED';
+      _bakuganStayPlayerIndex = playerIndex;
+      _bakuganStayBakuganIndex = bakuganIndex;
+      _bakuganStayClosing = false;
+    });
+
+    final soundFinished = Future.any<void>([
+      _sfxPlayer.onPlayerComplete.first.then((_) {}),
+      Future<void>.delayed(const Duration(seconds: 4)),
+    ]);
+    await _playBakuganRemovedSound();
+    if (!mounted) return;
+
+    await soundFinished;
+    if (!mounted) return;
+
+    await _hideBakuganResultOverlay();
+    await _resumeArenaPlaylist();
   }
 
   void _clearBattleSelectionForSlot(int playerIndex, int bakuganIndex) {
@@ -1734,6 +1802,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       _bakuganStayBannerText = 'STAY!';
       _bakuganStayPlayerIndex = playerIndex;
       _bakuganStayBakuganIndex = oldestStandingIndex;
+      _bakuganStayClosing = false;
     });
 
     final soundFinished = Future.any<void>([
@@ -1754,17 +1823,14 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     });
     _addPoint(_scoreIndexForPlayer(widget.players[playerIndex]), playPointSound: false);
 
-    setState(() {
-      _bakuganStayBannerText = null;
-      _bakuganStayPlayerIndex = null;
-      _bakuganStayBakuganIndex = null;
-    });
+    await _hideBakuganResultOverlay();
     _isResolvingBakuganStay = false;
   }
 
   void _markBattlingBakuganUsedAndClearSelection({
     required int leftBakuganIndex,
     required int rightBakuganIndex,
+    int? removedBakuganSideIndex,
   }) {
     final leftPlayerLocal = leftPlayer;
     final rightPlayerLocal = rightPlayer;
@@ -1787,7 +1853,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         if (playerIndex >= 0 &&
             leftBakuganIndex < _bakuganPileStates[playerIndex].length) {
           _bakuganPileStates[playerIndex][leftBakuganIndex] =
-              MatchBakuganPileState.used;
+              removedBakuganSideIndex == 0
+              ? MatchBakuganPileState.removed
+              : MatchBakuganPileState.used;
           _bakuganStandOrder[playerIndex][leftBakuganIndex] = null;
           _refreshUnusedPileIfNeeded(playerIndex);
         }
@@ -1808,7 +1876,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         if (playerIndex >= 0 &&
             rightBakuganIndex < _bakuganPileStates[playerIndex].length) {
           _bakuganPileStates[playerIndex][rightBakuganIndex] =
-              MatchBakuganPileState.used;
+              removedBakuganSideIndex == 1
+              ? MatchBakuganPileState.removed
+              : MatchBakuganPileState.used;
           _bakuganStandOrder[playerIndex][rightBakuganIndex] = null;
           _refreshUnusedPileIfNeeded(playerIndex);
         }
@@ -2047,7 +2117,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                     ),
                                   ),
                                 ).then((result) {
-                                  _resumeArenaPlaylist();
                                   if (!mounted) return;
                                   final resultMap =
                                       result is Map
@@ -2057,6 +2126,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       resultMap['winnerIndex'] as int?;
                                   final int? usedGatePenaltySideIndex =
                                       resultMap['usedGatePenaltySideIndex']
+                                          as int?;
+                                  final int? removedBakuganSideIndex =
+                                      resultMap['removedBakuganSideIndex']
                                           as int?;
                                   final int leftReturnedBakuganIndex =
                                       resultMap['leftBakuganIndex'] is int
@@ -2068,10 +2140,49 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       : rightBakuganIdx!;
                                   final previousLeftPlayer = leftPlayer;
                                   final previousRightPlayer = rightPlayer;
+                                  final PlayerData? winningPlayer =
+                                      winnerIndex == null
+                                      ? null
+                                      : winnerIndex == 0
+                                      ? previousLeftPlayer
+                                      : previousRightPlayer;
+                                  final hasRemovedBakugan =
+                                      removedBakuganSideIndex != null;
+                                  if (!hasRemovedBakugan) {
+                                    unawaited(_resumeArenaPlaylist());
+                                  }
                                   _markBattlingBakuganUsedAndClearSelection(
                                     leftBakuganIndex: leftReturnedBakuganIndex,
                                     rightBakuganIndex: rightReturnedBakuganIndex,
+                                    removedBakuganSideIndex:
+                                        removedBakuganSideIndex,
                                   );
+                                  if (winningPlayer != null) {
+                                    _addPoint(
+                                      _scoreIndexForPlayer(winningPlayer),
+                                    );
+                                  }
+                                  if (removedBakuganSideIndex != null) {
+                                    final removedPlayer = removedBakuganSideIndex == 0
+                                        ? previousLeftPlayer
+                                        : previousRightPlayer;
+                                    final removedBakuganIndex =
+                                        removedBakuganSideIndex == 0
+                                        ? leftReturnedBakuganIndex
+                                        : rightReturnedBakuganIndex;
+                                    if (removedPlayer != null) {
+                                      final removedPlayerIndex = widget.players
+                                          .indexOf(removedPlayer);
+                                      if (removedPlayerIndex >= 0) {
+                                        unawaited(
+                                          _showBakuganRemovedOverlay(
+                                            playerIndex: removedPlayerIndex,
+                                            bakuganIndex: removedBakuganIndex,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
                                   if (usedGatePenaltySideIndex != null) {
                                     final penalizedPlayer =
                                         usedGatePenaltySideIndex == 0
@@ -2084,17 +2195,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       unawaited(_showUsedGateRemovalReminder());
                                     }
                                   }
-                                  if (winnerIndex == null) return;
-                                  final sideWinner = winnerIndex;
-                                  final winningPlayer = sideWinner == 0
-                                      ? previousLeftPlayer
-                                      : previousRightPlayer;
-                                  if (winningPlayer == null) {
-                                    return;
-                                  }
-                                  _addPoint(
-                                    _scoreIndexForPlayer(winningPlayer),
-                                  );
                                 });
                               }
                             },
