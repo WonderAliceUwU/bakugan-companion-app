@@ -188,9 +188,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Gargonoid",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Gargonoid"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -215,9 +220,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Manion",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Manion"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -242,9 +252,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Mantris",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Mantris"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -269,9 +284,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Terrorclaw",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Terrorclaw"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -296,9 +316,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Cycloid",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Cycloid"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -323,9 +348,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Hynoid",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Hynoid"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -350,9 +380,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Tuskor",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Tuskor"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -431,8 +466,9 @@
       },
       "effects": [
         {
-          "type": "lowest_total_g_power_wins_battle",
-          "target": "battle"
+          "type": "lowest_wins",
+          "target": "battle",
+          "metric": "total_g_power"
         }
       ],
       "rules": []
@@ -782,8 +818,9 @@
       },
       "effects": [
         {
-          "type": "highest_printed_g_power_gets_bonus",
+          "type": "battle_state_bonus",
           "timing": "before_roll",
+          "target": "highest_printed_bakugan",
           "value": 50,
           "condition": {
             "battle_this_turn": true
@@ -1215,7 +1252,7 @@
       ],
       "rules": []
     },
-    "sub_terra": {
+    "subterra": {
       "set_number": "47/48",
       "file": "BA179_AB_SM_subterra_F.png",
       "name": "Sub Terra",
@@ -1294,9 +1331,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Gorem",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Gorem"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -1321,9 +1363,12 @@
       },
       "effects": [
         {
-          "type": "gain_per_opponent_used_ability",
+          "type": "flat_bonus",
           "target": "each_bakugan",
-          "value": 20
+          "value": 20,
+          "scaling": {
+            "per": "opponent_used_ability"
+          }
         }
       ],
       "rules": []
@@ -1378,9 +1423,15 @@
       },
       "effects": [
         {
-          "type": "lowest_printed_repeats_gate_bonus_per_opponent_used_ability",
-          "target": "lowest_printed_bakugan",
-          "value": 1
+          "type": "flat_bonus",
+          "target": "matching_bakugan",
+          "condition": {
+            "lowest_printed": true
+          },
+          "scaling": {
+            "per": "opponent_used_ability",
+            "value_source": "base_gate_bonus"
+          }
         }
       ],
       "rules": []
@@ -1405,8 +1456,9 @@
       },
       "effects": [
         {
-          "type": "lowest_total_g_power_wins_battle",
-          "target": "battle"
+          "type": "lowest_wins",
+          "target": "battle",
+          "metric": "total_g_power"
         }
       ],
       "rules": []
@@ -1431,8 +1483,9 @@
       },
       "effects": [
         {
-          "type": "lowest_total_g_power_wins_battle",
-          "target": "battle"
+          "type": "lowest_wins",
+          "target": "battle",
+          "metric": "total_g_power"
         }
       ],
       "rules": []
@@ -1909,9 +1962,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Limulus",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Limulus"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -1936,9 +1994,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Ravenoid",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Ravenoid"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -1963,9 +2026,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Warius",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Warius"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -1990,9 +2058,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Wormquake",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Wormquake"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -2055,13 +2128,6 @@
         }
       ],
       "rules": [
-        {
-          "type": "naming_discrepancy",
-          "text": {
-            "en": "The card art features Hammer Gorem but the card is labeled Gorem.",
-            "es": "El arte muestra Hammer Gorem pero la carta esta etiquetada como Gorem."
-          }
-        }
       ]
     },
     "lightning_storm": {
@@ -2143,18 +2209,12 @@
       },
       "effects": [
         {
-          "type": "forbid_ability_cards_for_player_with_most_used_gates",
+          "type": "forbid_ability_cards",
+          "target": "most_used_gates_player",
           "tie_result": "no_restriction"
         }
       ],
       "rules": [
-        {
-          "type": "source_series_discrepancy",
-          "text": {
-            "en": "The individual wiki page labels this card as Bakugan: New Vestroia, but the series page used for this batch lists it as 17/48b and it matches the supplied filename.",
-            "es": "La pagina individual de la wiki etiqueta esta carta como Bakugan: New Vestroia, pero la pagina de serie usada para este lote la lista como 17/48b y coincide con el filename proporcionado."
-          }
-        }
       ]
     },
     "lockdown": {
@@ -2177,8 +2237,9 @@
       },
       "effects": [
         {
-          "type": "double_ability_card_g_power_modifiers",
-          "target": "battle"
+          "type": "ability_card_g_power_modifier_multiplier",
+          "target": "battle",
+          "multiplier": 2
         }
       ],
       "rules": []
@@ -2230,8 +2291,9 @@
       },
       "effects": [
         {
-          "type": "lowest_total_g_power_wins_battle",
-          "target": "battle"
+          "type": "lowest_wins",
+          "target": "battle",
+          "metric": "total_g_power"
         }
       ],
       "rules": []
@@ -2275,12 +2337,12 @@
       "type": "gate",
       "card_class": "copper",
       "attributes": {
-        "pyrus": null,
-        "aquos": null,
-        "ventus": null,
-        "haos": null,
-        "darkus": null,
-        "subterra": null
+        "pyrus": 60,
+        "aquos": 30,
+        "ventus": 40,
+        "haos": 20,
+        "darkus": 20,
+        "subterra": 50
       },
       "descriptions": {
         "en": "The player with the highest printed G-Power may not play Ability Cards during this battle.",
@@ -2288,8 +2350,8 @@
       },
       "effects": [
         {
-          "type": "forbid_ability_cards_for_highest_printed_g_power_player",
-          "target": "battle"
+          "type": "forbid_ability_cards",
+          "target": "highest_printed_bakugan"
         }
       ],
       "rules": [
@@ -2322,8 +2384,8 @@
       },
       "effects": [
         {
-          "type": "forbid_ability_cards_for_lowest_printed_g_power_player",
-          "target": "battle"
+          "type": "forbid_ability_cards",
+          "target": "lowest_printed_bakugan"
         }
       ],
       "rules": []
@@ -2522,8 +2584,9 @@
       },
       "effects": [
         {
-          "type": "lowest_total_g_power_gets_bonus_if_battle_occurs",
+          "type": "battle_state_bonus",
           "timing": "before_roll",
+          "target": "lowest_total_bakugan",
           "condition": {
             "must_roll_attribute": "haos",
             "battle_this_turn": true
@@ -2584,13 +2647,14 @@
       },
       "effects": [
         {
-          "type": "zero_out_ability_card_g_power_bonuses_if_battle_occurs",
+          "type": "ability_card_g_power_modifier_multiplier",
           "timing": "before_roll",
           "condition": {
             "must_roll_attribute": "subterra",
             "battle_this_roll": true
           },
-          "target": "battle"
+          "target": "battle",
+          "multiplier": 0
         }
       ],
       "rules": []
@@ -2940,13 +3004,16 @@
       },
       "effects": [
         {
-          "type": "flat_bonus_if_named_bakugan_on_other_gate",
+          "type": "flat_bonus",
           "timing": "during_battle",
-          "targets": [
-            "Tigrerra",
-            "Blade Tigrerra"
-          ],
-          "value": 100
+          "target": "owner_bakugan",
+          "value": 100,
+          "condition": {
+            "named_bakugan_on_other_gate": [
+              "Tigrerra",
+              "Blade Tigrerra"
+            ]
+          }
         }
       ],
       "rules": []
@@ -3281,9 +3348,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Monarus",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Monarus"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -3308,9 +3380,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Harpus",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Harpus"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -3335,9 +3412,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Fourtress",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Fourtress"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -3362,9 +3444,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Sirenoid",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Sirenoid"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -3389,9 +3476,15 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_gain_per_opponent_used_ability",
-          "bakugan": "Rattleoid",
-          "value": 50
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Rattleoid"
+          ],
+          "value": 50,
+          "scaling": {
+            "per": "used_ability",
+            "scope": "opponent_used_pile"
+          }
         }
       ],
       "rules": []
@@ -4413,10 +4506,15 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_bonus_if_opponent_attribute_matches_highest_gate_bonus",
+          "type": "named_bakugan_bonus",
           "timing": "during_battle",
-          "bakugan": "Bee Striker",
-          "value": 200
+          "targets": [
+            "Bee Striker"
+          ],
+          "value": 200,
+          "condition": {
+            "opponent_attribute_matches_highest_gate_bonus": true
+          }
         }
       ],
       "rules": []
@@ -4636,9 +4734,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Wavern",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Wavern"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -4663,9 +4766,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Exedra",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Exedra"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -4690,9 +4798,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Apollonir",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Apollonir"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -4717,9 +4830,14 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_extra_gate_bonus",
-          "bakugan": "Clayf",
-          "extra_attribute_bonus_applications": 1
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Clayf"
+          ],
+          "scaling": {
+            "per": "base_gate_bonus",
+            "count": 1
+          }
         }
       ],
       "rules": []
@@ -4744,10 +4862,15 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_bonus_per_used_gate",
-          "bakugan": "Oberus",
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Oberus"
+          ],
           "value": 20,
-          "scope": "all_used_piles"
+          "scaling": {
+            "per": "used_gate",
+            "scope": "all_used_piles"
+          }
         }
       ],
       "rules": []
@@ -4779,8 +4902,9 @@
           }
         },
         {
-          "type": "lowest_total_g_power_wins_battle",
+          "type": "lowest_wins",
           "target": "battle",
+          "metric": "total_g_power",
           "condition": {
             "printed_g_power_difference_gte": 200
           }
@@ -4865,8 +4989,9 @@
       },
       "effects": [
         {
-          "type": "double_ability_card_g_power_bonuses_for_lowest_printed",
-          "target": "lowest_printed_bakugan"
+          "type": "ability_card_g_power_modifier_multiplier",
+          "target": "lowest_printed_bakugan",
+          "multiplier": 2
         }
       ],
       "rules": []
@@ -4986,10 +5111,15 @@
       },
       "effects": [
         {
-          "type": "named_bakugan_bonus_per_used_ability",
-          "bakugan": "Naga",
+          "type": "named_bakugan_bonus",
+          "targets": [
+            "Naga"
+          ],
           "value": 20,
-          "scope": "all_used_piles"
+          "scaling": {
+            "per": "used_ability",
+            "scope": "all_used_piles"
+          }
         }
       ],
       "rules": []

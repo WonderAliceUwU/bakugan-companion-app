@@ -45,14 +45,33 @@ class GateCard {
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
 
+  bool _matchesNamedTargets(BakuganVariant variant, dynamic targetsRaw) {
+    final targets = targetsRaw is List
+        ? targetsRaw
+        : targetsRaw == null
+        ? const []
+        : [targetsRaw];
+    final normalizedSpecies = variant.speciesName.toLowerCase();
+    return targets.any((target) {
+      final normalizedTarget = target.toString().toLowerCase().trim();
+      if (normalizedTarget.isEmpty) return false;
+      return normalizedSpecies == normalizedTarget ||
+          normalizedSpecies.contains(normalizedTarget);
+    });
+  }
+
   GateCardBonusBreakdown bonusBreakdownFor(
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
     int ownerUsedAbilityCards = 0,
+    int opponentUsedAbilityCards = 0,
     int ownerUsedGateCards = 0,
     int opponentUsedGateCards = 0,
     bool ownerHasAttributeBonusContext = true,
     Iterable<BakuganVariant> teamBakugans = const [],
+    Iterable<BakuganVariant> ownerUsedBakugans = const [],
+    Iterable<String> battleAttributes = const [],
+    bool isLowestPrinted = false,
   }) {
     final int baseBonus = bonusFor(variant.attribute);
     final List<int> effectBonusSegments = [];
@@ -87,6 +106,187 @@ class GateCard {
             if (dynamicBonus > 0) {
               effectBonusSegments.add(dynamicBonus);
             }
+          }
+        }
+      }
+
+      if (effect is Map && effect['type'] == 'named_bakugan_bonus') {
+        if (!_matchesNamedTargets(variant, effect['targets'])) {
+          continue;
+        }
+
+        final condition = effect['condition'];
+        if (condition is Map) {
+          if (condition['lowest_printed'] == true && !isLowestPrinted) {
+            continue;
+          }
+        }
+
+        final scaling = effect['scaling'];
+        if (scaling is Map) {
+          final per = (scaling['per'] ?? '').toString().toLowerCase();
+          if (per == 'base_gate_bonus') {
+            final countRaw = scaling['count'];
+            if (countRaw is num) {
+              for (int i = 0; i < countRaw.toInt(); i++) {
+                if (baseBonus > 0) {
+                  effectBonusSegments.add(baseBonus);
+                }
+              }
+            }
+            continue;
+          }
+          final valueRaw = effect['value'];
+          if (valueRaw is! num) continue;
+          if (per == 'used_gate') {
+            final dynamicBonus = valueRaw.toInt() * usedGateCardsInAllPiles;
+            if (dynamicBonus > 0) {
+              effectBonusSegments.add(dynamicBonus);
+            }
+            continue;
+          }
+          if (per == 'used_ability') {
+            final scope = (scaling['scope'] ?? 'owner_used_pile')
+                .toString()
+                .toLowerCase();
+            final abilityCount = switch (scope) {
+              'all_used_piles' => ownerUsedAbilityCards + opponentUsedAbilityCards,
+              'opponent_used_pile' => opponentUsedAbilityCards,
+              _ => ownerUsedAbilityCards,
+            };
+            final dynamicBonus = valueRaw.toInt() * abilityCount;
+            if (dynamicBonus > 0) {
+              effectBonusSegments.add(dynamicBonus);
+            }
+            continue;
+          }
+        }
+
+        final valueRaw = effect['value'];
+        if (valueRaw is num) {
+          final int dynamicBonus = valueRaw.toInt();
+          if (dynamicBonus > 0) {
+            effectBonusSegments.add(dynamicBonus);
+          }
+        }
+      }
+
+      if (effect is Map && effect['type'] == 'flat_bonus') {
+        final condition = effect['condition'];
+        if (condition is Map) {
+          if (condition['lowest_printed'] == true && !isLowestPrinted) {
+            continue;
+          }
+          final minDistinctAttributes = condition['min_distinct_owner_attributes'];
+          if (minDistinctAttributes is num) {
+            final distinctAttributeCount = teamBakugans
+                .map((bakugan) => bakugan.attribute.toLowerCase())
+                .where((attribute) => attribute.isNotEmpty)
+                .toSet()
+                .length;
+            if (distinctAttributeCount < minDistinctAttributes.toInt()) {
+              continue;
+            }
+          }
+
+          final ownerHasNamedInUsed = condition['owner_has_named_bakugan_in_used_pile'];
+          if (ownerHasNamedInUsed is List) {
+            final hasNamedUsed = ownerUsedBakugans.any(
+              (bakugan) => _matchesNamedTargets(bakugan, ownerHasNamedInUsed),
+            );
+            if (!hasNamedUsed) {
+              continue;
+            }
+          }
+        }
+
+        final target = (effect['target'] ?? '').toString().toLowerCase();
+        if (target == 'each_bakugan' || target == 'matching_bakugan') {
+          final scaling = effect['scaling'];
+          if (scaling is Map) {
+            final per = (scaling['per'] ?? '').toString().toLowerCase();
+            if (per == 'opponent_used_ability') {
+              final valueSource = (scaling['value_source'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              if (valueSource == 'base_gate_bonus') {
+                for (int i = 0; i < opponentUsedAbilityCards; i++) {
+                  if (baseBonus > 0) {
+                    effectBonusSegments.add(baseBonus);
+                  }
+                }
+                continue;
+              }
+
+              final valueRaw = effect['value'];
+              if (valueRaw is num) {
+                final dynamicBonus =
+                    valueRaw.toInt() * opponentUsedAbilityCards;
+                if (dynamicBonus > 0) {
+                  effectBonusSegments.add(dynamicBonus);
+                }
+              }
+              continue;
+            }
+          }
+
+          final valueRaw = effect['value'];
+          if (valueRaw is num) {
+            final int dynamicBonus = valueRaw.toInt();
+            if (dynamicBonus > 0) {
+              effectBonusSegments.add(dynamicBonus);
+            }
+          }
+        }
+      }
+
+      if (effect is Map && effect['type'] == 'attribute_bonus') {
+        final condition = effect['condition'];
+        if (condition is Map) {
+          final requiredBattleAttributes = condition['battle_contains_any_attributes'];
+          if (requiredBattleAttributes is List) {
+            final battleAttributeSet = battleAttributes
+                .map((attribute) => attribute.toLowerCase())
+                .toSet();
+            final hasRequired = requiredBattleAttributes.any(
+              (attribute) => battleAttributeSet.contains(
+                attribute.toString().toLowerCase(),
+              ),
+            );
+            if (!hasRequired) {
+              continue;
+            }
+          }
+        }
+
+        final targetAttributes = effect['target_attributes'];
+        final valueRaw = effect['value'];
+        if (targetAttributes is List &&
+            valueRaw is num &&
+            targetAttributes
+                .map((attribute) => attribute.toString().toLowerCase())
+                .contains(variant.attribute.toLowerCase())) {
+          final int dynamicBonus = valueRaw.toInt();
+          if (dynamicBonus > 0) {
+            effectBonusSegments.add(dynamicBonus);
+          }
+        }
+      }
+
+      if (effect is Map &&
+          effect['type'] == 'gain_per_opponent_used_gate_by_attribute') {
+        final target = (effect['target'] ?? '').toString().toLowerCase();
+        final attributes = effect['attributes'];
+        final valueRaw = effect['value'];
+        if ((target == 'matching_bakugan' || target == 'each_bakugan') &&
+            attributes is List &&
+            valueRaw is num &&
+            attributes
+                .map((attribute) => attribute.toString().toLowerCase())
+                .contains(variant.attribute.toLowerCase())) {
+          final dynamicBonus = valueRaw.toInt() * opponentUsedGateCards;
+          if (dynamicBonus > 0) {
+            effectBonusSegments.add(dynamicBonus);
           }
         }
       }
@@ -143,19 +343,27 @@ class GateCard {
     BakuganVariant variant, {
     int usedGateCardsInAllPiles = 0,
     int ownerUsedAbilityCards = 0,
+    int opponentUsedAbilityCards = 0,
     int ownerUsedGateCards = 0,
     int opponentUsedGateCards = 0,
     bool ownerHasAttributeBonusContext = true,
     Iterable<BakuganVariant> teamBakugans = const [],
+    Iterable<BakuganVariant> ownerUsedBakugans = const [],
+    Iterable<String> battleAttributes = const [],
+    bool isLowestPrinted = false,
   }) {
     return bonusBreakdownFor(
       variant,
       usedGateCardsInAllPiles: usedGateCardsInAllPiles,
       ownerUsedAbilityCards: ownerUsedAbilityCards,
+      opponentUsedAbilityCards: opponentUsedAbilityCards,
       ownerUsedGateCards: ownerUsedGateCards,
       opponentUsedGateCards: opponentUsedGateCards,
       ownerHasAttributeBonusContext: ownerHasAttributeBonusContext,
       teamBakugans: teamBakugans,
+      ownerUsedBakugans: ownerUsedBakugans,
+      battleAttributes: battleAttributes,
+      isLowestPrinted: isLowestPrinted,
     ).totalBonus;
   }
 
@@ -168,6 +376,32 @@ class GateCard {
         effect is Map && effect['type'] == 'return_all_used_ability_cards',
   );
 
+  bool get hasUsedPileGlobalAttributeBonus => effects.any(
+    (effect) =>
+        effect is Map && effect['type'] == 'used_pile_global_attribute_bonus',
+  );
+
+  int usedPileGlobalAttributeBonusFor(String attribute) {
+    int total = 0;
+    final normalizedAttribute = attribute.toLowerCase();
+    for (final effect in effects) {
+      if (effect is! Map ||
+          effect['type'] != 'used_pile_global_attribute_bonus') {
+        continue;
+      }
+      final attributes = effect['attributes'];
+      final valueRaw = effect['value'];
+      if (attributes is! List || valueRaw is! num) continue;
+      final matches = attributes.any(
+        (entry) => entry.toString().toLowerCase() == normalizedAttribute,
+      );
+      if (matches) {
+        total += valueRaw.toInt();
+      }
+    }
+    return total;
+  }
+
   bool get requiresOwnerSelection => effects.any(
     (effect) =>
         effect is Map &&
@@ -175,53 +409,247 @@ class GateCard {
         effect['target'] == 'lowest_printed_bakugan',
   );
 
-  bool forbidsAbilityCards({
+  ({
+    bool left,
+    bool right,
+    Set<String> leftClasses,
+    Set<String> rightClasses,
+  }) abilityRestrictions({
     required int leftPrintedGPower,
     required int rightPrintedGPower,
+    required int leftUsedGateCards,
+    required int rightUsedGateCards,
+    required BakuganVariant leftVariant,
+    required BakuganVariant rightVariant,
+    required Iterable<BakuganVariant> leftTeamBakugans,
+    required Iterable<BakuganVariant> rightTeamBakugans,
   }) {
+    bool forbidLeft = false;
+    bool forbidRight = false;
+    final leftClasses = <String>{};
+    final rightClasses = <String>{};
+
     for (final effect in effects) {
       if (effect is! Map || effect['type'] != 'forbid_ability_cards') {
         continue;
       }
 
-      final condition = effect['condition'];
-      if (condition is! Map) {
-        return true;
+      final target = (effect['target'] ?? '').toString().toLowerCase();
+      final classes = ((effect['classes'] as List?)
+                  ?.map((entry) => entry.toString().toLowerCase())
+                  .where((entry) => entry.isNotEmpty) ??
+              const Iterable<String>.empty())
+          .toSet();
+
+      void forbidBoth() {
+        if (classes.isEmpty) {
+          forbidLeft = true;
+          forbidRight = true;
+        } else {
+          leftClasses.addAll(classes);
+          rightClasses.addAll(classes);
+        }
       }
 
-      final dynamic thresholdRaw = condition['printed_g_power_difference_gte'];
-      if (thresholdRaw is num &&
-          (leftPrintedGPower - rightPrintedGPower).abs() >=
-              thresholdRaw.toInt()) {
-        return true;
+      void forbidSingle(bool isLeft) {
+        if (classes.isEmpty) {
+          if (isLeft) {
+            forbidLeft = true;
+          } else {
+            forbidRight = true;
+          }
+        } else if (isLeft) {
+          leftClasses.addAll(classes);
+        } else {
+          rightClasses.addAll(classes);
+        }
       }
-    }
-    return false;
-  }
 
-  bool lowestTotalGPowerWins({
-    required int leftPrintedGPower,
-    required int rightPrintedGPower,
-  }) {
-    for (final effect in effects) {
-      if (effect is! Map) continue;
-      if (effect['type'] != 'lowest_total_g_power_wins_battle') {
+      if (target == 'highest_printed_bakugan') {
+        if (leftPrintedGPower > rightPrintedGPower) {
+          forbidSingle(true);
+        } else if (rightPrintedGPower > leftPrintedGPower) {
+          forbidSingle(false);
+        }
+        continue;
+      }
+      if (target == 'lowest_printed_bakugan') {
+        if (leftPrintedGPower < rightPrintedGPower) {
+          forbidSingle(true);
+        } else if (rightPrintedGPower < leftPrintedGPower) {
+          forbidSingle(false);
+        }
+        continue;
+      }
+      if (target == 'most_used_gates_player') {
+        if (leftUsedGateCards > rightUsedGateCards) {
+          forbidSingle(true);
+        } else if (rightUsedGateCards > leftUsedGateCards) {
+          forbidSingle(false);
+        }
+        continue;
+      }
+      if (target == 'players_with_matching_attributes_in_battle') {
+        if (leftVariant.attribute.toLowerCase() ==
+            rightVariant.attribute.toLowerCase()) {
+          forbidBoth();
+        }
+        continue;
+      }
+      if (target == 'players_with_duplicate_bakugan_types') {
+        final leftSpecies = leftTeamBakugans
+            .map((bakugan) => bakugan.speciesName.toLowerCase())
+            .where((species) => species.isNotEmpty)
+            .toList();
+        final rightSpecies = rightTeamBakugans
+            .map((bakugan) => bakugan.speciesName.toLowerCase())
+            .where((species) => species.isNotEmpty)
+            .toList();
+        if (leftSpecies.toSet().length != leftSpecies.length) {
+          forbidSingle(true);
+        }
+        if (rightSpecies.toSet().length != rightSpecies.length) {
+          forbidSingle(false);
+        }
         continue;
       }
 
       final condition = effect['condition'];
       if (condition is! Map) {
-        return true;
+        forbidBoth();
+        continue;
       }
 
       final dynamic thresholdRaw = condition['printed_g_power_difference_gte'];
       if (thresholdRaw is num &&
           (leftPrintedGPower - rightPrintedGPower).abs() >=
               thresholdRaw.toInt()) {
-        return true;
+        forbidBoth();
       }
     }
-    return false;
+    return (
+      left: forbidLeft,
+      right: forbidRight,
+      leftClasses: leftClasses,
+      rightClasses: rightClasses,
+    );
+  }
+
+  String? lowestWinsMetric({
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+    required BakuganVariant leftVariant,
+    required BakuganVariant rightVariant,
+  }) {
+    for (final effect in effects) {
+      if (effect is! Map) continue;
+      if (effect['type'] != 'lowest_wins') {
+        continue;
+      }
+
+      final condition = effect['condition'];
+      if (condition is Map) {
+        final missingAttributes = condition['battle_lacks_any_attributes'];
+        if (missingAttributes is List) {
+          final battleAttributes = {
+            leftVariant.attribute.toLowerCase(),
+            rightVariant.attribute.toLowerCase(),
+          };
+          final hasForbiddenPresence = missingAttributes.any(
+            (attribute) => battleAttributes.contains(
+              attribute.toString().toLowerCase(),
+            ),
+          );
+          if (hasForbiddenPresence) {
+            continue;
+          }
+        }
+
+        final dynamic thresholdRaw = condition['printed_g_power_difference_gte'];
+        if (thresholdRaw is num &&
+            (leftPrintedGPower - rightPrintedGPower).abs() <
+                thresholdRaw.toInt()) {
+          continue;
+        }
+      }
+      final metric = (effect['metric'] ?? 'total_g_power')
+          .toString()
+          .toLowerCase();
+      return metric;
+    }
+    return null;
+  }
+
+  int? namedBakuganAutoWinSide({
+    required BakuganVariant leftVariant,
+    required BakuganVariant rightVariant,
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+  }) {
+    for (final effect in effects) {
+      if (effect is! Map ||
+          effect['type'] != 'named_bakugan_auto_win_on_printed_margin') {
+        continue;
+      }
+
+      final targetBakugan = effect['bakugan'];
+      final thresholdRaw = effect['min_printed_g_power_lead'];
+      if (thresholdRaw is! num) continue;
+      final threshold = thresholdRaw.toInt();
+
+      final leftMatches = _matchesNamedTargets(leftVariant, targetBakugan);
+      final rightMatches = _matchesNamedTargets(rightVariant, targetBakugan);
+
+      if (leftMatches && leftPrintedGPower - rightPrintedGPower >= threshold) {
+        return 0;
+      }
+      if (rightMatches && rightPrintedGPower - leftPrintedGPower >= threshold) {
+        return 1;
+      }
+    }
+    return null;
+  }
+
+  int abilityGPowerModifierMultiplier({
+    required AbilityCard sourceCard,
+    required bool sourceIsLeft,
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+  }) {
+    int multiplier = 1;
+
+    for (final effect in effects) {
+      if (effect is! Map ||
+          effect['type'] != 'ability_card_g_power_modifier_multiplier') {
+        continue;
+      }
+
+      final classes = ((effect['classes'] as List?)
+                  ?.map((entry) => entry.toString().toLowerCase())
+                  .where((entry) => entry.isNotEmpty) ??
+              const Iterable<String>.empty())
+          .toSet();
+      if (classes.isNotEmpty &&
+          !classes.contains(sourceCard.cardClass.toLowerCase())) {
+        continue;
+      }
+
+      final target = (effect['target'] ?? 'battle').toString().toLowerCase();
+      if (target == 'lowest_printed_bakugan') {
+        final sourcePrinted = sourceIsLeft ? leftPrintedGPower : rightPrintedGPower;
+        final opponentPrinted = sourceIsLeft ? rightPrintedGPower : leftPrintedGPower;
+        if (sourcePrinted >= opponentPrinted) {
+          continue;
+        }
+      }
+
+      final multiplierRaw = effect['multiplier'];
+      if (multiplierRaw is num) {
+        multiplier *= multiplierRaw.toInt();
+      }
+    }
+
+    return multiplier;
   }
 }
 
@@ -258,21 +686,155 @@ class AbilityCard {
     BakuganVariant variant, {
     required int ownPrintedGPower,
     required int opponentPrintedGPower,
+    bool opponentAttributeMatchesHighestGateBonus = false,
+    String? opponentAttribute,
   }) {
     int bonus = calculateBonus(variant);
 
     for (final effect in effects) {
       if (effect is! Map) continue;
-      if (effect['type'] != 'highest_printed_g_power_gets_bonus') continue;
-      if (ownPrintedGPower <= opponentPrintedGPower) continue;
+      if (effect['type'] == 'named_bakugan_bonus') {
+        final targets = effect['targets'];
+        final targetList = targets is List
+            ? targets
+            : targets == null
+            ? const []
+            : [targets];
+        final normalizedSpecies = variant.speciesName.toLowerCase();
+        final matchesTarget = targetList.any((target) {
+          final normalizedTarget = target.toString().toLowerCase().trim();
+          if (normalizedTarget.isEmpty) return false;
+          return normalizedSpecies == normalizedTarget ||
+              normalizedSpecies.contains(normalizedTarget);
+        });
+        if (!matchesTarget) continue;
 
-      final valueRaw = effect['value'];
-      if (valueRaw is num) {
-        bonus += valueRaw.toInt();
+        final condition = effect['condition'];
+        if (condition is Map &&
+            condition['opponent_attribute_matches_highest_gate_bonus'] == true &&
+            !opponentAttributeMatchesHighestGateBonus) {
+          continue;
+        }
+
+        final valueRaw = effect['value'];
+        if (valueRaw is num) {
+          bonus += valueRaw.toInt();
+        }
+        continue;
+      }
+      if (effect['type'] == 'flat_bonus') {
+        final condition = effect['condition'];
+        if (condition is Map) {
+          final opponentAttributeIn = condition['opponent_attribute_in'];
+          if (opponentAttributeIn is List) {
+            final normalizedOpponentAttribute =
+                opponentAttribute?.toLowerCase() ?? '';
+            final matchesAttribute = opponentAttributeIn.any(
+              (attribute) =>
+                  attribute.toString().toLowerCase() == normalizedOpponentAttribute,
+            );
+            if (!matchesAttribute) continue;
+          }
+
+          final printedGPowerLte = condition['printed_g_power_lte'];
+          if (printedGPowerLte is num &&
+              ownPrintedGPower > printedGPowerLte.toInt()) {
+            continue;
+          }
+        }
+
+        final valueRaw = effect['value'];
+        if (valueRaw is num) {
+          bonus += valueRaw.toInt();
+        }
+        continue;
       }
     }
 
     return bonus;
+  }
+
+  int abilityGPowerModifierMultiplier({
+    required AbilityCard sourceCard,
+    required bool sourceIsLeft,
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+  }) {
+    int multiplier = 1;
+
+    for (final effect in effects) {
+      if (effect is! Map ||
+          effect['type'] != 'ability_card_g_power_modifier_multiplier') {
+        continue;
+      }
+
+      final classes = ((effect['classes'] as List?)
+                  ?.map((entry) => entry.toString().toLowerCase())
+                  .where((entry) => entry.isNotEmpty) ??
+              const Iterable<String>.empty())
+          .toSet();
+      if (classes.isNotEmpty &&
+          !classes.contains(sourceCard.cardClass.toLowerCase())) {
+        continue;
+      }
+
+      final target = (effect['target'] ?? 'battle').toString().toLowerCase();
+      if (target == 'lowest_printed_bakugan') {
+        final sourcePrinted = sourceIsLeft ? leftPrintedGPower : rightPrintedGPower;
+        final opponentPrinted = sourceIsLeft ? rightPrintedGPower : leftPrintedGPower;
+        if (sourcePrinted >= opponentPrinted) {
+          continue;
+        }
+      }
+
+      final multiplierRaw = effect['multiplier'];
+      if (multiplierRaw is num) {
+        multiplier *= multiplierRaw.toInt();
+      }
+    }
+
+    return multiplier;
+  }
+
+  ({int leftDelta, int rightDelta}) battleStateBonusDeltas({
+    required BakuganVariant leftVariant,
+    required BakuganVariant rightVariant,
+    required int leftPrintedGPower,
+    required int rightPrintedGPower,
+    required int leftTotalGPower,
+    required int rightTotalGPower,
+  }) {
+    int leftDelta = 0;
+    int rightDelta = 0;
+
+    for (final effect in effects) {
+      if (effect is! Map || effect['type'] != 'battle_state_bonus') continue;
+
+      final valueRaw = effect['value'];
+      if (valueRaw is! num) continue;
+      final value = valueRaw.toInt();
+      if (value == 0) continue;
+
+      final target = (effect['target'] ?? '').toString().toLowerCase();
+      switch (target) {
+        case 'highest_printed_bakugan':
+          if (leftPrintedGPower > rightPrintedGPower) {
+            leftDelta += value;
+          } else if (rightPrintedGPower > leftPrintedGPower) {
+            rightDelta += value;
+          }
+          break;
+        case 'lowest_total_bakugan':
+          if (leftTotalGPower < rightTotalGPower) {
+            leftDelta += value;
+          } else if (rightTotalGPower < leftTotalGPower) {
+            rightDelta += value;
+          }
+          break;
+      }
+    }
+
+    return (leftDelta: leftDelta, rightDelta: rightDelta);
   }
 
   bool get setsAllPrintedGPowerToZero => effects.any(
@@ -300,6 +862,12 @@ class AbilityCard {
     (effect) =>
         effect is Map &&
         effect['type'] == 'prevent_gate_capture_after_close_loss',
+  );
+
+  bool get setsPrintedGPowerFromOpponentUsedBakugan => effects.any(
+    (effect) =>
+        effect is Map &&
+        effect['type'] == 'set_printed_g_power_from_opponent_used_bakugan',
   );
 
   bool get isMatchStageCard =>

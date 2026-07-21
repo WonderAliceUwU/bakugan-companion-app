@@ -218,6 +218,22 @@ class LeaderboardRepository {
     return File('${directory.path}/bakugan_leaderboard.json');
   }
 
+  Future<String> suggestedBackupPath() async {
+    final directory =
+        await getDownloadsDirectory() ??
+        await getApplicationDocumentsDirectory();
+    await directory.create(recursive: true);
+    final now = DateTime.now();
+    final timestamp =
+        '${now.year.toString().padLeft(4, '0')}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}_'
+        '${now.hour.toString().padLeft(2, '0')}'
+        '${now.minute.toString().padLeft(2, '0')}'
+        '${now.second.toString().padLeft(2, '0')}';
+    return '${directory.path}/bakugan_stadium_leaderboard_$timestamp.json';
+  }
+
   Future<LeaderboardData> load() async {
     try {
       final file = await _dataFile();
@@ -238,6 +254,48 @@ class LeaderboardRepository {
     } catch (_) {
       return const LeaderboardData();
     }
+  }
+
+  Future<String> exportToFile([String? rawPath]) async {
+    final path = (rawPath ?? '').trim().isEmpty
+        ? await suggestedBackupPath()
+        : rawPath!.trim();
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    final data = await load();
+    final normalized = _normalizeData(data);
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(normalized.toJson()),
+    );
+    return file.path;
+  }
+
+  Future<LeaderboardData> importFromFile(String rawPath) async {
+    final path = rawPath.trim();
+    if (path.isEmpty) {
+      throw const FileSystemException('Path is empty.');
+    }
+
+    final file = File(path);
+    if (!await file.exists()) {
+      throw FileSystemException('File not found.', path);
+    }
+
+    final raw = await file.readAsString();
+    if (raw.trim().isEmpty) {
+      throw FileSystemException('File is empty.', path);
+    }
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) {
+      throw const FormatException('Invalid leaderboard file format.');
+    }
+
+    return _persist(
+      _normalizeData(
+        LeaderboardData.fromJson(Map<String, dynamic>.from(decoded)),
+      ),
+    );
   }
 
   Future<LeaderboardData> savePlayerProfile({

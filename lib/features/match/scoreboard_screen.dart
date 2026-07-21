@@ -33,9 +33,11 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   bool _useArenaPlayerA = true;
   bool _isArenaCrossfading = false;
   AbilityCard? _focusedMatchAbilityCard;
+  GateCard? _focusedGlobalGateCard;
   int? _focusedMatchAbilityPlayerIndex;
   int? _focusedMatchAbilityIndex;
   late List<List<MatchPresentedAbility?>> _presentedMatchAbilities;
+  final List<GateCard> _activeGlobalGateEffects = [];
   late List<List<MatchBakuganPileState>> _bakuganPileStates;
   late List<List<int?>> _bakuganStandOrder;
   int _nextStandOrder = 1;
@@ -229,16 +231,20 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   Future<void> _loadMatchAbilityCards() async {
     try {
-      final String rawJson = await rootBundle.loadString(
+      const jsonPaths = [
         'assets/images/cards/cards.json',
-      );
-      final decodedJson = jsonDecode(rawJson);
-      if (decodedJson is! Map) return;
-      final decoded = Map<String, dynamic>.from(decodedJson);
-      final cardsNode = decoded['cards'];
-      if (cardsNode is! Map) return;
-
-      final cards = Map<String, dynamic>.from(cardsNode);
+        'assets/images/cards/cards_expansion.json',
+      ];
+      final Map<String, dynamic> cards = <String, dynamic>{};
+      for (final jsonPath in jsonPaths) {
+        final String rawJson = await rootBundle.loadString(jsonPath);
+        final decodedJson = jsonDecode(rawJson);
+        if (decodedJson is! Map) continue;
+        final decoded = Map<String, dynamic>.from(decodedJson);
+        final cardsNode = decoded['cards'];
+        if (cardsNode is! Map) continue;
+        cards.addAll(Map<String, dynamic>.from(cardsNode));
+      }
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
       final assets = manifest
           .listAssets()
@@ -631,6 +637,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         card: card,
       );
       _focusedMatchAbilityCard = card;
+      _focusedGlobalGateCard = null;
       _focusedMatchAbilityPlayerIndex = playerIndex;
       _focusedMatchAbilityIndex = slotIndex;
     });
@@ -642,6 +649,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
     setState(() {
       _focusedMatchAbilityCard = presented.card;
+      _focusedGlobalGateCard = null;
       _focusedMatchAbilityPlayerIndex = playerIndex;
       _focusedMatchAbilityIndex = abilityIndex;
     });
@@ -666,8 +674,28 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     setState(() {
       _presentedMatchAbilities[playerIndex][abilityIndex] = null;
       _focusedMatchAbilityCard = null;
+      _focusedGlobalGateCard = null;
       _focusedMatchAbilityPlayerIndex = null;
       _focusedMatchAbilityIndex = null;
+    });
+  }
+
+  void _focusGlobalGateEffect(GateCard card) {
+    setState(() {
+      _focusedMatchAbilityCard = null;
+      _focusedMatchAbilityPlayerIndex = null;
+      _focusedMatchAbilityIndex = null;
+      _focusedGlobalGateCard = card;
+    });
+  }
+
+  void _removeFocusedGlobalGateEffect() {
+    final card = _focusedGlobalGateCard;
+    if (card == null) return;
+
+    setState(() {
+      _activeGlobalGateEffects.remove(card);
+      _focusedGlobalGateCard = null;
     });
   }
 
@@ -780,7 +808,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   Widget _buildMatchAbilityOverlay() {
     final card = _focusedMatchAbilityCard;
-    if (card == null) return const SizedBox.shrink();
+    final gateCard = _focusedGlobalGateCard;
+    if (card == null && gateCard == null) return const SizedBox.shrink();
+    final imagePath = gateCard?.imagePath ?? card!.imagePath;
 
     return Positioned.fill(
       child: IgnorePointer(
@@ -792,18 +822,21 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 InteractiveCard(
-                  imagePath: card.imagePath,
+                  imagePath: imagePath,
                   width: 380,
                   onTap: () {
                     setState(() {
                       _focusedMatchAbilityCard = null;
+                      _focusedGlobalGateCard = null;
                       _focusedMatchAbilityPlayerIndex = null;
                       _focusedMatchAbilityIndex = null;
                     });
                   },
                 ),
                 const SizedBox(height: 46),
-                _buildMatchAbilityDescriptionPanel(card),
+                gateCard != null
+                    ? _buildGlobalGateDescriptionPanel(gateCard)
+                    : _buildMatchAbilityDescriptionPanel(card!),
               ],
             ),
           ),
@@ -834,6 +867,32 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       headerAction: DescriptionHeaderActionButton(
         accentColor: accentColor,
         onTap: _returnFocusedMatchAbilityToUnusedPile,
+      ),
+    );
+  }
+
+  Widget _buildGlobalGateDescriptionPanel(GateCard card) {
+    final hasDescription =
+        (card.descriptionEn?.trim().isNotEmpty ?? false) ||
+        (card.descriptionEs?.trim().isNotEmpty ?? false);
+    if (!hasDescription) return const SizedBox.shrink();
+
+    final accentColor =
+        _gateDescriptionAccentColors[card.cardClass] ??
+        _gateDescriptionAccentColors['silver']!;
+
+    return FramedDescriptionPanel(
+      width: 620,
+      title: card.name,
+      esText: card.descriptionEs ?? card.descriptionEn ?? '',
+      maxHeight: 300,
+      frameGradient:
+          _gateDescriptionBorderGradients[card.cardClass] ??
+          _gateDescriptionBorderGradients['silver']!,
+      accentColor: accentColor,
+      headerAction: DescriptionHeaderActionButton(
+        accentColor: accentColor,
+        onTap: _removeFocusedGlobalGateEffect,
       ),
     );
   }
@@ -947,6 +1006,50 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               ),
             );
           }),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlobalGateEffectRail() {
+    if (_activeGlobalGateEffects.isEmpty) return const SizedBox.shrink();
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 110),
+        child: SizedBox(
+          height: 104,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(_activeGlobalGateEffects.length, (index) {
+              final card = _activeGlobalGateEffects[index];
+              final isHidden = _focusedGlobalGateCard == card;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeInOutCubic,
+                width: isHidden ? 0 : 90,
+                height: 90,
+                margin: EdgeInsets.symmetric(
+                  horizontal: isHidden ? 0 : _matchAbilityRailSpacing / 2,
+                ),
+                child: IgnorePointer(
+                  ignoring: isHidden,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: isHidden ? 0 : 1,
+                    child: InteractiveCard(
+                      key: ValueKey('global_match_gate_${card.key}_$index'),
+                      imagePath: card.imagePath,
+                      width: 90,
+                      onTap: () => _focusGlobalGateEffect(card),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -1416,14 +1519,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       unawaited(_recordLeaderboardMatch(index));
       await _playMatchWinSound();
     }
-  }
-
-  void _removePoint(int index) {
-    setState(() {
-      if (index >= 0 && index < scores.length && scores[index] > 0) {
-        scores[index]--;
-      }
-    });
   }
 
   Future<void> _showMatchInfoModal({
@@ -1934,6 +2029,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               child: Stack(
                 children: [
                   _buildArenaPlaylistBar(),
+                  _buildGlobalGateEffectRail(),
                   IgnorePointer(
                     child: Center(
                       child: Stack(
@@ -2114,6 +2210,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           scores[rightScoreIndex],
                                       presentedMatchAbilities:
                                           _presentedMatchAbilities,
+                                      activeGlobalGateCards:
+                                          _activeGlobalGateEffects,
                                     ),
                                   ),
                                 ).then((result) {
@@ -2130,6 +2228,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                   final int? removedBakuganSideIndex =
                                       resultMap['removedBakuganSideIndex']
                                           as int?;
+                                  final GateCard? revealedGateCard =
+                                      resultMap['revealedGateCard'] is GateCard
+                                      ? resultMap['revealedGateCard'] as GateCard
+                                      : null;
                                   final int leftReturnedBakuganIndex =
                                       resultMap['leftBakuganIndex'] is int
                                       ? resultMap['leftBakuganIndex'] as int
@@ -2157,10 +2259,72 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                     removedBakuganSideIndex:
                                         removedBakuganSideIndex,
                                   );
-                                  if (winningPlayer != null) {
-                                    _addPoint(
-                                      _scoreIndexForPlayer(winningPlayer),
-                                    );
+                                  final awardedScoreIndex = winningPlayer == null
+                                      ? null
+                                      : _scoreIndexForPlayer(winningPlayer);
+                                  final penalizedPlayer =
+                                      usedGatePenaltySideIndex == null
+                                      ? null
+                                      : usedGatePenaltySideIndex == 0
+                                      ? previousLeftPlayer
+                                      : previousRightPlayer;
+                                  final penalizedScoreIndex =
+                                      penalizedPlayer == null
+                                      ? null
+                                      : _scoreIndexForPlayer(penalizedPlayer);
+                                  bool didWinMatch = false;
+                                  if (awardedScoreIndex != null ||
+                                      penalizedScoreIndex != null) {
+                                    setState(() {
+                                      if (awardedScoreIndex != null &&
+                                          awardedScoreIndex >= 0 &&
+                                          awardedScoreIndex < scores.length &&
+                                          scores[awardedScoreIndex] < 3) {
+                                        scores[awardedScoreIndex]++;
+                                      }
+                                      if (penalizedScoreIndex != null &&
+                                          penalizedScoreIndex >= 0 &&
+                                          penalizedScoreIndex < scores.length &&
+                                          scores[penalizedScoreIndex] > 0) {
+                                        scores[penalizedScoreIndex]--;
+                                      }
+
+                                      final resolvedWinnerIndex = scores
+                                          .indexWhere((score) => score >= 3);
+                                      if (resolvedWinnerIndex >= 0) {
+                                        didWinMatch = true;
+                                        _matchWinnerIndex = resolvedWinnerIndex;
+                                        selectionMode = false;
+                                        leftBakugan = null;
+                                        rightBakugan = null;
+                                        leftPlayer = null;
+                                        rightPlayer = null;
+                                        leftBakuganIdx = null;
+                                        rightBakuganIdx = null;
+                                      } else {
+                                        _matchWinnerIndex = null;
+                                      }
+
+                                      if (winningPlayer != null &&
+                                          (revealedGateCard
+                                                  ?.hasUsedPileGlobalAttributeBonus ??
+                                              false)) {
+                                        _activeGlobalGateEffects.add(
+                                          revealedGateCard!,
+                                        );
+                                      }
+                                    });
+                                    if (awardedScoreIndex != null) {
+                                      unawaited(_playPointCaptureSound());
+                                    }
+                                    if (didWinMatch) {
+                                      unawaited(
+                                        _recordLeaderboardMatch(
+                                          _matchWinnerIndex!,
+                                        ),
+                                      );
+                                      unawaited(_playMatchWinSound());
+                                    }
                                   }
                                   if (removedBakuganSideIndex != null) {
                                     final removedPlayer = removedBakuganSideIndex == 0
@@ -2184,14 +2348,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                     }
                                   }
                                   if (usedGatePenaltySideIndex != null) {
-                                    final penalizedPlayer =
-                                        usedGatePenaltySideIndex == 0
-                                        ? previousLeftPlayer
-                                        : previousRightPlayer;
                                     if (penalizedPlayer != null) {
-                                      _removePoint(
-                                        _scoreIndexForPlayer(penalizedPlayer),
-                                      );
                                       unawaited(_showUsedGateRemovalReminder());
                                     }
                                   }

@@ -228,6 +228,273 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       ..showSnackBar(SnackBar(content: Text('$name deleted.')));
   }
 
+  Future<String?> _showPathPrompt({
+    required String title,
+    required String confirmLabel,
+    required String initialPath,
+    required Future<String?> Function() onExplore,
+    String? subtitle,
+  }) async {
+    final controller = TextEditingController(text: initialPath);
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(-0.08),
+              child: Container(
+                width: 760,
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.cyanAccent.withValues(alpha: 0.55),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyanAccent.withValues(alpha: 0.16),
+                      blurRadius: 28,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(0.08),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      TextField(
+                        controller: controller,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '/path/to/leaderboard.json',
+                          hintStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.35),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.08),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.18),
+                            ),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                            borderSide: BorderSide(
+                              color: Colors.cyanAccent,
+                              width: 1.6,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.cyanAccent,
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          onPressed: () async {
+                            final exploredPath = await onExplore();
+                            if (exploredPath == null || exploredPath.isEmpty) {
+                              return;
+                            }
+                            controller.text = exploredPath;
+                            controller.selection = TextSelection.collapsed(
+                              offset: controller.text.length,
+                            );
+                          },
+                          icon: const Icon(Icons.folder_open_rounded, size: 18),
+                          label: const Text('EXPLORE'),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              _playUiCancelSound();
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text(
+                              'CANCEL',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.cyanAccent,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
+                              ),
+                              textStyle: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            onPressed: () {
+                              _playUiConfirmSound();
+                              Navigator.of(context).pop(controller.text.trim());
+                            },
+                            child: Text(confirmLabel),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<void> _exportLeaderboard() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final suggestedPath = await LeaderboardRepository.instance
+          .suggestedBackupPath();
+      if (!mounted) return;
+      final selectedPath = await _showPathPrompt(
+        title: 'EXPORT LEADERBOARD',
+        confirmLabel: 'EXPORT',
+        initialPath: suggestedPath,
+        onExplore: () async {
+          final fileName = suggestedPath.split(Platform.pathSeparator).last;
+          final selectedPath = await FilePicker.platform.saveFile(
+            dialogTitle: 'Export Leaderboard',
+            fileName: fileName,
+            type: FileType.custom,
+            allowedExtensions: const ['json'],
+          );
+          if (selectedPath == null || selectedPath.trim().isEmpty) {
+            return null;
+          }
+          return selectedPath.toLowerCase().endsWith('.json')
+              ? selectedPath
+              : '$selectedPath.json';
+        },
+        subtitle:
+            'This creates a backup JSON with saved players and ranking progress.',
+      );
+      if (!mounted || selectedPath == null || selectedPath.trim().isEmpty) {
+        return;
+      }
+      final exportedPath = await LeaderboardRepository.instance.exportToFile(
+        selectedPath,
+      );
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Leaderboard exported to $exportedPath')),
+        );
+    } catch (error) {
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Export failed: $error')));
+    }
+  }
+
+  Future<void> _importLeaderboard() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final selectedPath = await _showPathPrompt(
+        title: 'IMPORT LEADERBOARD',
+        confirmLabel: 'IMPORT',
+        initialPath: '',
+        onExplore: () async {
+          final result = await FilePicker.platform.pickFiles(
+            dialogTitle: 'Import Leaderboard',
+            allowMultiple: false,
+            type: FileType.custom,
+            allowedExtensions: const ['json'],
+          );
+          final path = result?.files.single.path;
+          if (path == null || path.trim().isEmpty) {
+            return null;
+          }
+          return path;
+        },
+        subtitle:
+            'Importing replaces the current leaderboard file with the selected backup JSON.',
+      );
+      if (!mounted || selectedPath == null || selectedPath.trim().isEmpty) {
+        return;
+      }
+      final data = await LeaderboardRepository.instance.importFromFile(
+        selectedPath,
+      );
+      if (!mounted) return;
+      setState(() {
+        _leaderboardFuture = Future.value(data);
+        if (data.players.isEmpty) {
+          _isEditingLeaderboard = false;
+        }
+      });
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Leaderboard imported successfully.')),
+        );
+    } catch (error) {
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Import failed: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -419,6 +686,49 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 children: [
                                   Row(
                                     children: [
+                                      TextButton.icon(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.cyanAccent,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.8,
+                                          ),
+                                        ),
+                                        onPressed: () => unawaited(
+                                          _importLeaderboard(),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.file_open_rounded,
+                                          size: 18,
+                                        ),
+                                        label: const Text('IMPORT'),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      TextButton.icon(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.amberAccent,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.8,
+                                          ),
+                                        ),
+                                        onPressed: () => unawaited(
+                                          _exportLeaderboard(),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.save_alt_rounded,
+                                          size: 18,
+                                        ),
+                                        label: const Text('EXPORT'),
+                                      ),
                                       const Spacer(),
                                       TextButton.icon(
                                         style: TextButton.styleFrom(
