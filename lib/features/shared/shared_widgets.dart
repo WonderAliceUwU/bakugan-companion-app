@@ -15,6 +15,12 @@ class BakuganPreview extends StatefulWidget {
   final bool mirrorImage;
   final bool centerLargeFooter;
   final String? statusLabel;
+  final String? illustrationAssetPath;
+  final double? visualScaleOverride;
+  final Alignment? visualAlignmentOverride;
+  final EdgeInsets? visualPaddingOverride;
+  final Widget? frameBackground;
+  final bool showGridBackground;
 
   const BakuganPreview({
     super.key,
@@ -32,6 +38,12 @@ class BakuganPreview extends StatefulWidget {
     this.mirrorImage = false,
     this.centerLargeFooter = false,
     this.statusLabel,
+    this.illustrationAssetPath,
+    this.visualScaleOverride,
+    this.visualAlignmentOverride,
+    this.visualPaddingOverride,
+    this.frameBackground,
+    this.showGridBackground = true,
   });
 
   @override
@@ -53,15 +65,31 @@ class _BakuganPreviewState extends State<BakuganPreview>
     return 1.06;
   }
 
+  double get _illustrationScale {
+    if (widget.isLarge) return 1.6;
+    if (widget.isDeck) return 0.98;
+    return 0.96;
+  }
+
   Alignment get _pngAlignment {
     if (widget.isLarge) return const Alignment(0.04, -0.03);
     if (widget.isDeck) return Alignment.center;
     return const Alignment(0.16, 0.0);
   }
 
+  Alignment get _illustrationAlignment {
+    if (widget.isLarge) return const Alignment(0.0, 0.12);
+    return Alignment.center;
+  }
+
   EdgeInsets get _pngPadding {
     if (widget.isLarge) return const EdgeInsets.fromLTRB(8, 8, 8, 52);
     return const EdgeInsets.all(8);
+  }
+
+  EdgeInsets get _illustrationPadding {
+    if (widget.isLarge) return const EdgeInsets.fromLTRB(24, 80, 24, 14);
+    return const EdgeInsets.all(12);
   }
 
   Widget _wrapPngImage(Widget child) {
@@ -101,6 +129,14 @@ class _BakuganPreviewState extends State<BakuganPreview>
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Widget _unskewPreviewContent(Widget child) {
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.skewX(0.15),
+      child: child,
+    );
   }
 
   Future<void> _configureModelView({int attempt = 0}) async {
@@ -173,13 +209,28 @@ class _BakuganPreviewState extends State<BakuganPreview>
                 ), // Slightly smaller to stay inside border
                 child: Stack(
                   children: [
-                    // Grid Background
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: GridPainter(
-                          color: themeColor.withValues(
-                            alpha: widget.isLarge ? 0.12 : 0.05,
+                    if (widget.frameBackground != null)
+                      Positioned.fill(child: widget.frameBackground!),
+
+                    if (widget.showGridBackground)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: GridPainter(
+                            color: themeColor.withValues(
+                              alpha: widget.isLarge ? 0.12 : 0.05,
+                            ),
                           ),
+                        ),
+                      ),
+
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: widget.isTaken ? 0.2 : 1.0,
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            bottom: widget.isLarge ? 65 : 20,
+                          ),
+                          child: _buildPreviewVisual(),
                         ),
                       ),
                     ),
@@ -203,17 +254,6 @@ class _BakuganPreviewState extends State<BakuganPreview>
             center: widget.centerLargeFooter,
           ),
 
-        // --- THE 3D MODEL ---
-        Positioned.fill(
-          child: Opacity(
-            opacity: widget.isTaken ? 0.2 : 1.0,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: widget.isLarge ? 65 : 20),
-              child: _buildModel(),
-            ),
-          ),
-        ),
-
         if (widget.statusLabel != null && widget.isLarge)
           _buildStatusOverlay(widget.statusLabel!),
       ],
@@ -236,20 +276,16 @@ class _BakuganPreviewState extends State<BakuganPreview>
             ),
           ),
         ),
-        child: Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.skewX(0.15), // Un-skew the text
-          child: Text(
-            widget.speciesName!.toUpperCase(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10,
-              fontFamily: 'button_font',
-              fontWeight: FontWeight.w900,
-              color: widget.isSelected ? Colors.white : Colors.white60,
-              fontStyle: FontStyle.italic,
-              letterSpacing: 1,
-            ),
+        child: Text(
+          widget.speciesName!.toUpperCase(),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10,
+            fontFamily: 'button_font',
+            fontWeight: FontWeight.w900,
+            color: widget.isSelected ? Colors.white : Colors.white60,
+            fontStyle: FontStyle.italic,
+            letterSpacing: 1,
           ),
         ),
       ),
@@ -257,26 +293,65 @@ class _BakuganPreviewState extends State<BakuganPreview>
   }
 
   // --- MODEL & OVERLAY HELPERS ---
-  Widget _buildModel({bool isDeck = false}) {
-    if (!_uses3DViewer) {
+  Widget _buildPreviewVisual() {
+    final illustrationAssetPath = widget.illustrationAssetPath;
+    if (illustrationAssetPath != null) {
+      final padding = widget.visualPaddingOverride ?? _illustrationPadding;
+      final alignment = widget.visualAlignmentOverride ?? _illustrationAlignment;
+      final scale = widget.visualScaleOverride ?? _illustrationScale;
       return IgnorePointer(
         ignoring: true,
         child: Padding(
-          padding: _pngPadding,
-          child: Align(
-            alignment: _pngAlignment,
-            child: Transform.scale(
-              scale: _pngScale,
-              child: _wrapPngImage(
-                Image.asset(
-                  widget.variant.modelPath,
+          padding: padding,
+          child: _unskewPreviewContent(
+            Align(
+              alignment: alignment,
+              child: Transform.scale(
+                scale: scale,
+                child: Image.asset(
+                  illustrationAssetPath,
                   key: ValueKey(
-                    'image_${widget.variant.modelPath}_${widget.isLarge}_${widget.mirrorImage}',
+                    'illustration_${illustrationAssetPath}_${widget.isLarge}',
                   ),
                   fit: BoxFit.contain,
                   filterQuality: FilterQuality.high,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox.shrink(),
+                  errorBuilder: (context, error, stackTrace) => _buildModel(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return _buildModel();
+  }
+
+  Widget _buildModel({bool isDeck = false}) {
+    if (!_uses3DViewer) {
+      final padding = widget.visualPaddingOverride ?? _pngPadding;
+      final alignment = widget.visualAlignmentOverride ?? _pngAlignment;
+      final scale = widget.visualScaleOverride ?? _pngScale;
+      return IgnorePointer(
+        ignoring: true,
+        child: Padding(
+          padding: padding,
+          child: _unskewPreviewContent(
+            Align(
+              alignment: alignment,
+              child: Transform.scale(
+                scale: scale,
+                child: _wrapPngImage(
+                  Image.asset(
+                    widget.variant.modelPath,
+                    key: ValueKey(
+                      'image_${widget.variant.modelPath}_${widget.isLarge}_${widget.mirrorImage}',
+                    ),
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),
@@ -287,16 +362,18 @@ class _BakuganPreviewState extends State<BakuganPreview>
 
     return IgnorePointer(
       ignoring: isDeck || widget.disableInteraction || !widget.isLarge,
-      child: Flutter3DViewer(
-        key: ValueKey('model_${widget.variant.modelPath}_${widget.isLarge}'),
-        src: widget.variant.modelPath,
-        controller: _controller,
-        progressBarColor: Colors.transparent,
-        onLoad: (_) {
-          Future<void>.delayed(const Duration(milliseconds: 180), () {
-            _configureModelView();
-          });
-        },
+      child: _unskewPreviewContent(
+        Flutter3DViewer(
+          key: ValueKey('model_${widget.variant.modelPath}_${widget.isLarge}'),
+          src: widget.variant.modelPath,
+          controller: _controller,
+          progressBarColor: Colors.transparent,
+          onLoad: (_) {
+            Future<void>.delayed(const Duration(milliseconds: 180), () {
+              _configureModelView();
+            });
+          },
+        ),
       ),
     );
   }

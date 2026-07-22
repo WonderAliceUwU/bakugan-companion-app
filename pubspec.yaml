@@ -71,6 +71,36 @@ flutter:
     - assets/images/attributes/haos_game.png
     - assets/images/attributes/darkus_game.png
     - assets/images/attributes/ventus_game.png
+    - assets/images/battle_backgrounds/
+    - assets/images/bakugan/apollonir/
+    - assets/images/bakugan/bee_striker/
+    - assets/images/bakugan/blade_tigrerra/
+    - assets/images/bakugan/centipoid/
+    - assets/images/bakugan/clayf/
+    - assets/images/bakugan/cosmic_ingram/
+    - assets/images/bakugan/dragonoid/
+    - assets/images/bakugan/fear_ripper/
+    - assets/images/bakugan/fourtress/
+    - assets/images/bakugan/gorem/
+    - assets/images/bakugan/griffon/
+    - assets/images/bakugan/hammer_gorem/
+    - assets/images/bakugan/harpus/
+    - assets/images/bakugan/juggernoid/
+    - assets/images/bakugan/limulus/
+    - assets/images/bakugan/monarus/
+    - assets/images/bakugan/naga/
+    - assets/images/bakugan/nemus/
+    - assets/images/bakugan/neo_dragonoid/
+    - assets/images/bakugan/oberus/
+    - assets/images/bakugan/preyas_diablo/
+    - assets/images/bakugan/rattleoid/
+    - assets/images/bakugan/ravenoid/
+    - assets/images/bakugan/reaper/
+    - assets/images/bakugan/sirenoid/
+    - assets/images/bakugan/stinglash/
+    - assets/images/bakugan/tentaclear/
+    - assets/images/bakugan/warius/
+    - assets/images/bakugan/wired/
     # Carpetas de modelos
     - assets/models/dragonoid/
     - assets/models/gorem/

@@ -48,6 +48,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   int? _bakuganStayBakuganIndex;
   bool _bakuganStayClosing = false;
   bool _isResolvingBakuganStay = false;
+  final List<MatchBattleRecord> _battleHistory = [];
+  final Map<String, Set<String>> _abilitiesUsedByPlayer = {};
 
   bool selectionMode = false;
   BakuganVariant? leftBakugan;
@@ -631,6 +633,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     if (_presentedMatchAbilities[playerIndex][slotIndex] != null) return;
 
     _playRevealSfx('ability_reveal.wav');
+    final playerName = widget.players[playerIndex].name;
+    _abilitiesUsedByPlayer
+        .putIfAbsent(playerName, () => <String>{})
+        .add(card.name);
 
     setState(() {
       _presentedMatchAbilities[playerIndex][slotIndex] = MatchPresentedAbility(
@@ -1198,9 +1204,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               Positioned.fill(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.35),
-                  ),
+                  child: Container(color: Colors.black.withValues(alpha: 0.35)),
                 ),
               ),
               Center(
@@ -1292,9 +1296,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           crossAxisAlignment:
-                                          CrossAxisAlignment.center,
+                                              CrossAxisAlignment.center,
                                           mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                              MainAxisAlignment.center,
                                           children: [
                                             Container(
                                               width: 84,
@@ -1305,12 +1309,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                                   begin: Alignment.topLeft,
                                                   end: Alignment.bottomRight,
                                                   colors: [
-                                                    Colors.blueAccent.withValues(
-                                                      alpha: 0.9,
-                                                    ),
-                                                    Colors.cyanAccent.withValues(
-                                                      alpha: 0.7,
-                                                    ),
+                                                    Colors.blueAccent
+                                                        .withValues(alpha: 0.9),
+                                                    Colors.cyanAccent
+                                                        .withValues(alpha: 0.7),
                                                   ],
                                                 ),
                                                 boxShadow: [
@@ -1322,9 +1324,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                                   ),
                                                 ],
                                                 border: Border.all(
-                                                  color: Colors.white.withValues(
-                                                    alpha: 0.75,
-                                                  ),
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.75),
                                                   width: 2.5,
                                                 ),
                                               ),
@@ -1366,20 +1367,20 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                             ),
                                             const SizedBox(height: 18),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 10,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 10,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: Colors.white.withValues(
                                                   alpha: 0.04,
                                                 ),
                                                 borderRadius:
-                                                BorderRadius.circular(16),
+                                                    BorderRadius.circular(16),
                                                 border: Border.all(
-                                                  color: Colors.white.withValues(
-                                                    alpha: 0.09,
-                                                  ),
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.09),
                                                 ),
                                               ),
                                               child: Column(
@@ -1387,8 +1388,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                                 children: [
                                                   BakuganButton(
                                                     text: 'Resume',
-                                                    icon:
-                                                    Icons.play_arrow_rounded,
+                                                    icon: Icons
+                                                        .play_arrow_rounded,
                                                     iconOnly: false,
                                                     onPressed: () =>
                                                         Navigator.of(
@@ -1400,8 +1401,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                                   const SizedBox(height: 10),
                                                   BakuganButton(
                                                     text: 'Restart',
-                                                    icon:
-                                                    Icons.restart_alt_rounded,
+                                                    icon: Icons
+                                                        .restart_alt_rounded,
                                                     iconOnly: false,
                                                     onPressed: () =>
                                                         Navigator.of(
@@ -1479,7 +1480,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     if (action == 'main_menu') {
       Navigator.of(context).pushAndRemoveUntil(
         _fadeRoute(const MainMenuScreen()),
-            (route) => false,
+        (route) => false,
       );
       return;
     }
@@ -1595,7 +1596,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                   letterSpacing: 1.15,
                                 ),
                               ),
-                              if (subtitle != null && subtitle.trim().isNotEmpty) ...[
+                              if (subtitle != null &&
+                                  subtitle.trim().isNotEmpty) ...[
                                 const SizedBox(height: 8),
                                 Text(
                                   subtitle,
@@ -1658,6 +1660,12 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 
   Future<void> _recordLeaderboardMatch(int winningScoreIndex) async {
+    final gateCardsWonByPlayer = <String, int>{};
+    for (final player in widget.players) {
+      if (!player.isSavedProfile) continue;
+      gateCardsWonByPlayer[player.name] = scores[_scoreIndexForPlayer(player)];
+    }
+
     if (widget.isTeamBattle) {
       final winners = winningScoreIndex == 0
           ? [widget.players[0], widget.players[2]]
@@ -1674,6 +1682,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
             .where((player) => player.isSavedProfile)
             .map((player) => player.name)
             .toList(),
+        gateCardsWonByPlayer: gateCardsWonByPlayer,
       );
       return;
     }
@@ -1689,7 +1698,55 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           .where((player) => player.isSavedProfile)
           .map((player) => player.name)
           .toList(),
+      gateCardsWonByPlayer: gateCardsWonByPlayer,
     );
+  }
+
+  Future<void> _recordMatchHistory(int winningScoreIndex) async {
+    final winnerNames = widget.isTeamBattle
+        ? (winningScoreIndex == 0
+              ? [widget.players[0].name, widget.players[2].name]
+              : [widget.players[1].name, widget.players[3].name])
+        : [widget.players[winningScoreIndex].name];
+
+    final historyPlayers = <MatchHistoryPlayerEntry>[
+      for (int i = 0; i < widget.players.length; i++)
+        MatchHistoryPlayerEntry(
+          name: widget.players[i].name,
+          character: widget.players[i].character,
+          isSavedProfile: widget.players[i].isSavedProfile,
+          isWinner: winnerNames.any(
+            (winner) =>
+                _playerNameKey(winner) ==
+                _playerNameKey(widget.players[i].name),
+          ),
+          gateCardsWon: scores[_scoreIndexForPlayer(widget.players[i])],
+          bakuganUsed: widget.players[i].deck
+              .map(
+                (variant) =>
+                    '${variant.speciesName} (${variant.attribute.toUpperCase()} ${variant.gPower}G)',
+              )
+              .toList(),
+          abilitiesUsed:
+              (_abilitiesUsedByPlayer[widget.players[i].name] ??
+                      const <String>{})
+                  .toList()
+                ..sort(),
+        ),
+    ];
+
+    final now = DateTime.now();
+    final entry = MatchHistoryEntry(
+      id: now.microsecondsSinceEpoch.toString(),
+      seasonNumber: (await LeaderboardRepository.instance.loadStore())
+          .currentSeasonNumber,
+      isTeamBattle: widget.isTeamBattle,
+      playedAt: now.toIso8601String(),
+      winnerNames: winnerNames.map(_sanitizePlayerName).toList(),
+      players: historyPlayers,
+      battles: List<MatchBattleRecord>.from(_battleHistory),
+    );
+    await LeaderboardRepository.instance.recordMatchHistory(entry);
   }
 
   void _playClick() async {
@@ -1794,7 +1851,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     int? oldestIndex;
     int? oldestOrder;
     for (int i = 0; i < min(3, widget.players[playerIndex].deck.length); i++) {
-      if (_bakuganPileStates[playerIndex][i] != MatchBakuganPileState.standing) {
+      if (_bakuganPileStates[playerIndex][i] !=
+          MatchBakuganPileState.standing) {
         continue;
       }
       final order = _bakuganStandOrder[playerIndex][i];
@@ -1916,7 +1974,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       _bakuganStandOrder[playerIndex][oldestStandingIndex] = null;
       _clearBattleSelectionForSlot(playerIndex, oldestStandingIndex);
     });
-    _addPoint(_scoreIndexForPlayer(widget.players[playerIndex]), playPointSound: false);
+    _addPoint(
+      _scoreIndexForPlayer(widget.players[playerIndex]),
+      playPointSound: false,
+    );
 
     await _hideBakuganResultOverlay();
     _isResolvingBakuganStay = false;
@@ -2127,54 +2188,78 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                 final rightScoreIndex = _scoreIndexForPlayer(
                                   rightPlayer!,
                                 );
-                                final leftUnusedBakuganIndices = List.generate(
-                                  _bakuganPileStates[leftPlayerIndex].length,
-                                  (index) => index,
-                                ).where(
-                                  (index) =>
-                                      _bakuganPileStates[leftPlayerIndex][index] ==
-                                          MatchBakuganPileState.unused &&
-                                      index != leftBakuganIdx,
-                                ).toList();
-                                final rightUnusedBakuganIndices = List.generate(
-                                  _bakuganPileStates[rightPlayerIndex].length,
-                                  (index) => index,
-                                ).where(
-                                  (index) =>
-                                      _bakuganPileStates[rightPlayerIndex][index] ==
-                                          MatchBakuganPileState.unused &&
-                                      index != rightBakuganIdx,
-                                ).toList();
-                                final leftUsedBakuganIndices = List.generate(
-                                  _bakuganPileStates[leftPlayerIndex].length,
-                                  (index) => index,
-                                ).where(
-                                  (index) =>
-                                      _bakuganPileStates[leftPlayerIndex][index] ==
-                                          MatchBakuganPileState.used &&
-                                      index != leftBakuganIdx,
-                                ).toList();
-                                final rightUsedBakuganIndices = List.generate(
-                                  _bakuganPileStates[rightPlayerIndex].length,
-                                  (index) => index,
-                                ).where(
-                                  (index) =>
-                                      _bakuganPileStates[rightPlayerIndex][index] ==
-                                          MatchBakuganPileState.used &&
-                                      index != rightBakuganIdx,
-                                ).toList();
+                                final leftUnusedBakuganIndices =
+                                    List.generate(
+                                          _bakuganPileStates[leftPlayerIndex]
+                                              .length,
+                                          (index) => index,
+                                        )
+                                        .where(
+                                          (index) =>
+                                              _bakuganPileStates[leftPlayerIndex][index] ==
+                                                  MatchBakuganPileState
+                                                      .unused &&
+                                              index != leftBakuganIdx,
+                                        )
+                                        .toList();
+                                final rightUnusedBakuganIndices =
+                                    List.generate(
+                                          _bakuganPileStates[rightPlayerIndex]
+                                              .length,
+                                          (index) => index,
+                                        )
+                                        .where(
+                                          (index) =>
+                                              _bakuganPileStates[rightPlayerIndex][index] ==
+                                                  MatchBakuganPileState
+                                                      .unused &&
+                                              index != rightBakuganIdx,
+                                        )
+                                        .toList();
+                                final leftUsedBakuganIndices =
+                                    List.generate(
+                                          _bakuganPileStates[leftPlayerIndex]
+                                              .length,
+                                          (index) => index,
+                                        )
+                                        .where(
+                                          (index) =>
+                                              _bakuganPileStates[leftPlayerIndex][index] ==
+                                                  MatchBakuganPileState.used &&
+                                              index != leftBakuganIdx,
+                                        )
+                                        .toList();
+                                final rightUsedBakuganIndices =
+                                    List.generate(
+                                          _bakuganPileStates[rightPlayerIndex]
+                                              .length,
+                                          (index) => index,
+                                        )
+                                        .where(
+                                          (index) =>
+                                              _bakuganPileStates[rightPlayerIndex][index] ==
+                                                  MatchBakuganPileState.used &&
+                                              index != rightBakuganIdx,
+                                        )
+                                        .toList();
                                 final usedBakuganIndicesByPlayer = {
-                                  for (int playerIndex = 0;
-                                      playerIndex < _bakuganPileStates.length;
-                                      playerIndex++)
-                                    playerIndex: List.generate(
-                                      _bakuganPileStates[playerIndex].length,
-                                      (index) => index,
-                                    ).where(
-                                      (index) =>
-                                          _bakuganPileStates[playerIndex][index] ==
-                                          MatchBakuganPileState.used,
-                                    ).toList(),
+                                  for (
+                                    int playerIndex = 0;
+                                    playerIndex < _bakuganPileStates.length;
+                                    playerIndex++
+                                  )
+                                    playerIndex:
+                                        List.generate(
+                                              _bakuganPileStates[playerIndex]
+                                                  .length,
+                                              (index) => index,
+                                            )
+                                            .where(
+                                              (index) =>
+                                                  _bakuganPileStates[playerIndex][index] ==
+                                                  MatchBakuganPileState.used,
+                                            )
+                                            .toList(),
                                 };
 
                                 _pauseArenaPlaylist();
@@ -2216,10 +2301,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                   ),
                                 ).then((result) {
                                   if (!mounted) return;
-                                  final resultMap =
-                                      result is Map
-                                          ? Map<String, dynamic>.from(result)
-                                          : const <String, dynamic>{};
+                                  final resultMap = result is Map
+                                      ? Map<String, dynamic>.from(result)
+                                      : const <String, dynamic>{};
                                   final int? winnerIndex =
                                       resultMap['winnerIndex'] as int?;
                                   final int? usedGatePenaltySideIndex =
@@ -2230,7 +2314,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           as int?;
                                   final GateCard? revealedGateCard =
                                       resultMap['revealedGateCard'] is GateCard
-                                      ? resultMap['revealedGateCard'] as GateCard
+                                      ? resultMap['revealedGateCard']
+                                            as GateCard
                                       : null;
                                   final int leftReturnedBakuganIndex =
                                       resultMap['leftBakuganIndex'] is int
@@ -2242,6 +2327,38 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       : rightBakuganIdx!;
                                   final previousLeftPlayer = leftPlayer;
                                   final previousRightPlayer = rightPlayer;
+                                  final leftAbilitiesUsed =
+                                      resultMap['leftAbilitiesUsed'] is List
+                                      ? (resultMap['leftAbilitiesUsed'] as List)
+                                            .map((entry) => entry.toString())
+                                            .where(
+                                              (entry) =>
+                                                  entry.trim().isNotEmpty,
+                                            )
+                                            .toList()
+                                      : const <String>[];
+                                  final rightAbilitiesUsed =
+                                      resultMap['rightAbilitiesUsed'] is List
+                                      ? (resultMap['rightAbilitiesUsed']
+                                                as List)
+                                            .map((entry) => entry.toString())
+                                            .where(
+                                              (entry) =>
+                                                  entry.trim().isNotEmpty,
+                                            )
+                                            .toList()
+                                      : const <String>[];
+                                  final externalAbilitiesUsed =
+                                      resultMap['externalAbilitiesUsed'] is List
+                                      ? (resultMap['externalAbilitiesUsed']
+                                                as List)
+                                            .map((entry) => entry.toString())
+                                            .where(
+                                              (entry) =>
+                                                  entry.trim().isNotEmpty,
+                                            )
+                                            .toList()
+                                      : const <String>[];
                                   final PlayerData? winningPlayer =
                                       winnerIndex == null
                                       ? null
@@ -2250,16 +2367,53 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       : previousRightPlayer;
                                   final hasRemovedBakugan =
                                       removedBakuganSideIndex != null;
+                                  _battleHistory.add(
+                                    MatchBattleRecord(
+                                      battleNumber: _battleHistory.length + 1,
+                                      leftPlayerName:
+                                          previousLeftPlayer?.name ?? '',
+                                      rightPlayerName:
+                                          previousRightPlayer?.name ?? '',
+                                      leftBakugan:
+                                          leftBakugan?.speciesName ?? '',
+                                      rightBakugan:
+                                          rightBakugan?.speciesName ?? '',
+                                      winnerName: winningPlayer?.name,
+                                      revealedGateCard: revealedGateCard?.name,
+                                      leftAbilitiesUsed: leftAbilitiesUsed,
+                                      rightAbilitiesUsed: rightAbilitiesUsed,
+                                      externalAbilitiesUsed:
+                                          externalAbilitiesUsed,
+                                    ),
+                                  );
+                                  for (final ability in leftAbilitiesUsed) {
+                                    _abilitiesUsedByPlayer
+                                        .putIfAbsent(
+                                          previousLeftPlayer?.name ?? '',
+                                          () => <String>{},
+                                        )
+                                        .add(ability);
+                                  }
+                                  for (final ability in rightAbilitiesUsed) {
+                                    _abilitiesUsedByPlayer
+                                        .putIfAbsent(
+                                          previousRightPlayer?.name ?? '',
+                                          () => <String>{},
+                                        )
+                                        .add(ability);
+                                  }
                                   if (!hasRemovedBakugan) {
                                     unawaited(_resumeArenaPlaylist());
                                   }
                                   _markBattlingBakuganUsedAndClearSelection(
                                     leftBakuganIndex: leftReturnedBakuganIndex,
-                                    rightBakuganIndex: rightReturnedBakuganIndex,
+                                    rightBakuganIndex:
+                                        rightReturnedBakuganIndex,
                                     removedBakuganSideIndex:
                                         removedBakuganSideIndex,
                                   );
-                                  final awardedScoreIndex = winningPlayer == null
+                                  final awardedScoreIndex =
+                                      winningPlayer == null
                                       ? null
                                       : _scoreIndexForPlayer(winningPlayer);
                                   final penalizedPlayer =
@@ -2323,11 +2477,15 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           _matchWinnerIndex!,
                                         ),
                                       );
+                                      unawaited(
+                                        _recordMatchHistory(_matchWinnerIndex!),
+                                      );
                                       unawaited(_playMatchWinSound());
                                     }
                                   }
                                   if (removedBakuganSideIndex != null) {
-                                    final removedPlayer = removedBakuganSideIndex == 0
+                                    final removedPlayer =
+                                        removedBakuganSideIndex == 0
                                         ? previousLeftPlayer
                                         : previousRightPlayer;
                                     final removedBakuganIndex =
@@ -2484,7 +2642,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               : (leftPlayer == player ? leftBakuganIdx : null),
           selectedBakuganIndices: {
             if (leftPlayer == player && leftBakuganIdx != null) leftBakuganIdx!,
-            if (rightPlayer == player && rightBakuganIdx != null) rightBakuganIdx!,
+            if (rightPlayer == player && rightBakuganIdx != null)
+              rightBakuganIdx!,
           },
           onPortraitTap: null,
           portraitOverlay: _buildProfileAbilityOverlay(
