@@ -21,6 +21,10 @@ class BakuganPreview extends StatefulWidget {
   final EdgeInsets? visualPaddingOverride;
   final Widget? frameBackground;
   final bool showGridBackground;
+  final bool showIllustrationShadow;
+  final Offset illustrationShadowOffset;
+  final double illustrationShadowOpacity;
+  final double illustrationShadowBlur;
 
   const BakuganPreview({
     super.key,
@@ -44,6 +48,10 @@ class BakuganPreview extends StatefulWidget {
     this.visualPaddingOverride,
     this.frameBackground,
     this.showGridBackground = true,
+    this.showIllustrationShadow = false,
+    this.illustrationShadowOffset = const Offset(14, 18),
+    this.illustrationShadowOpacity = 0.42,
+    this.illustrationShadowBlur = 10,
   });
 
   @override
@@ -299,6 +307,20 @@ class _BakuganPreviewState extends State<BakuganPreview>
       final padding = widget.visualPaddingOverride ?? _illustrationPadding;
       final alignment = widget.visualAlignmentOverride ?? _illustrationAlignment;
       final scale = widget.visualScaleOverride ?? _illustrationScale;
+      Widget buildIllustration({bool includeKey = false}) {
+        return Image.asset(
+          illustrationAssetPath,
+          key: includeKey
+              ? ValueKey(
+                  'illustration_${illustrationAssetPath}_${widget.isLarge}',
+                )
+              : null,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (context, error, stackTrace) => _buildModel(),
+        );
+      }
+
       return IgnorePointer(
         ignoring: true,
         child: Padding(
@@ -308,14 +330,35 @@ class _BakuganPreviewState extends State<BakuganPreview>
               alignment: alignment,
               child: Transform.scale(
                 scale: scale,
-                child: Image.asset(
-                  illustrationAssetPath,
-                  key: ValueKey(
-                    'illustration_${illustrationAssetPath}_${widget.isLarge}',
-                  ),
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (context, error, stackTrace) => _buildModel(),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (widget.showIllustrationShadow)
+                      Transform.translate(
+                        offset: Offset(
+                          widget.illustrationShadowOffset.dx * 0.38,
+                          widget.illustrationShadowOffset.dy * 0.42,
+                        ),
+                        child: Opacity(
+                          opacity: (widget.illustrationShadowOpacity + 0.18)
+                              .clamp(0.0, 1.0),
+                          child: ImageFiltered(
+                            imageFilter: ImageFilter.blur(
+                              sigmaX: 3.4,
+                              sigmaY: 3.4,
+                            ),
+                            child: ColorFiltered(
+                              colorFilter: const ColorFilter.mode(
+                                Colors.black,
+                                BlendMode.srcATop,
+                              ),
+                              child: buildIllustration(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    buildIllustration(includeKey: true),
+                  ],
                 ),
               ),
             ),

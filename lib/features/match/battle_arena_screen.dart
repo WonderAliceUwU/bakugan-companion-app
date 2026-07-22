@@ -453,6 +453,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             showGridBackground: false,
             mirrorImage: isLeft,
             illustrationAssetPath: illustrationPath,
+            showIllustrationShadow: true,
+            illustrationShadowOffset: const Offset(28, 30),
+            illustrationShadowOpacity: 0.58,
+            illustrationShadowBlur: 16,
             visualScaleOverride: 1.55,
             visualAlignmentOverride: const Alignment(0.0, 1.28),
             visualPaddingOverride: const EdgeInsets.fromLTRB(28, 96, 28, 34),
@@ -468,7 +472,6 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                         const SizedBox.shrink(),
                   ),
                 ),
-                Container(color: Colors.black.withValues(alpha: 0.28)),
               ],
             ),
           ),
@@ -521,7 +524,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                       horizontal: 0,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: Colors.black.withValues(alpha: 0.82),
                       border: Border.all(color: themeColor, width: 3),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(8),
