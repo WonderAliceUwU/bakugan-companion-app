@@ -1425,15 +1425,11 @@ class PlayerArenaInfo extends StatelessWidget {
                           children: [
                             if (hasBakugan && !isRemoved)
                               Positioned.fill(
-                                child: Transform(
-                                  alignment: Alignment.center,
-                                  transform: Matrix4.skewX(0.15),
-                                  child: IgnorePointer(
-                                    ignoring: true,
-                                    child: BakuganPreview(
-                                      variant: variant!,
-                                      isDeck: true,
-                                    ),
+                                child: IgnorePointer(
+                                  ignoring: true,
+                                  child: BakuganPreview(
+                                    variant: variant!,
+                                    isDeck: true,
                                   ),
                                 ),
                               ),
@@ -1507,12 +1503,16 @@ class BattleResultShowcase extends StatelessWidget {
   final String title;
   final Widget previewChild;
   final VoidCallback? onTap;
+  final double previewWidth;
+  final double previewHeight;
 
   const BattleResultShowcase({
     super.key,
     required this.title,
     required this.previewChild,
     this.onTap,
+    this.previewWidth = 560,
+    this.previewHeight = 560,
   });
 
   @override
@@ -1558,7 +1558,11 @@ class BattleResultShowcase extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 36),
-            SizedBox(width: 560, height: 560, child: previewChild),
+            SizedBox(
+              width: previewWidth,
+              height: previewHeight,
+              child: previewChild,
+            ),
           ],
         ),
       ),

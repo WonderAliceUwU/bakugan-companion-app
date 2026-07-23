@@ -546,9 +546,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                           fontSize: 34,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
-                          shadows: [
-                            Shadow(blurRadius: 10, color: themeColor),
-                          ],
+                          shadows: [Shadow(blurRadius: 10, color: themeColor)],
                         ),
                       ),
                     ),
@@ -639,7 +637,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                   ],
                                   stops: [0.0, 0.4, 1.0],
                                 ),
-                                border: Border.all(color: Colors.white, width: 3),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.42),
@@ -649,7 +650,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                                 ],
                               ),
                               child: Transform.translate(
-                                offset: const Offset(-0.75, 0),
+                                offset: const Offset(-0.75, -0.80),
                                 child: Image.asset(
                                   'assets/images/attributes/${attribute}_game.png',
                                   fit: BoxFit.contain,
@@ -716,7 +717,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       ((animationValue - 0.82) / 0.18).clamp(0.0, 1.0),
     );
     final verticalOffset =
-        lerpDouble(_battleBonusRiseStart, 0, risePhase)! + (10 * fallPhase);
+        lerpDouble(0, _battleBonusRiseStart, risePhase)! + (10 * fallPhase);
     final fadeInPhase = Curves.easeOut.transform(
       (animationValue / 0.22).clamp(0.0, 1.0),
     );
@@ -747,7 +748,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 Opacity(
                   opacity: opacity,
                   child: Transform.translate(
-                    offset: Offset(0, verticalOffset),
+                    offset: _battleAnimatedBonusBaseOffset +
+                        Offset(0, verticalOffset),
                     child: Text(
                       '${bonusDelta > 0 ? '+' : ''}$bonusDelta',
                       style: TextStyle(
@@ -774,24 +776,27 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 Positioned(
                   right: 0,
                   bottom: 36,
-                  child: Text(
-                    '+$pendingBonusDelta',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      fontStyle: FontStyle.italic,
-                      shadows: [
-                        Shadow(
-                          color: themeColor.withValues(alpha: 0.9),
-                          blurRadius: 18,
-                        ),
-                        const Shadow(
-                          color: Colors.black,
-                          offset: Offset(2, 2),
-                          blurRadius: 6,
-                        ),
-                      ],
+                  child: Transform.translate(
+                    offset: _battlePendingBonusBaseOffset,
+                    child: Text(
+                      '+$pendingBonusDelta',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        fontStyle: FontStyle.italic,
+                        shadows: [
+                          Shadow(
+                            color: themeColor.withValues(alpha: 0.9),
+                            blurRadius: 18,
+                          ),
+                          const Shadow(
+                            color: Colors.black,
+                            offset: Offset(2, 2),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -3483,7 +3488,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         return;
       }
 
-      await _applyQueuedAbilityCards();
+      // Defer battle G-Power resolution until the card presentation is closed,
+      // so the player can see the bonus animation on the Bakugan showcase.
     } catch (error, stackTrace) {
       debugPrint('Failed to present ability card ${card.key}: $error');
       debugPrintStack(stackTrace: stackTrace);
@@ -3830,6 +3836,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         _showRightAbilityFlash = false;
       }
     });
+
+    if (_revealedCard != null && _winnerSideIndex == null && !_isTieResult) {
+      unawaited(_applyQueuedAbilityCards());
+    }
   }
 
   void _showExternalAbilityPresentationFor(int playerIndex, int slotIndex) {
@@ -4330,6 +4340,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
             ignoring: true,
             child: BattleResultShowcase(
               title: '${winnerPlayer.name} WINS!',
+              previewWidth: _abilityPresentationWidth,
+              previewHeight: _abilityPresentationHeight,
               previewChild: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -5769,7 +5781,7 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
       ((animationValue - 0.82) / 0.18).clamp(0.0, 1.0),
     );
     final verticalOffset =
-        lerpDouble(_battleBonusRiseStart, 0, risePhase)! + (10 * fallPhase);
+        lerpDouble(0, _battleBonusRiseStart, risePhase)! + (10 * fallPhase);
     final fadeInPhase = Curves.easeOut.transform(
       (animationValue / 0.22).clamp(0.0, 1.0),
     );
@@ -5807,10 +5819,11 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
                 opacity: opacity,
                 child: Align(
                   alignment: Alignment.topRight,
-                  child: Transform.translate(
-                    offset: _battleBonusAnchor + Offset(0, verticalOffset),
-                    child: Text(
-                      '${bonusDelta! > 0 ? '+' : ''}$bonusDelta',
+                child: Transform.translate(
+                  offset: _battleAnimatedBonusBaseOffset +
+                      Offset(0, verticalOffset),
+                  child: Text(
+                    '${bonusDelta! > 0 ? '+' : ''}$bonusDelta',
                       style: TextStyle(
                         color: bonusColor,
                         fontSize: 32,
@@ -5838,7 +5851,7 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
               child: Align(
                 alignment: Alignment.topRight,
                 child: Transform.translate(
-                  offset: _battleBonusAnchor + _battlePendingBonusOffset,
+                  offset: _battlePendingBonusBaseOffset,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 0,

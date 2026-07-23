@@ -50,6 +50,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   bool _isResolvingBakuganStay = false;
   final List<MatchBattleRecord> _battleHistory = [];
   final Map<String, Set<String>> _abilitiesUsedByPlayer = {};
+  bool _showGameStartBanner = false;
+  bool _showGameStartBannerContent = false;
+  bool _hideGameStartBanner = false;
+  Offset _gameStartBannerOffset = const Offset(-1.2, 0);
 
   bool selectionMode = false;
   BakuganVariant? leftBakugan;
@@ -85,6 +89,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     );
     _loadMatchAbilityCards();
     _loadArenaPlaylistAndStart();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_showGameStartOverlay());
+    });
   }
 
   AudioPlayer get _activeArenaPlayer =>
@@ -229,6 +236,49 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       await _sfxPlayer.stop();
       await _sfxPlayer.play(AssetSource('sound/$assetName'));
     } catch (_) {}
+  }
+
+  Future<void> _showGameStartOverlay() async {
+    if (!mounted) return;
+
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+
+    setState(() {
+      _showGameStartBanner = true;
+      _showGameStartBannerContent = false;
+      _hideGameStartBanner = false;
+      _gameStartBannerOffset = const Offset(-1.2, 0);
+    });
+
+    unawaited(_playRevealSfx('game_start.wav'));
+
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    if (!mounted) return;
+
+    setState(() {
+      _showGameStartBannerContent = true;
+      _gameStartBannerOffset = Offset.zero;
+    });
+
+    await Future<void>.delayed(const Duration(milliseconds: 2200));
+    if (!mounted) return;
+
+    setState(() {
+      _showGameStartBannerContent = false;
+      _hideGameStartBanner = true;
+      _gameStartBannerOffset = const Offset(1.2, 0);
+    });
+
+    await Future<void>.delayed(const Duration(milliseconds: 520));
+    if (!mounted) return;
+
+    setState(() {
+      _showGameStartBanner = false;
+      _showGameStartBannerContent = false;
+      _hideGameStartBanner = false;
+      _gameStartBannerOffset = const Offset(-1.2, 0);
+    });
   }
 
   Future<void> _loadMatchAbilityCards() async {
@@ -2540,11 +2590,99 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
                   _buildMatchAbilityOverlay(),
                   _buildBakuganStayOverlay(),
+                  _buildGameStartOverlay(),
                   if (hasMatchWinner) _buildMatchWinnerOverlay(),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameStartOverlay() {
+    if (!_showGameStartBanner) return const SizedBox.shrink();
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 420),
+                curve: Curves.easeInOutCubic,
+                opacity: _showGameStartBannerContent ? 1 : 0,
+                child: Container(color: Colors.black.withValues(alpha: 0.5)),
+              ),
+            ),
+            Center(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeInOutCubic,
+                opacity: _showGameStartBannerContent ? 1 : 0,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 520),
+                  curve: Curves.easeInOutCubic,
+                  offset: _gameStartBannerOffset,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 36,
+                      vertical: 18,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.68),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.lightBlueAccent.withValues(alpha: 0.9),
+                        width: 2.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.lightBlueAccent.withValues(alpha: 0.32),
+                          blurRadius: 28,
+                          spreadRadius: 3,
+                        ),
+                        BoxShadow(
+                          color: Colors.cyanAccent.withValues(alpha: 0.18),
+                          blurRadius: 44,
+                          spreadRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'GAME START',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'title_font',
+                        fontSize: 72,
+                        fontWeight: FontWeight.w900,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: 2.4,
+                        color: const Color(0xFF8BEBFF),
+                        shadows: [
+                          Shadow(
+                            color: Colors.white.withValues(alpha: 0.95),
+                            blurRadius: 10,
+                          ),
+                          Shadow(
+                            color: Colors.lightBlueAccent.withValues(
+                              alpha: 0.95,
+                            ),
+                            blurRadius: 24,
+                          ),
+                          Shadow(
+                            color: Colors.cyanAccent.withValues(alpha: 0.8),
+                            blurRadius: 42,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

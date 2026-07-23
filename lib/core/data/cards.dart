@@ -891,8 +891,10 @@ class MatchPresentedAbility {
 const double _gateCardAspectRatio = 842 / 1130;
 const double _gateCardHeight = 560;
 const double _gateCardWidth = _gateCardHeight * _gateCardAspectRatio;
-const Offset _battleBonusAnchor = Offset(-40, 0);
-const Offset _battlePendingBonusOffset = Offset(0, -10);
+// Battle bonus text positioning. Adjust these to fine-tune where the floating
+// `+G` animation and the fixed pending `+G` label appear.
+const Offset _battleAnimatedBonusBaseOffset = Offset(-40, 90);
+const Offset _battlePendingBonusBaseOffset = Offset(-40, 170);
 const double _battleBonusRiseStart = 42;
 const Map<String, List<Color>> _gateDescriptionBorderGradients = {
   'copper': [
