@@ -1485,13 +1485,21 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   }
 }
 
-class _MatchHistoryCard extends StatelessWidget {
+class _MatchHistoryCard extends StatefulWidget {
   final MatchHistoryEntry entry;
 
   const _MatchHistoryCard({required this.entry});
 
   @override
+  State<_MatchHistoryCard> createState() => _MatchHistoryCardState();
+}
+
+class _MatchHistoryCardState extends State<_MatchHistoryCard> {
+  bool _isExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
     final winners = entry.winnerNames.join(', ').toUpperCase();
     final playedAt = _formatHistoryDate(entry.playedAt);
     return Container(
@@ -1503,6 +1511,7 @@ class _MatchHistoryCard extends StatelessWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          onExpansionChanged: (value) => setState(() => _isExpanded = value),
           tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           childrenPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           iconColor: Colors.cyanAccent,
@@ -1549,44 +1558,11 @@ class _MatchHistoryCard extends StatelessWidget {
               ),
             ],
           ),
-          children: [
-            Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: [
-                for (final player in entry.players)
-                  _HistoryPlayerCard(player: player),
-              ],
-            ),
-            const SizedBox(height: 18),
-            if (entry.battles.isNotEmpty) ...[
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'BATTLE LOG',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Column(
-                children: [
-                  for (final battle in entry.battles) ...[
-                    _HistoryBattleRow(battle: battle),
-                    if (battle != entry.battles.last)
-                      Divider(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        height: 20,
-                      ),
-                  ],
-                ],
-              ),
-            ],
-          ],
+          children: _isExpanded
+              ? [
+                  _MatchHistoryExpandedContent(entry: entry),
+                ]
+              : const [],
         ),
       ),
     );
@@ -1621,6 +1597,55 @@ class _HistoryBadge extends StatelessWidget {
   }
 }
 
+class _MatchHistoryExpandedContent extends StatelessWidget {
+  final MatchHistoryEntry entry;
+
+  const _MatchHistoryExpandedContent({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            for (final player in entry.players) _HistoryPlayerCard(player: player),
+          ],
+        ),
+        const SizedBox(height: 18),
+        if (entry.battles.isNotEmpty) ...[
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'BATTLE LOG',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            children: [
+              for (final battle in entry.battles) ...[
+                _HistoryBattleRow(battle: battle),
+                if (battle != entry.battles.last)
+                  Divider(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    height: 20,
+                  ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _HistoryPlayerCard extends StatelessWidget {
   final MatchHistoryPlayerEntry player;
 
@@ -1628,8 +1653,10 @@ class _HistoryPlayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sortedSlots = [...player.abilitySlots]
+      ..sort((a, b) => a.slotIndex.compareTo(b.slotIndex));
     return Container(
-      width: 330,
+      width: 520,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: player.isWinner
@@ -1645,31 +1672,87 @@ class _HistoryPlayerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            player.name.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              fontStyle: FontStyle.italic,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 88,
+                height: 112,
+                child: CharacterMiniature(
+                  char: player.character,
+                  isSelected: player.isWinner,
+                  showName: false,
+                  thickness: 4,
+                  glowAlpha: player.isWinner ? 0.42 : 0.18,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            player.name.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            player.character.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _HistoryGateCardTicks(count: player.gateCardsWon),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          for (int i = 0; i < 3; i++) ...[
+                            _HistoryAbilityMiniCard(
+                              card: i < sortedSlots.length
+                                  ? sortedSlots[i].card
+                                  : null,
+                              width: 58,
+                              borderRadius: 2,
+                            ),
+                            if (i != 2) const SizedBox(width: 6),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            '${player.character.toUpperCase()} • ${player.gateCardsWon} gate cards',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _HistorySection(title: 'Bakugan', items: player.bakuganUsed),
-          const SizedBox(height: 12),
-          _HistorySection(
-            title: 'Abilities Used',
-            items: player.abilitiesUsed,
-            emptyLabel: 'No abilities recorded',
+          const SizedBox(height: 16),
+          const _HistorySectionTitle('BAKUGAN'),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final bakugan in player.bakuganUsed)
+                _HistoryBakuganMiniCard(bakugan: bakugan),
+            ],
           ),
         ],
       ),
@@ -1677,42 +1760,184 @@ class _HistoryPlayerCard extends StatelessWidget {
   }
 }
 
-class _HistorySection extends StatelessWidget {
+class _HistorySectionTitle extends StatelessWidget {
   final String title;
-  final List<String> items;
-  final String emptyLabel;
 
-  const _HistorySection({
-    required this.title,
-    required this.items,
-    this.emptyLabel = 'None',
+  const _HistorySectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: Colors.white60,
+        fontSize: 12,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.0,
+      ),
+    );
+  }
+}
+
+class _HistoryGateCardTicks extends StatelessWidget {
+  final int count;
+
+  const _HistoryGateCardTicks({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (index) {
+        final isFilled = index < count;
+        return Transform(
+          transform: Matrix4.skewX(-0.25),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: 28,
+            height: 42,
+            margin: const EdgeInsets.only(right: 6),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isFilled
+                    ? [
+                        Colors.cyanAccent,
+                        Colors.purpleAccent.withValues(alpha: 0.8),
+                      ]
+                    : [
+                        Colors.blueGrey.withValues(alpha: 0.4),
+                        Colors.black87,
+                      ],
+              ),
+              border: Border.all(
+                color: isFilled ? Colors.cyanAccent : Colors.white10,
+                width: 2.4,
+              ),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: isFilled
+                  ? [
+                      BoxShadow(
+                        color: Colors.cyanAccent.withValues(alpha: 0.45),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : const [],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _HistoryBakuganMiniCard extends StatelessWidget {
+  final MatchHistoryBakuganEntry bakugan;
+
+  const _HistoryBakuganMiniCard({required this.bakugan});
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = _historyAttributeColor(bakugan.attribute);
+    final variant = _historyVariantFromEntry(bakugan);
+    return SizedBox(
+      width: 148,
+      child: Column(
+        children: [
+          Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(-0.15),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor.withValues(alpha: 0.45)),
+              ),
+              child: SizedBox(
+                width: 132,
+                height: 102,
+                child: variant == null
+                    ? const SizedBox.expand()
+                    : BakuganPreview(
+                        variant: variant,
+                        speciesName: variant.speciesName,
+                        isDeck: true,
+                        autoRotate: false,
+                        disableInteraction: true,
+                        showGPower: false,
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            bakugan.speciesName.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${bakugan.gPower}G',
+            style: TextStyle(
+              color: borderColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryAbilityMiniCard extends StatelessWidget {
+  final MatchHistoryCardEntry? card;
+  final double width;
+  final double borderRadius;
+
+  const _HistoryAbilityMiniCard({
+    required this.card,
+    this.width = 74,
+    this.borderRadius = 10,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white60,
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.0,
+    final imagePath = card?.imagePath.isNotEmpty == true
+        ? card!.imagePath
+        : 'assets/images/cards/anverse.png';
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.08),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (_, error, stackTrace) => Image.asset(
+            'assets/images/cards/anverse.png',
+            fit: BoxFit.cover,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          items.isEmpty ? emptyLabel : items.join('\n'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            height: 1.35,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1724,61 +1949,446 @@ class _HistoryBattleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'BATTLE ${battle.battleNumber}',
-          style: const TextStyle(
-            color: Colors.amberAccent,
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.1,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${battle.leftPlayerName.toUpperCase()} (${battle.leftBakugan}) vs ${battle.rightPlayerName.toUpperCase()} (${battle.rightBakugan})',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            height: 1.3,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Winner: ${(battle.winnerName ?? 'Tie').toUpperCase()} • Gate: ${(battle.revealedGateCard ?? 'Unknown').toUpperCase()}',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        if (battle.leftAbilitiesUsed.isNotEmpty ||
-            battle.rightAbilitiesUsed.isNotEmpty ||
-            battle.externalAbilitiesUsed.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Text(
-            [
-              if (battle.leftAbilitiesUsed.isNotEmpty)
-                'L: ${battle.leftAbilitiesUsed.join(', ')}',
-              if (battle.rightAbilitiesUsed.isNotEmpty)
-                'R: ${battle.rightAbilitiesUsed.join(', ')}',
-              if (battle.externalAbilitiesUsed.isNotEmpty)
-                'EXT: ${battle.externalAbilitiesUsed.join(', ')}',
-            ].join(' • '),
-            style: const TextStyle(
-              color: Colors.cyanAccent,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              height: 1.35,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 28,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: Text(
+                    '${battle.leftPlayerName.toUpperCase()} VS ${battle.rightPlayerName.toUpperCase()}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.9,
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    'BATTLE ${battle.battleNumber}',
+                    style: const TextStyle(
+                      color: Colors.amberAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 900) {
+                return Column(
+                  children: [
+                    _HistoryBattleCompetitor(
+                      side: battle.leftSide,
+                      isLeftSide: true,
+                    ),
+                    const SizedBox(height: 14),
+                    _HistoryBattleGateCard(card: battle.revealedGateCard),
+                    const SizedBox(height: 14),
+                    _HistoryBattleCompetitor(
+                      side: battle.rightSide,
+                      isLeftSide: false,
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: _HistoryBattleCompetitor(
+                      side: battle.leftSide,
+                      isLeftSide: true,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  _HistoryBattleGateCard(card: battle.revealedGateCard),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _HistoryBattleCompetitor(
+                      side: battle.rightSide,
+                      isLeftSide: false,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          if (battle.externalAbilitiesUsed.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  const Text(
+                    'EXT',
+                    style: TextStyle(
+                      color: Colors.cyanAccent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  for (final card in battle.externalAbilitiesUsed)
+                    _HistoryAbilityMiniCard(
+                      card: card,
+                      borderRadius: 2,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryBattleCompetitor extends StatelessWidget {
+  final MatchHistoryBattleSideEntry side;
+  final bool isLeftSide;
+
+  const _HistoryBattleCompetitor({
+    required this.side,
+    required this.isLeftSide,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment:
+          isLeftSide ? MainAxisAlignment.start : MainAxisAlignment.end,
+      children: [
+        if (isLeftSide) ...[
+          _HistoryBattleBakuganMini(side: side),
+          if (side.abilitiesUsed.isNotEmpty) ...[
+            const SizedBox(width: 10),
+            Flexible(
+              child: Align(
+                alignment: Alignment.center,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final card in side.abilitiesUsed)
+                      _HistoryAbilityMiniCard(
+                        card: card,
+                        borderRadius: 2,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ] else ...[
+          if (side.abilitiesUsed.isNotEmpty) ...[
+            Flexible(
+              child: Align(
+                alignment: Alignment.center,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final card in side.abilitiesUsed)
+                      _HistoryAbilityMiniCard(
+                        card: card,
+                        borderRadius: 2,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+          _HistoryBattleBakuganMini(side: side),
         ],
       ],
     );
   }
+}
+
+class _HistoryBattleBakuganMini extends StatelessWidget {
+  final MatchHistoryBattleSideEntry side;
+
+  const _HistoryBattleBakuganMini({
+    required this.side,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = _historyAttributeColor(side.bakugan.attribute);
+    final variant = _historyVariantFromEntry(side.bakugan);
+    return SizedBox(
+      width: 170,
+      child: Column(
+        children: [
+          Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(-0.15),
+            child: CustomPaint(
+              foregroundPainter: _HistoryBakuganMiniBorderPainter(
+                color: borderColor.withValues(alpha: 0.6),
+                glowColor: side.isWinner ? borderColor : null,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 132,
+                    height: 102,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.03),
+                                  Colors.transparent,
+                                  borderColor.withValues(alpha: 0.03),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: GridPainter(
+                              color: borderColor.withValues(alpha: 0.1),
+                            ),
+                          ),
+                        ),
+                        if (variant != null)
+                          BakuganPreview(
+                            variant: variant,
+                            speciesName: variant.speciesName,
+                            isDeck: true,
+                            autoRotate: false,
+                            disableInteraction: true,
+                            showGPower: false,
+                            showGridBackground: false,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(-0.15),
+            child: Text(
+              side.bakugan.speciesName.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${side.finalGPower}G',
+            style: TextStyle(
+              color: borderColor,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryBakuganMiniBorderPainter extends CustomPainter {
+  final Color color;
+  final Color? glowColor;
+
+  const _HistoryBakuganMiniBorderPainter({
+    required this.color,
+    this.glowColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(14));
+
+    if (glowColor != null) {
+      final glowPaint = Paint()
+        ..color = glowColor!.withValues(alpha: 0.72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.8
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+      canvas.drawRRect(rrect, glowPaint);
+
+      final outerGlowPaint = Paint()
+        ..color = glowColor!.withValues(alpha: 0.34)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
+      canvas.drawRRect(rrect, outerGlowPaint);
+    }
+
+    final strokePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    canvas.drawRRect(rrect.deflate(0.7), strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _HistoryBakuganMiniBorderPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.glowColor != glowColor;
+  }
+}
+
+class _HistoryBattleGateCard extends StatelessWidget {
+  final MatchHistoryCardEntry? card;
+
+  const _HistoryBattleGateCard({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final imagePath = card?.imagePath.isNotEmpty == true
+        ? card!.imagePath
+        : 'assets/images/cards/anverse.png';
+    return SizedBox(
+      width: 136,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          IgnorePointer(
+            child: Container(
+              width: 136,
+              height: 190,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    blurRadius: 26,
+                    spreadRadius: 4,
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    blurRadius: 46,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
+              errorBuilder: (_, error, stackTrace) => Image.asset(
+                'assets/images/cards/anverse.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _historyAttributeColor(String attribute) {
+  switch (attribute.trim().toLowerCase()) {
+    case 'pyrus':
+      return Colors.redAccent;
+    case 'aquos':
+      return Colors.lightBlueAccent;
+    case 'subterra':
+      return Colors.orangeAccent;
+    case 'haos':
+      return Colors.amberAccent;
+    case 'darkus':
+      return Colors.deepPurpleAccent;
+    case 'ventus':
+      return Colors.greenAccent;
+    default:
+      return Colors.white70;
+  }
+}
+
+BakuganVariant? _historyVariantFromEntry(MatchHistoryBakuganEntry entry) {
+  final modelPath = entry.modelPath?.trim() ?? '';
+  if (modelPath.isNotEmpty) {
+    return BakuganVariant(
+      attribute: entry.attribute,
+      modelPath: modelPath,
+      color: _historyAttributeColor(entry.attribute),
+      gPower: entry.gPower,
+      speciesName: entry.speciesName,
+    );
+  }
+
+  for (final bakugan in availableBakugans) {
+    if (bakugan.name.trim().toLowerCase() !=
+        entry.speciesName.trim().toLowerCase()) {
+      continue;
+    }
+    for (final variant in bakugan.variants) {
+      if (variant.attribute.trim().toLowerCase() !=
+          entry.attribute.trim().toLowerCase()) {
+        continue;
+      }
+      if (entry.gPower > 0 && variant.gPower != entry.gPower) {
+        continue;
+      }
+      return variant;
+    }
+    for (final variant in bakugan.variants) {
+      if (variant.attribute.trim().toLowerCase() ==
+          entry.attribute.trim().toLowerCase()) {
+        return variant;
+      }
+    }
+  }
+
+  return null;
 }
 
 String _formatHistoryDate(String rawIsoDate) {

@@ -3953,7 +3953,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         if (_appliedExternalAbilitySlots.contains(
           '${entry.playerIndex}:${entry.slotIndex}',
         ))
-          entry.slot.card.name,
+          MatchHistoryCardEntry(
+            name: entry.slot.card.name,
+            imagePath: entry.slot.card.imagePath,
+          ),
     ];
     Navigator.of(context).pop({
       'winnerIndex': _winnerSideIndex,
@@ -3963,6 +3966,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
       'leftAbilitiesUsed': leftAbilitiesUsed,
       'rightAbilitiesUsed': rightAbilitiesUsed,
       'externalAbilitiesUsed': externalAbilitiesUsed,
+      'leftFinalGPower': _leftCurrentGPower,
+      'rightFinalGPower': _rightCurrentGPower,
       'usedGatePenaltySideIndex': _usedGatePenaltySideIndex(),
       'removedBakuganSideIndex':
           _winnerSideIndex != null && _hasAppliedRemoveLosingBakuganEffect()

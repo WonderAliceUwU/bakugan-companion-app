@@ -1773,8 +1773,16 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
           gateCardsWon: scores[_scoreIndexForPlayer(widget.players[i])],
           bakuganUsed: widget.players[i].deck
               .map(
-                (variant) =>
-                    '${variant.speciesName} (${variant.attribute.toUpperCase()} ${variant.gPower}G)',
+                (variant) => MatchHistoryBakuganEntry(
+                  speciesName: variant.speciesName,
+                  attribute: variant.attribute,
+                  gPower: variant.gPower,
+                  modelPath: variant.modelPath,
+                  imagePath: _historyBakuganImagePath(
+                    speciesName: variant.speciesName,
+                    attribute: variant.attribute,
+                  ),
+                ),
               )
               .toList(),
           abilitiesUsed:
@@ -1782,6 +1790,20 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                       const <String>{})
                   .toList()
                 ..sort(),
+          abilitySlots: List<MatchHistoryAbilitySlotEntry>.generate(3, (
+            slotIndex,
+          ) {
+            final presented = _presentedMatchAbilities[i][slotIndex];
+            return MatchHistoryAbilitySlotEntry(
+              slotIndex: slotIndex,
+              card: presented == null
+                  ? null
+                  : MatchHistoryCardEntry(
+                      name: presented.card.name,
+                      imagePath: presented.card.imagePath,
+                    ),
+            );
+          }),
         ),
     ];
 
@@ -1797,6 +1819,19 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       battles: List<MatchBattleRecord>.from(_battleHistory),
     );
     await LeaderboardRepository.instance.recordMatchHistory(entry);
+  }
+
+  MatchHistoryCardEntry _historyCardEntryForAbilityName(String name) {
+    final normalized = name.trim().toLowerCase();
+    for (final card in _matchAbilityCards.values) {
+      if (card.name.trim().toLowerCase() == normalized) {
+        return MatchHistoryCardEntry(name: card.name, imagePath: card.imagePath);
+      }
+    }
+    return MatchHistoryCardEntry(
+      name: name,
+      imagePath: 'assets/images/cards/anverse.png',
+    );
   }
 
   void _playClick() async {
@@ -2402,19 +2437,49 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       resultMap['externalAbilitiesUsed'] is List
                                       ? (resultMap['externalAbilitiesUsed']
                                                 as List)
-                                            .map((entry) => entry.toString())
+                                            .map((entry) {
+                                              if (entry is MatchHistoryCardEntry) {
+                                                return entry;
+                                              }
+                                              if (entry is Map) {
+                                                return MatchHistoryCardEntry.fromJson(
+                                                  Map<String, dynamic>.from(entry),
+                                                );
+                                              }
+                                              return MatchHistoryCardEntry(
+                                                name: entry.toString(),
+                                                imagePath:
+                                                    'assets/images/cards/anverse.png',
+                                              );
+                                            })
                                             .where(
                                               (entry) =>
-                                                  entry.trim().isNotEmpty,
+                                                  entry.name.trim().isNotEmpty,
                                             )
                                             .toList()
-                                      : const <String>[];
+                                      : const <MatchHistoryCardEntry>[];
+                                  final leftFinalGPower =
+                                      (resultMap['leftFinalGPower'] as num?)
+                                          ?.toInt() ??
+                                      (leftBakugan?.gPower ?? 0);
+                                  final rightFinalGPower =
+                                      (resultMap['rightFinalGPower'] as num?)
+                                          ?.toInt() ??
+                                      (rightBakugan?.gPower ?? 0);
                                   final PlayerData? winningPlayer =
                                       winnerIndex == null
                                       ? null
                                       : winnerIndex == 0
                                       ? previousLeftPlayer
                                       : previousRightPlayer;
+                                  final leftBakuganSpecies =
+                                      leftBakugan?.speciesName ?? '';
+                                  final leftBakuganAttribute =
+                                      leftBakugan?.attribute ?? '';
+                                  final rightBakuganSpecies =
+                                      rightBakugan?.speciesName ?? '';
+                                  final rightBakuganAttribute =
+                                      rightBakugan?.attribute ?? '';
                                   final hasRemovedBakugan =
                                       removedBakuganSideIndex != null;
                                   _battleHistory.add(
@@ -2424,14 +2489,60 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           previousLeftPlayer?.name ?? '',
                                       rightPlayerName:
                                           previousRightPlayer?.name ?? '',
-                                      leftBakugan:
-                                          leftBakugan?.speciesName ?? '',
-                                      rightBakugan:
-                                          rightBakugan?.speciesName ?? '',
+                                      leftSide: MatchHistoryBattleSideEntry(
+                                        bakugan: MatchHistoryBakuganEntry(
+                                          speciesName: leftBakuganSpecies,
+                                          attribute: leftBakuganAttribute,
+                                          gPower: leftBakugan?.gPower ?? 0,
+                                          modelPath: leftBakugan?.modelPath ?? '',
+                                          imagePath: leftBakuganSpecies.isEmpty ||
+                                                  leftBakuganAttribute.isEmpty
+                                              ? ''
+                                              : _historyBakuganImagePath(
+                                                  speciesName:
+                                                      leftBakuganSpecies,
+                                                  attribute:
+                                                      leftBakuganAttribute,
+                                                ),
+                                        ),
+                                        finalGPower: leftFinalGPower,
+                                        isWinner: winnerIndex == 0,
+                                        abilitiesUsed: leftAbilitiesUsed
+                                            .map(_historyCardEntryForAbilityName)
+                                            .toList(),
+                                      ),
+                                      rightSide: MatchHistoryBattleSideEntry(
+                                        bakugan: MatchHistoryBakuganEntry(
+                                          speciesName: rightBakuganSpecies,
+                                          attribute: rightBakuganAttribute,
+                                          gPower: rightBakugan?.gPower ?? 0,
+                                          modelPath:
+                                              rightBakugan?.modelPath ?? '',
+                                          imagePath:
+                                              rightBakuganSpecies.isEmpty ||
+                                                  rightBakuganAttribute.isEmpty
+                                              ? ''
+                                              : _historyBakuganImagePath(
+                                                  speciesName:
+                                                      rightBakuganSpecies,
+                                                  attribute:
+                                                      rightBakuganAttribute,
+                                                ),
+                                        ),
+                                        finalGPower: rightFinalGPower,
+                                        isWinner: winnerIndex == 1,
+                                        abilitiesUsed: rightAbilitiesUsed
+                                            .map(_historyCardEntryForAbilityName)
+                                            .toList(),
+                                      ),
                                       winnerName: winningPlayer?.name,
-                                      revealedGateCard: revealedGateCard?.name,
-                                      leftAbilitiesUsed: leftAbilitiesUsed,
-                                      rightAbilitiesUsed: rightAbilitiesUsed,
+                                      revealedGateCard: revealedGateCard == null
+                                          ? null
+                                          : MatchHistoryCardEntry(
+                                              name: revealedGateCard.name,
+                                              imagePath:
+                                                  revealedGateCard.imagePath,
+                                            ),
                                       externalAbilitiesUsed:
                                           externalAbilitiesUsed,
                                     ),

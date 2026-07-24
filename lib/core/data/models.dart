@@ -457,8 +457,9 @@ class MatchHistoryPlayerEntry {
   final bool isSavedProfile;
   final bool isWinner;
   final int gateCardsWon;
-  final List<String> bakuganUsed;
+  final List<MatchHistoryBakuganEntry> bakuganUsed;
   final List<String> abilitiesUsed;
+  final List<MatchHistoryAbilitySlotEntry> abilitySlots;
 
   const MatchHistoryPlayerEntry({
     required this.name,
@@ -468,6 +469,7 @@ class MatchHistoryPlayerEntry {
     required this.gateCardsWon,
     this.bakuganUsed = const [],
     this.abilitiesUsed = const [],
+    this.abilitySlots = const [],
   });
 
   factory MatchHistoryPlayerEntry.fromJson(Map<String, dynamic> json) {
@@ -484,8 +486,32 @@ class MatchHistoryPlayerEntry {
       isSavedProfile: json['isSavedProfile'] == true,
       isWinner: json['isWinner'] == true,
       gateCardsWon: (json['gateCardsWon'] as num?)?.toInt() ?? 0,
-      bakuganUsed: parseList('bakuganUsed'),
+      bakuganUsed: json['bakuganUsed'] is List
+          ? (json['bakuganUsed'] as List)
+                .map((entry) {
+                  if (entry is Map) {
+                    return MatchHistoryBakuganEntry.fromJson(
+                      Map<String, dynamic>.from(entry),
+                    );
+                  }
+                  return MatchHistoryBakuganEntry.fromLegacyLabel(
+                    entry.toString(),
+                  );
+                })
+                .where((entry) => entry.speciesName.trim().isNotEmpty)
+                .toList()
+          : const [],
       abilitiesUsed: parseList('abilitiesUsed'),
+      abilitySlots: json['abilitySlots'] is List
+          ? (json['abilitySlots'] as List)
+                .whereType<Map>()
+                .map(
+                  (entry) => MatchHistoryAbilitySlotEntry.fromJson(
+                    Map<String, dynamic>.from(entry),
+                  ),
+                )
+                .toList()
+          : const [],
     );
   }
 
@@ -495,8 +521,9 @@ class MatchHistoryPlayerEntry {
     'isSavedProfile': isSavedProfile,
     'isWinner': isWinner,
     'gateCardsWon': gateCardsWon,
-    'bakuganUsed': bakuganUsed,
+    'bakuganUsed': bakuganUsed.map((entry) => entry.toJson()).toList(),
     'abilitiesUsed': abilitiesUsed,
+    'abilitySlots': abilitySlots.map((entry) => entry.toJson()).toList(),
   };
 }
 
@@ -504,35 +531,24 @@ class MatchBattleRecord {
   final int battleNumber;
   final String leftPlayerName;
   final String rightPlayerName;
-  final String leftBakugan;
-  final String rightBakugan;
+  final MatchHistoryBattleSideEntry leftSide;
+  final MatchHistoryBattleSideEntry rightSide;
   final String? winnerName;
-  final String? revealedGateCard;
-  final List<String> leftAbilitiesUsed;
-  final List<String> rightAbilitiesUsed;
-  final List<String> externalAbilitiesUsed;
+  final MatchHistoryCardEntry? revealedGateCard;
+  final List<MatchHistoryCardEntry> externalAbilitiesUsed;
 
   const MatchBattleRecord({
     required this.battleNumber,
     required this.leftPlayerName,
     required this.rightPlayerName,
-    required this.leftBakugan,
-    required this.rightBakugan,
+    required this.leftSide,
+    required this.rightSide,
     this.winnerName,
     this.revealedGateCard,
-    this.leftAbilitiesUsed = const [],
-    this.rightAbilitiesUsed = const [],
     this.externalAbilitiesUsed = const [],
   });
 
   factory MatchBattleRecord.fromJson(Map<String, dynamic> json) {
-    List<String> parseList(String key) => json[key] is List
-        ? (json[key] as List)
-              .map((entry) => entry.toString())
-              .where((entry) => entry.trim().isNotEmpty)
-              .toList()
-        : const [];
-
     return MatchBattleRecord(
       battleNumber: (json['battleNumber'] as num?)?.toInt() ?? 0,
       leftPlayerName: _sanitizePlayerName(
@@ -541,18 +557,61 @@ class MatchBattleRecord {
       rightPlayerName: _sanitizePlayerName(
         (json['rightPlayerName'] ?? '').toString(),
       ),
-      leftBakugan: (json['leftBakugan'] ?? '').toString(),
-      rightBakugan: (json['rightBakugan'] ?? '').toString(),
+      leftSide: json['leftSide'] is Map
+          ? MatchHistoryBattleSideEntry.fromJson(
+              Map<String, dynamic>.from(json['leftSide'] as Map),
+            )
+          : MatchHistoryBattleSideEntry.fromLegacy(
+              bakuganName: (json['leftBakugan'] ?? '').toString(),
+              abilitiesUsed: json['leftAbilitiesUsed'] is List
+                  ? (json['leftAbilitiesUsed'] as List)
+                        .map((entry) => entry.toString())
+                        .where((entry) => entry.trim().isNotEmpty)
+                        .toList()
+                  : const [],
+            ),
+      rightSide: json['rightSide'] is Map
+          ? MatchHistoryBattleSideEntry.fromJson(
+              Map<String, dynamic>.from(json['rightSide'] as Map),
+            )
+          : MatchHistoryBattleSideEntry.fromLegacy(
+              bakuganName: (json['rightBakugan'] ?? '').toString(),
+              abilitiesUsed: json['rightAbilitiesUsed'] is List
+                  ? (json['rightAbilitiesUsed'] as List)
+                        .map((entry) => entry.toString())
+                        .where((entry) => entry.trim().isNotEmpty)
+                        .toList()
+                  : const [],
+            ),
       winnerName: (json['winnerName'] ?? '').toString().trim().isEmpty
           ? null
           : _sanitizePlayerName(json['winnerName'].toString()),
-      revealedGateCard:
-          (json['revealedGateCard'] ?? '').toString().trim().isEmpty
+      revealedGateCard: json['revealedGateCard'] is Map
+          ? MatchHistoryCardEntry.fromJson(
+              Map<String, dynamic>.from(json['revealedGateCard'] as Map),
+            )
+          : (json['revealedGateCard'] ?? '').toString().trim().isEmpty
           ? null
-          : json['revealedGateCard'].toString(),
-      leftAbilitiesUsed: parseList('leftAbilitiesUsed'),
-      rightAbilitiesUsed: parseList('rightAbilitiesUsed'),
-      externalAbilitiesUsed: parseList('externalAbilitiesUsed'),
+          : MatchHistoryCardEntry(
+              name: json['revealedGateCard'].toString(),
+              imagePath: 'assets/images/cards/anverse.png',
+            ),
+      externalAbilitiesUsed: json['externalAbilitiesUsed'] is List
+          ? (json['externalAbilitiesUsed'] as List)
+                .map((entry) {
+                  if (entry is Map) {
+                    return MatchHistoryCardEntry.fromJson(
+                      Map<String, dynamic>.from(entry),
+                    );
+                  }
+                  return MatchHistoryCardEntry(
+                    name: entry.toString(),
+                    imagePath: 'assets/images/cards/anverse.png',
+                  );
+                })
+                .where((entry) => entry.name.trim().isNotEmpty)
+                .toList()
+          : const [],
     );
   }
 
@@ -560,14 +619,199 @@ class MatchBattleRecord {
     'battleNumber': battleNumber,
     'leftPlayerName': leftPlayerName,
     'rightPlayerName': rightPlayerName,
-    'leftBakugan': leftBakugan,
-    'rightBakugan': rightBakugan,
+    'leftSide': leftSide.toJson(),
+    'rightSide': rightSide.toJson(),
     'winnerName': winnerName,
-    'revealedGateCard': revealedGateCard,
-    'leftAbilitiesUsed': leftAbilitiesUsed,
-    'rightAbilitiesUsed': rightAbilitiesUsed,
-    'externalAbilitiesUsed': externalAbilitiesUsed,
+    'revealedGateCard': revealedGateCard?.toJson(),
+    'externalAbilitiesUsed': externalAbilitiesUsed
+        .map((entry) => entry.toJson())
+        .toList(),
   };
+}
+
+class MatchHistoryBakuganEntry {
+  final String speciesName;
+  final String attribute;
+  final int gPower;
+  final String? modelPath;
+  final String? imagePath;
+
+  const MatchHistoryBakuganEntry({
+    required this.speciesName,
+    required this.attribute,
+    required this.gPower,
+    required this.modelPath,
+    required this.imagePath,
+  });
+
+  factory MatchHistoryBakuganEntry.fromJson(Map<String, dynamic> json) {
+    return MatchHistoryBakuganEntry(
+      speciesName: (json['speciesName'] ?? '').toString(),
+      attribute: (json['attribute'] ?? '').toString(),
+      gPower: (json['gPower'] as num?)?.toInt() ?? 0,
+      modelPath: json['modelPath']?.toString(),
+      imagePath: json['imagePath']?.toString(),
+    );
+  }
+
+  factory MatchHistoryBakuganEntry.fromLegacyLabel(String label) {
+    final trimmed = label.trim();
+    final regex = RegExp(r'^(.*?)\s*\(([A-Z]+)\s+(\d+)G\)$');
+    final match = regex.firstMatch(trimmed);
+    if (match == null) {
+      return MatchHistoryBakuganEntry(
+        speciesName: trimmed,
+        attribute: '',
+        gPower: 0,
+        modelPath: null,
+        imagePath: null,
+      );
+    }
+    final speciesName = match.group(1)?.trim() ?? trimmed;
+    final attribute = (match.group(2) ?? '').toLowerCase();
+    return MatchHistoryBakuganEntry(
+      speciesName: speciesName,
+      attribute: attribute,
+      gPower: int.tryParse(match.group(3) ?? '') ?? 0,
+      modelPath: null,
+      imagePath: null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'speciesName': speciesName,
+    'attribute': attribute,
+    'gPower': gPower,
+    'modelPath': modelPath,
+    'imagePath': imagePath,
+  };
+}
+
+class MatchHistoryCardEntry {
+  final String name;
+  final String imagePath;
+
+  const MatchHistoryCardEntry({required this.name, required this.imagePath});
+
+  factory MatchHistoryCardEntry.fromJson(Map<String, dynamic> json) {
+    return MatchHistoryCardEntry(
+      name: (json['name'] ?? '').toString(),
+      imagePath: (json['imagePath'] ?? '').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'name': name, 'imagePath': imagePath};
+}
+
+class MatchHistoryAbilitySlotEntry {
+  final int slotIndex;
+  final MatchHistoryCardEntry? card;
+
+  const MatchHistoryAbilitySlotEntry({required this.slotIndex, this.card});
+
+  factory MatchHistoryAbilitySlotEntry.fromJson(Map<String, dynamic> json) {
+    return MatchHistoryAbilitySlotEntry(
+      slotIndex: (json['slotIndex'] as num?)?.toInt() ?? 0,
+      card: json['card'] is Map
+          ? MatchHistoryCardEntry.fromJson(
+              Map<String, dynamic>.from(json['card'] as Map),
+            )
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'slotIndex': slotIndex,
+    'card': card?.toJson(),
+  };
+}
+
+class MatchHistoryBattleSideEntry {
+  final MatchHistoryBakuganEntry bakugan;
+  final int finalGPower;
+  final bool isWinner;
+  final List<MatchHistoryCardEntry> abilitiesUsed;
+
+  const MatchHistoryBattleSideEntry({
+    required this.bakugan,
+    required this.finalGPower,
+    required this.isWinner,
+    this.abilitiesUsed = const [],
+  });
+
+  factory MatchHistoryBattleSideEntry.fromJson(Map<String, dynamic> json) {
+    return MatchHistoryBattleSideEntry(
+      bakugan: json['bakugan'] is Map
+          ? MatchHistoryBakuganEntry.fromJson(
+              Map<String, dynamic>.from(json['bakugan'] as Map),
+            )
+          : MatchHistoryBakuganEntry.fromLegacyLabel(
+              (json['bakuganName'] ?? '').toString(),
+            ),
+      finalGPower: (json['finalGPower'] as num?)?.toInt() ?? 0,
+      isWinner: json['isWinner'] == true,
+      abilitiesUsed: json['abilitiesUsed'] is List
+          ? (json['abilitiesUsed'] as List)
+                .map((entry) {
+                  if (entry is Map) {
+                    return MatchHistoryCardEntry.fromJson(
+                      Map<String, dynamic>.from(entry),
+                    );
+                  }
+                  return MatchHistoryCardEntry(
+                    name: entry.toString(),
+                    imagePath: 'assets/images/cards/anverse.png',
+                  );
+                })
+                .where((entry) => entry.name.trim().isNotEmpty)
+                .toList()
+          : const [],
+    );
+  }
+
+  factory MatchHistoryBattleSideEntry.fromLegacy({
+    required String bakuganName,
+    required List<String> abilitiesUsed,
+  }) {
+    return MatchHistoryBattleSideEntry(
+      bakugan: MatchHistoryBakuganEntry.fromLegacyLabel(bakuganName),
+      finalGPower: 0,
+      isWinner: false,
+      abilitiesUsed: abilitiesUsed
+          .map(
+            (entry) => MatchHistoryCardEntry(
+              name: entry,
+              imagePath: 'assets/images/cards/anverse.png',
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'bakugan': bakugan.toJson(),
+    'finalGPower': finalGPower,
+    'isWinner': isWinner,
+    'abilitiesUsed': abilitiesUsed.map((entry) => entry.toJson()).toList(),
+  };
+}
+
+String _historyBakuganSpeciesSlug(String value) {
+  return value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+      .replaceAll(RegExp(r'_+'), '_')
+      .replaceAll(RegExp(r'^_|_$'), '');
+}
+
+String _historyBakuganImagePath({
+  required String speciesName,
+  required String attribute,
+}) {
+  final speciesSlug = _historyBakuganSpeciesSlug(speciesName);
+  final attributeSlug = attribute.trim().toLowerCase();
+  return 'assets/images/bakugan/$speciesSlug/${speciesSlug}_$attributeSlug.png';
 }
 
 class MatchHistoryEntry {
