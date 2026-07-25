@@ -1567,7 +1567,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       unawaited(_playPointCaptureSound());
     }
     if (didWinMatch) {
-      unawaited(_recordLeaderboardMatch(index));
+      await _recordLeaderboardMatch(index);
+      await _recordMatchHistory(index);
       await _playMatchWinSound();
     }
   }
@@ -2384,13 +2385,15 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                           _activeGlobalGateEffects,
                                     ),
                                   ),
-                                ).then((result) {
+                                ).then((result) async {
                                   if (!mounted) return;
                                   final resultMap = result is Map
                                       ? Map<String, dynamic>.from(result)
                                       : const <String, dynamic>{};
                                   final int? winnerIndex =
                                       resultMap['winnerIndex'] as int?;
+                                  final bool isTieResult =
+                                      resultMap['isTieResult'] == true;
                                   final int? usedGatePenaltySideIndex =
                                       resultMap['usedGatePenaltySideIndex']
                                           as int?;
@@ -2482,71 +2485,79 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       rightBakugan?.attribute ?? '';
                                   final hasRemovedBakugan =
                                       removedBakuganSideIndex != null;
-                                  _battleHistory.add(
-                                    MatchBattleRecord(
-                                      battleNumber: _battleHistory.length + 1,
-                                      leftPlayerName:
-                                          previousLeftPlayer?.name ?? '',
-                                      rightPlayerName:
-                                          previousRightPlayer?.name ?? '',
-                                      leftSide: MatchHistoryBattleSideEntry(
-                                        bakugan: MatchHistoryBakuganEntry(
-                                          speciesName: leftBakuganSpecies,
-                                          attribute: leftBakuganAttribute,
-                                          gPower: leftBakugan?.gPower ?? 0,
-                                          modelPath: leftBakugan?.modelPath ?? '',
-                                          imagePath: leftBakuganSpecies.isEmpty ||
-                                                  leftBakuganAttribute.isEmpty
-                                              ? ''
-                                              : _historyBakuganImagePath(
-                                                  speciesName:
-                                                      leftBakuganSpecies,
-                                                  attribute:
-                                                      leftBakuganAttribute,
-                                                ),
+                                  if (winnerIndex != null || isTieResult) {
+                                    _battleHistory.add(
+                                      MatchBattleRecord(
+                                        battleNumber: _battleHistory.length + 1,
+                                        leftPlayerName:
+                                            previousLeftPlayer?.name ?? '',
+                                        rightPlayerName:
+                                            previousRightPlayer?.name ?? '',
+                                        leftSide: MatchHistoryBattleSideEntry(
+                                          bakugan: MatchHistoryBakuganEntry(
+                                            speciesName: leftBakuganSpecies,
+                                            attribute: leftBakuganAttribute,
+                                            gPower: leftBakugan?.gPower ?? 0,
+                                            modelPath:
+                                                leftBakugan?.modelPath ?? '',
+                                            imagePath:
+                                                leftBakuganSpecies.isEmpty ||
+                                                    leftBakuganAttribute.isEmpty
+                                                ? ''
+                                                : _historyBakuganImagePath(
+                                                    speciesName:
+                                                        leftBakuganSpecies,
+                                                    attribute:
+                                                        leftBakuganAttribute,
+                                                  ),
+                                          ),
+                                          finalGPower: leftFinalGPower,
+                                          isWinner: winnerIndex == 0,
+                                          abilitiesUsed: leftAbilitiesUsed
+                                              .map(
+                                                _historyCardEntryForAbilityName,
+                                              )
+                                              .toList(),
                                         ),
-                                        finalGPower: leftFinalGPower,
-                                        isWinner: winnerIndex == 0,
-                                        abilitiesUsed: leftAbilitiesUsed
-                                            .map(_historyCardEntryForAbilityName)
-                                            .toList(),
-                                      ),
-                                      rightSide: MatchHistoryBattleSideEntry(
-                                        bakugan: MatchHistoryBakuganEntry(
-                                          speciesName: rightBakuganSpecies,
-                                          attribute: rightBakuganAttribute,
-                                          gPower: rightBakugan?.gPower ?? 0,
-                                          modelPath:
-                                              rightBakugan?.modelPath ?? '',
-                                          imagePath:
-                                              rightBakuganSpecies.isEmpty ||
-                                                  rightBakuganAttribute.isEmpty
-                                              ? ''
-                                              : _historyBakuganImagePath(
-                                                  speciesName:
-                                                      rightBakuganSpecies,
-                                                  attribute:
-                                                      rightBakuganAttribute,
-                                                ),
+                                        rightSide: MatchHistoryBattleSideEntry(
+                                          bakugan: MatchHistoryBakuganEntry(
+                                            speciesName: rightBakuganSpecies,
+                                            attribute: rightBakuganAttribute,
+                                            gPower: rightBakugan?.gPower ?? 0,
+                                            modelPath:
+                                                rightBakugan?.modelPath ?? '',
+                                            imagePath:
+                                                rightBakuganSpecies.isEmpty ||
+                                                    rightBakuganAttribute.isEmpty
+                                                ? ''
+                                                : _historyBakuganImagePath(
+                                                    speciesName:
+                                                        rightBakuganSpecies,
+                                                    attribute:
+                                                        rightBakuganAttribute,
+                                                  ),
+                                          ),
+                                          finalGPower: rightFinalGPower,
+                                          isWinner: winnerIndex == 1,
+                                          abilitiesUsed: rightAbilitiesUsed
+                                              .map(
+                                                _historyCardEntryForAbilityName,
+                                              )
+                                              .toList(),
                                         ),
-                                        finalGPower: rightFinalGPower,
-                                        isWinner: winnerIndex == 1,
-                                        abilitiesUsed: rightAbilitiesUsed
-                                            .map(_historyCardEntryForAbilityName)
-                                            .toList(),
+                                        winnerName: winningPlayer?.name,
+                                        revealedGateCard: revealedGateCard == null
+                                            ? null
+                                            : MatchHistoryCardEntry(
+                                                name: revealedGateCard.name,
+                                                imagePath:
+                                                    revealedGateCard.imagePath,
+                                              ),
+                                        externalAbilitiesUsed:
+                                            externalAbilitiesUsed,
                                       ),
-                                      winnerName: winningPlayer?.name,
-                                      revealedGateCard: revealedGateCard == null
-                                          ? null
-                                          : MatchHistoryCardEntry(
-                                              name: revealedGateCard.name,
-                                              imagePath:
-                                                  revealedGateCard.imagePath,
-                                            ),
-                                      externalAbilitiesUsed:
-                                          externalAbilitiesUsed,
-                                    ),
-                                  );
+                                    );
+                                  }
                                   for (final ability in leftAbilitiesUsed) {
                                     _abilitiesUsedByPlayer
                                         .putIfAbsent(
@@ -2633,13 +2644,11 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       unawaited(_playPointCaptureSound());
                                     }
                                     if (didWinMatch) {
-                                      unawaited(
-                                        _recordLeaderboardMatch(
-                                          _matchWinnerIndex!,
-                                        ),
+                                      await _recordLeaderboardMatch(
+                                        _matchWinnerIndex!,
                                       );
-                                      unawaited(
-                                        _recordMatchHistory(_matchWinnerIndex!),
+                                      await _recordMatchHistory(
+                                        _matchWinnerIndex!,
                                       );
                                       unawaited(_playMatchWinSound());
                                     }

@@ -40,58 +40,22 @@ class PlayerData {
 }
 
 const int _defaultLeaderboardPoints = 1000;
-const int _eloKFactor = 32;
 const int _minimumLeaderboardDelta = 1;
 const int _minimumRankedMatches = 5;
 const int _currentSeasonNumber = 2;
+const int _lossWithZeroGateCards = 16;
+const int _lossWithOneGateCard = 12;
+const int _lossWithTwoOrMoreGateCards = 8;
 
 String _sanitizePlayerName(String value) =>
     value.trim().replaceAll(RegExp(r'\s+'), ' ');
 
 String _playerNameKey(String value) => _sanitizePlayerName(value).toLowerCase();
 
-double _expectedScore(int playerPoints, int opponentPoints) {
-  return 1 / (1 + pow(10, (opponentPoints - playerPoints) / 400));
-}
-
-Map<String, int> _roundPointDeltasPreservingTotal(
-  Map<String, double> rawDeltas,
-) {
-  final rounded = <String, int>{};
-  final residuals = <String, double>{};
-
-  for (final entry in rawDeltas.entries) {
-    final value = entry.value.round();
-    rounded[entry.key] = value;
-    residuals[entry.key] = entry.value - value;
-  }
-
-  int remainder = -rounded.values.fold(0, (sum, value) => sum + value);
-  if (remainder == 0) return rounded;
-
-  final keys = rawDeltas.keys.toList();
-  keys.sort((a, b) {
-    final residualCompare = remainder > 0
-        ? residuals[b]!.compareTo(residuals[a]!)
-        : residuals[a]!.compareTo(residuals[b]!);
-    if (residualCompare != 0) return residualCompare;
-    return a.compareTo(b);
-  });
-
-  int index = 0;
-  while (remainder != 0 && keys.isNotEmpty) {
-    final key = keys[index % keys.length];
-    rounded[key] = (rounded[key] ?? 0) + (remainder > 0 ? 1 : -1);
-    remainder += remainder > 0 ? -1 : 1;
-    index++;
-  }
-
-  return rounded;
-}
-
 Map<String, int> _computeZeroSumMatchDeltas({
   required List<LeaderboardEntry> winnerEntries,
   required List<LeaderboardEntry> loserEntries,
+  Map<String, int> gateCardsWonByPlayer = const {},
 }) {
   if (winnerEntries.isEmpty) return const {};
   if (loserEntries.isEmpty) {
@@ -101,66 +65,42 @@ Map<String, int> _computeZeroSumMatchDeltas({
     };
   }
 
-  final rawDeltas = <String, double>{
-    for (final winner in winnerEntries) _playerNameKey(winner.name): 0,
-    for (final loser in loserEntries) _playerNameKey(loser.name): 0,
-  };
-
-  final pairKFactor =
-      _eloKFactor / max(winnerEntries.length, loserEntries.length);
-
-  for (final winner in winnerEntries) {
-    final winnerKey = _playerNameKey(winner.name);
-    for (final loser in loserEntries) {
-      final loserKey = _playerNameKey(loser.name);
-      final expectedWinner = _expectedScore(winner.points, loser.points);
-      final pairDelta = pairKFactor * (1 - expectedWinner);
-      rawDeltas[winnerKey] = (rawDeltas[winnerKey] ?? 0) + pairDelta;
-      rawDeltas[loserKey] = (rawDeltas[loserKey] ?? 0) - pairDelta;
-    }
-  }
-
-  final rounded = _roundPointDeltasPreservingTotal(rawDeltas);
   final capped = <String, int>{};
-
-  for (final winner in winnerEntries) {
-    final key = _playerNameKey(winner.name);
-    capped[key] = max(0, rounded[key] ?? 0);
-  }
 
   int totalLossesApplied = 0;
   for (final loser in loserEntries) {
     final key = _playerNameKey(loser.name);
-    final plannedLoss = max(0, -(rounded[key] ?? 0));
-    final appliedLoss = min(plannedLoss, loser.points);
+    final gateCardsWon = gateCardsWonByPlayer[key] ?? 0;
+    final targetLoss = switch (gateCardsWon) {
+      >= 2 => _lossWithTwoOrMoreGateCards,
+      1 => _lossWithOneGateCard,
+      _ => _lossWithZeroGateCards,
+    };
+    final appliedLoss = min(
+      loser.points,
+      max(_minimumLeaderboardDelta, targetLoss),
+    );
     capped[key] = -appliedLoss;
     totalLossesApplied += appliedLoss;
   }
 
-  final positiveKeys = [
-    for (final winner in winnerEntries)
-      if ((capped[_playerNameKey(winner.name)] ?? 0) > 0)
-        _playerNameKey(winner.name),
-  ];
+  if (totalLossesApplied <= 0) return capped;
 
-  if (positiveKeys.isEmpty) return capped;
-
-  final scaledPositiveRaw = <String, double>{};
-  final totalPositivePlanned = positiveKeys.fold<int>(
-    0,
-    (sum, key) => sum + (capped[key] ?? 0),
-  );
-
-  if (totalPositivePlanned <= 0) return capped;
-
-  for (final key in positiveKeys) {
-    scaledPositiveRaw[key] =
-        (capped[key] ?? 0) * totalLossesApplied / totalPositivePlanned;
+  final winnerKeys = [
+    for (final winner in winnerEntries) _playerNameKey(winner.name),
+  ]..sort();
+  final baseWinnerShare = totalLossesApplied ~/ winnerKeys.length;
+  int remainder = totalLossesApplied % winnerKeys.length;
+  for (final key in winnerKeys) {
+    final bonus = remainder > 0 ? 1 : 0;
+    if (remainder > 0) {
+      remainder--;
+    }
+    capped[key] = max(0, baseWinnerShare + bonus);
   }
-
-  final scaledPositive = _roundPointDeltasPreservingTotal(scaledPositiveRaw);
-  for (final key in positiveKeys) {
-    capped[key] = max(0, scaledPositive[key] ?? 0);
+  for (final winner in winnerEntries) {
+    final key = _playerNameKey(winner.name);
+    capped.putIfAbsent(key, () => 0);
   }
 
   return capped;
@@ -1112,6 +1052,7 @@ class LeaderboardRepository {
     final pointDeltas = _computeZeroSumMatchDeltas(
       winnerEntries: winnerEntries,
       loserEntries: loserEntries,
+      gateCardsWonByPlayer: sanitizedGateCardsWonByPlayer,
     );
 
     for (final name in winnerNames) {

@@ -3960,6 +3960,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     ];
     Navigator.of(context).pop({
       'winnerIndex': _winnerSideIndex,
+      'isTieResult': _isTieResult,
       'leftBakuganIndex': _leftBattleBakuganIndex,
       'rightBakuganIndex': _rightBattleBakuganIndex,
       'revealedGateCard': _revealedCard,
@@ -3989,6 +3990,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     if (!mounted) return;
     Navigator.of(context).pop({
       'winnerIndex': null,
+      'isTieResult': false,
       'leftBakuganIndex': _leftBattleBakuganIndex,
       'rightBakuganIndex': _rightBattleBakuganIndex,
     });

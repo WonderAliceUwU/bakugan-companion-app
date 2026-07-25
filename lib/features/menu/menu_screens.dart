@@ -145,143 +145,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     await Navigator.of(context).push(_fadeRoute(const MatchHistoryScreen()));
   }
 
-  Future<void> _quickBackup() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final exportedPath = await LeaderboardRepository.instance.exportToFile();
-      if (!mounted) return;
-      await _playUiConfirmSound();
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text('Backup saved to $exportedPath')),
-        );
-    } catch (error) {
-      if (!mounted) return;
-      await _playUiCancelSound();
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('Backup failed: $error')));
-    }
-  }
-
-  @override
-  void dispose() {
-    _sfxPlayer.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/Menu.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final availableWidth = min(920.0, constraints.maxWidth);
-                    final isCompact = availableWidth < 760;
-                    final buttonWidth = isCompact
-                        ? min(420.0, availableWidth)
-                        : (availableWidth - 24) / 2;
-
-                    final buttons = [
-                      BakuganButton(
-                        text: 'BATTLE',
-                        onPressed: _navigateToBattleMode,
-                        width: buttonWidth,
-                        height: 100,
-                      ),
-                      BakuganButton(
-                        text: 'LEADERBOARD',
-                        onPressed: _navigateToLeaderboard,
-                        width: buttonWidth,
-                        height: 100,
-                      ),
-                      BakuganButton(
-                        text: 'HISTORY',
-                        onPressed: _navigateToHistory,
-                        width: buttonWidth,
-                        height: 100,
-                      ),
-                      BakuganButton(
-                        text: 'QUICK BACKUP',
-                        onPressed: _quickBackup,
-                        width: buttonWidth,
-                        height: 100,
-                      ),
-                    ];
-
-                    return SizedBox(
-                      width: availableWidth,
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 24,
-                        runSpacing: 24,
-                        children: buttons,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class LeaderboardScreen extends StatefulWidget {
-  const LeaderboardScreen({super.key});
-
-  @override
-  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
-}
-
-class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  late Future<LeaderboardStore> _leaderboardFuture;
-  bool _isEditingLeaderboard = false;
-  int? _selectedSeasonNumber;
-
-  @override
-  void initState() {
-    super.initState();
-    _leaderboardFuture = LeaderboardRepository.instance.loadStore();
-  }
-
-  Future<void> _reload() async {
-    final future = LeaderboardRepository.instance.loadStore();
-    setState(() => _leaderboardFuture = future);
-    await future;
-  }
-
-  Future<void> _deleteLeaderboardPlayer(String name) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final data = await LeaderboardRepository.instance.deleteSavedPlayer(name);
-    final store = await LeaderboardRepository.instance.loadStore();
-    if (!mounted) return;
-    setState(() {
-      _leaderboardFuture = Future.value(store);
-      if (data.players.isEmpty) {
-        _isEditingLeaderboard = false;
-      }
-    });
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$name deleted.')));
-  }
-
   Future<String?> _showPathPrompt({
     required String title,
     required String confirmLabel,
@@ -452,20 +315,20 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return result;
   }
 
-  Future<void> _exportLeaderboard() async {
+  Future<void> _exportBackup() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final suggestedPath = await LeaderboardRepository.instance
           .suggestedBackupPath();
       if (!mounted) return;
       final selectedPath = await _showPathPrompt(
-        title: 'EXPORT LEADERBOARD',
+        title: 'EXPORT BACKUP',
         confirmLabel: 'EXPORT',
         initialPath: suggestedPath,
         onExplore: () async {
           final fileName = suggestedPath.split(Platform.pathSeparator).last;
           final selectedPath = await FilePicker.platform.saveFile(
-            dialogTitle: 'Export Leaderboard',
+            dialogTitle: 'Export Backup',
             fileName: fileName,
             type: FileType.custom,
             allowedExtensions: const ['json'],
@@ -478,7 +341,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               : '$selectedPath.json';
         },
         subtitle:
-            'This creates a backup JSON with saved players and ranking progress.',
+            'This exports the full app state to a JSON backup, including saved players, leaderboard seasons, and match history.',
       );
       if (!mounted || selectedPath == null || selectedPath.trim().isEmpty) {
         return;
@@ -487,29 +350,31 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         selectedPath,
       );
       if (!mounted) return;
+      await _playUiConfirmSound();
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Leaderboard exported to $exportedPath')),
+          SnackBar(content: Text('Backup saved to $exportedPath')),
         );
     } catch (error) {
       if (!mounted) return;
+      await _playUiCancelSound();
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('Export failed: $error')));
+        ..showSnackBar(SnackBar(content: Text('Backup failed: $error')));
     }
   }
 
-  Future<void> _importLeaderboard() async {
+  Future<void> _importBackup() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final selectedPath = await _showPathPrompt(
-        title: 'IMPORT LEADERBOARD',
+        title: 'IMPORT BACKUP',
         confirmLabel: 'IMPORT',
         initialPath: '',
         onExplore: () async {
           final result = await FilePicker.platform.pickFiles(
-            dialogTitle: 'Import Leaderboard',
+            dialogTitle: 'Import Backup',
             allowMultiple: false,
             type: FileType.custom,
             allowedExtensions: const ['json'],
@@ -521,33 +386,258 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           return path;
         },
         subtitle:
-            'Importing replaces the current leaderboard file with the selected backup JSON.',
+            'Importing restores the full app state from the selected JSON backup and replaces the current saved data.',
       );
       if (!mounted || selectedPath == null || selectedPath.trim().isEmpty) {
         return;
       }
-      final data = await LeaderboardRepository.instance.importFromFile(
-        selectedPath,
-      );
-      final store = await LeaderboardRepository.instance.loadStore();
+      await LeaderboardRepository.instance.importFromFile(selectedPath);
       if (!mounted) return;
-      setState(() {
-        _leaderboardFuture = Future.value(store);
-        if (data.players.isEmpty) {
-          _isEditingLeaderboard = false;
-        }
-      });
+      await _playUiConfirmSound();
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Leaderboard imported successfully.')),
+          const SnackBar(
+            content: Text('Backup imported. Full app data restored.'),
+          ),
         );
     } catch (error) {
       if (!mounted) return;
+      await _playUiCancelSound();
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('Import failed: $error')));
     }
+  }
+
+  Future<void> _showBackupImportOptions() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(-0.08),
+              child: Container(
+                width: 620,
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.cyanAccent.withValues(alpha: 0.55),
+                    width: 2,
+                  ),
+                ),
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(0.08),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'BACKUP / IMPORT',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Choose whether to export the current full app state or restore the entire app from a backup JSON.',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.amberAccent,
+                                side: const BorderSide(
+                                  color: Colors.amberAccent,
+                                  width: 1.6,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                unawaited(_exportBackup());
+                              },
+                              icon: const Icon(Icons.save_alt_rounded),
+                              label: const Text('BACKUP'),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.cyanAccent,
+                                side: const BorderSide(
+                                  color: Colors.cyanAccent,
+                                  width: 1.6,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                unawaited(_importBackup());
+                              },
+                              icon: const Icon(Icons.file_open_rounded),
+                              label: const Text('IMPORT'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _sfxPlayer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/Menu.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final availableWidth = min(920.0, constraints.maxWidth);
+                    final isCompact = availableWidth < 760;
+                    final buttonWidth = isCompact
+                        ? min(420.0, availableWidth)
+                        : (availableWidth - 24) / 2;
+
+                    final buttons = [
+                      BakuganButton(
+                        text: 'BATTLE',
+                        onPressed: _navigateToBattleMode,
+                        width: buttonWidth,
+                        height: 100,
+                      ),
+                      BakuganButton(
+                        text: 'LEADERBOARD',
+                        onPressed: _navigateToLeaderboard,
+                        width: buttonWidth,
+                        height: 100,
+                      ),
+                      BakuganButton(
+                        text: 'HISTORY',
+                        onPressed: _navigateToHistory,
+                        width: buttonWidth,
+                        height: 100,
+                      ),
+                      BakuganButton(
+                        text: 'BACKUP / IMPORT',
+                        onPressed: _showBackupImportOptions,
+                        width: buttonWidth,
+                        height: 100,
+                      ),
+                    ];
+
+                    return SizedBox(
+                      width: availableWidth,
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 24,
+                        runSpacing: 24,
+                        children: buttons,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LeaderboardScreen extends StatefulWidget {
+  const LeaderboardScreen({super.key});
+
+  @override
+  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+}
+
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  late Future<LeaderboardStore> _leaderboardFuture;
+  bool _isEditingLeaderboard = false;
+  int? _selectedSeasonNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    _leaderboardFuture = LeaderboardRepository.instance.loadStore();
+  }
+
+  Future<void> _reload() async {
+    final future = LeaderboardRepository.instance.loadStore();
+    setState(() => _leaderboardFuture = future);
+    await future;
+  }
+
+  Future<void> _deleteLeaderboardPlayer(String name) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final data = await LeaderboardRepository.instance.deleteSavedPlayer(name);
+    final store = await LeaderboardRepository.instance.loadStore();
+    if (!mounted) return;
+    setState(() {
+      _leaderboardFuture = Future.value(store);
+      if (data.players.isEmpty) {
+        _isEditingLeaderboard = false;
+      }
+    });
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('$name deleted.')));
   }
 
   @override
@@ -889,54 +979,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     children: [
                                       Row(
                                         children: [
-                                          TextButton.icon(
-                                            style: TextButton.styleFrom(
-                                              foregroundColor:
-                                                  Colors.cyanAccent,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 8,
-                                                  ),
-                                              textStyle: const TextStyle(
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 0.8,
-                                              ),
-                                            ),
-                                            onPressed: isCurrentSeason
-                                                ? () => unawaited(
-                                                    _importLeaderboard(),
-                                                  )
-                                                : null,
-                                            icon: const Icon(
-                                              Icons.file_open_rounded,
-                                              size: 18,
-                                            ),
-                                            label: const Text('IMPORT'),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          TextButton.icon(
-                                            style: TextButton.styleFrom(
-                                              foregroundColor:
-                                                  Colors.amberAccent,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 8,
-                                                  ),
-                                              textStyle: const TextStyle(
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 0.8,
-                                              ),
-                                            ),
-                                            onPressed: () =>
-                                                unawaited(_exportLeaderboard()),
-                                            icon: const Icon(
-                                              Icons.save_alt_rounded,
-                                              size: 18,
-                                            ),
-                                            label: const Text('EXPORT'),
-                                          ),
                                           const Spacer(),
                                           TextButton.icon(
                                             style: TextButton.styleFrom(
