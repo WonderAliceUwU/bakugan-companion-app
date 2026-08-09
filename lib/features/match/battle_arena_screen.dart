@@ -748,7 +748,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
                 Opacity(
                   opacity: opacity,
                   child: Transform.translate(
-                    offset: _battleAnimatedBonusBaseOffset +
+                    offset:
+                        _battleAnimatedBonusBaseOffset +
                         Offset(0, verticalOffset),
                     child: Text(
                       '${bonusDelta > 0 ? '+' : ''}$bonusDelta',
@@ -1540,8 +1541,13 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
         }
         final attribute = variant.attribute.toLowerCase();
         final deck = widget.matchPlayers[ownerIndex].deck;
-        return deck.any(
-          (bakugan) => bakugan.attribute.toLowerCase() == attribute,
+        final usedBakuganIndices =
+            widget.usedBakuganIndicesByPlayer[ownerIndex] ?? const <int>[];
+        return usedBakuganIndices.any(
+          (index) =>
+              index >= 0 &&
+              index < deck.length &&
+              deck[index].attribute.toLowerCase() == attribute,
         );
       }
 
@@ -5826,11 +5832,12 @@ class _AnimatedBattleGPowerBadge extends StatelessWidget {
                 opacity: opacity,
                 child: Align(
                   alignment: Alignment.topRight,
-                child: Transform.translate(
-                  offset: _battleAnimatedBonusBaseOffset +
-                      Offset(0, verticalOffset),
-                  child: Text(
-                    '${bonusDelta! > 0 ? '+' : ''}$bonusDelta',
+                  child: Transform.translate(
+                    offset:
+                        _battleAnimatedBonusBaseOffset +
+                        Offset(0, verticalOffset),
+                    child: Text(
+                      '${bonusDelta! > 0 ? '+' : ''}$bonusDelta',
                       style: TextStyle(
                         color: bonusColor,
                         fontSize: 32,
