@@ -1,5 +1,232 @@
 part of '../../main.dart';
 
+// OBJ preview tuning controls. Adjust these values to change the framing
+// without touching the model-loading or card-layout code.
+const _objCameraDistance = 11.0;
+const _objClosedCameraDistance = 30.0;
+const _objCameraHeight = 1.5;
+const _objCameraTargetY = 0.8;
+const _objCameraFov = 20.0;
+const _objModelScale = 5.0;
+const _objInitialRotationX = 0.0;
+const _objInitialRotationY = -32.0;
+const _objInitialRotationZ = 0.0;
+const _objRotationDegreesPerSecond = 10.0;
+const _objDragSensitivity = 0.35;
+const _objLargePreviewOffsetY = 60.0;
+const _objClosedPreviewOffsetY = 10.0;
+const _objSmallPreviewOffsetY = 20.0;
+
+class _BakuganObjViewer extends StatefulWidget {
+  final String modelPath;
+  final String? texturePath;
+  final double cameraDistance;
+  final bool enableTouch;
+  final bool autoRotate;
+  final VoidCallback? onTap;
+
+  const _BakuganObjViewer({
+    super.key,
+    required this.modelPath,
+    required this.texturePath,
+    required this.cameraDistance,
+    required this.enableTouch,
+    required this.autoRotate,
+    this.onTap,
+  });
+
+  @override
+  State<_BakuganObjViewer> createState() => _BakuganObjViewerState();
+}
+
+class _BakuganObjViewerState extends State<_BakuganObjViewer> {
+  late obj_scene.Scene _scene;
+  Timer? _rotationTimer;
+  double _rotationX = _objInitialRotationX;
+  double _rotationY = _objInitialRotationY;
+  double _rotationZ = _objInitialRotationZ;
+  int _loadToken = 0;
+  bool _isLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scene = _newScene();
+    _loadModel();
+  }
+
+  obj_scene.Scene _newScene() {
+    return obj_scene.Scene(
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  Future<ui.Image> _loadTexture(String path) async {
+    final data = await rootBundle.load(path);
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    final frame = await codec.getNextFrame();
+    codec.dispose();
+    return frame.image;
+  }
+
+  Future<void> _loadModel() async {
+    final int token = ++_loadToken;
+    _rotationTimer?.cancel();
+    setState(() {
+      _isLoaded = false;
+    });
+
+    try {
+      final meshes = await obj_mesh.loadObj(widget.modelPath, true);
+      final texture = widget.texturePath == null
+          ? null
+          : await _loadTexture(widget.texturePath!);
+      final scene = _newScene();
+      // Keep the OBJ framing close to the old GLB preview. The package's
+      // generic OBJ camera starts at z=10, which leaves these normalized
+      // Bakugan models noticeably smaller than the previous preview.
+      scene.camera.position.z = widget.cameraDistance;
+      scene.camera.position.y = _objCameraHeight;
+      scene.camera.target.y = _objCameraTargetY;
+      scene.camera.fov = _objCameraFov;
+      scene.texture = texture;
+
+      for (final mesh in meshes) {
+        mesh.texture = texture;
+        mesh.texturePath = widget.texturePath;
+        if (texture != null) {
+          // The OBJ assets do not always include their MTL files. When the
+          // texture is supplied by the variant, replace the parser's default
+          // 1x1 texture rectangle so UVs cover the complete image.
+          mesh.textureRect = Rect.fromLTWH(
+            0,
+            0,
+            texture.width.toDouble(),
+            texture.height.toDouble(),
+          );
+        }
+        final object = obj_object.Object(mesh: mesh, scene: scene);
+        object.scale.setValues(_objModelScale, _objModelScale, _objModelScale);
+        // The OBJ viewer stores Euler rotations in degrees; its transform
+        // converts them to radians internally. Start slightly turned, as in
+        // the previous model preview.
+        object.rotation.x = _rotationX;
+        object.rotation.y = _rotationY;
+        object.rotation.z = _rotationZ;
+        object.updateTransform();
+        scene.world.add(object);
+      }
+      scene.updateTexture();
+
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _scene = scene;
+        _isLoaded = true;
+      });
+      _startRotation();
+    } catch (error) {
+      debugPrint('Error loading OBJ model: $error');
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _isLoaded = false;
+      });
+    }
+  }
+
+  void _startRotation() {
+    _rotationTimer?.cancel();
+    if (!widget.autoRotate || !_isLoaded) return;
+    _rotationTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      _rotationY += _objRotationDegreesPerSecond / 60;
+      for (final object in _scene.world.children) {
+        // Match flutter_3d_controller's previous model-viewer setting:
+        // 15 degrees per second. Object rotations are expressed in degrees
+        // by the package, even though the transform uses radians internally.
+        object.rotation.y = _rotationY;
+        object.updateTransform();
+      }
+      _scene.update();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _BakuganObjViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.modelPath != widget.modelPath ||
+        oldWidget.texturePath != widget.texturePath) {
+      _loadModel();
+    } else if (oldWidget.autoRotate != widget.autoRotate) {
+      _startRotation();
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotationTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handlePanUpdate(DragUpdateDetails details) {
+    _rotationY += details.delta.dx * _objDragSensitivity;
+    _rotationX += details.delta.dy * _objDragSensitivity;
+    for (final object in _scene.world.children) {
+      // Rotate the object directly instead of moving the camera. This keeps
+      // mouse dragging independent from camera zoom and supports both axes.
+      object.rotation.y = _rotationY;
+      object.rotation.x = _rotationX;
+      object.updateTransform();
+    }
+    _scene.update();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isLoaded) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Reapply the framing on rebuilds as well as after loading the OBJ,
+        // so hot reloads also update an already loaded model.
+        _scene.camera.position.z = widget.cameraDistance;
+        _scene.camera.position.y = _objCameraHeight;
+        _scene.camera.target.y = _objCameraTargetY;
+        _scene.camera.fov = _objCameraFov;
+        final painter = _BakuganObjPainter(_scene);
+        final child = CustomPaint(
+          painter: painter,
+          size: Size(constraints.maxWidth, constraints.maxHeight),
+        );
+        if (!widget.enableTouch) return child;
+        return GestureDetector(
+          // Use a drag recognizer for model rotation. Scale gestures make a
+          // mouse drag look like a zoom on macOS even with one pointer.
+          onTap: widget.onTap,
+          onPanUpdate: _handlePanUpdate,
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+class _BakuganObjPainter extends CustomPainter {
+  final obj_scene.Scene scene;
+
+  const _BakuganObjPainter(this.scene);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    scene.camera.viewportWidth = size.width;
+    scene.camera.viewportHeight = size.height;
+    scene.render(canvas, size);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BakuganObjPainter oldDelegate) => true;
+}
+
 class BakuganPreview extends StatefulWidget {
   final BakuganVariant variant;
   final bool isLarge;
@@ -61,10 +288,24 @@ class BakuganPreview extends StatefulWidget {
 class _BakuganPreviewState extends State<BakuganPreview>
     with AutomaticKeepAliveClientMixin {
   late Flutter3DController _controller;
+  bool _showClosedObj = true;
 
   bool get _uses3DViewer {
     final path = widget.variant.modelPath.toLowerCase();
     return path.endsWith('.glb') || path.endsWith('.gltf');
+  }
+
+  bool get _usesObjViewer =>
+      widget.variant.modelPath.toLowerCase().endsWith('.obj');
+
+  String get _objPreviewModelPath {
+    if (widget.isLarge &&
+        _usesObjViewer &&
+        _showClosedObj &&
+        widget.variant.closedModelPath != null) {
+      return widget.variant.closedModelPath!;
+    }
+    return widget.variant.modelPath;
   }
 
   double get _pngScale {
@@ -113,6 +354,7 @@ class _BakuganPreviewState extends State<BakuganPreview>
   void initState() {
     super.initState();
     _controller = Flutter3DController();
+    _resetOpenCloseState();
   }
 
   @override
@@ -122,11 +364,14 @@ class _BakuganPreviewState extends State<BakuganPreview>
   void didUpdateWidget(covariant BakuganPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.variant.modelPath != widget.variant.modelPath ||
+        oldWidget.variant.closedModelPath != widget.variant.closedModelPath ||
+        oldWidget.variant.texturePath != widget.variant.texturePath ||
         oldWidget.isLarge != widget.isLarge ||
         oldWidget.isDeck != widget.isDeck ||
         oldWidget.theta != widget.theta ||
         oldWidget.phi != widget.phi ||
         oldWidget.autoRotate != widget.autoRotate) {
+      _resetOpenCloseState();
       Future<void>.delayed(const Duration(milliseconds: 120), () {
         if (!mounted) return;
         _configureModelView();
@@ -137,6 +382,19 @@ class _BakuganPreviewState extends State<BakuganPreview>
   @override
   void dispose() {
     super.dispose();
+  }
+
+  void _resetOpenCloseState() {
+    _showClosedObj = false;
+  }
+
+  void _toggleOpenClose() {
+    if (!widget.isLarge ||
+        !_usesObjViewer ||
+        widget.variant.closedModelPath == null) {
+      return;
+    }
+    setState(() => _showClosedObj = !_showClosedObj);
   }
 
   Widget _unskewPreviewContent(Widget child) {
@@ -305,7 +563,8 @@ class _BakuganPreviewState extends State<BakuganPreview>
     final illustrationAssetPath = widget.illustrationAssetPath;
     if (illustrationAssetPath != null) {
       final padding = widget.visualPaddingOverride ?? _illustrationPadding;
-      final alignment = widget.visualAlignmentOverride ?? _illustrationAlignment;
+      final alignment =
+          widget.visualAlignmentOverride ?? _illustrationAlignment;
       final scale = widget.visualScaleOverride ?? _illustrationScale;
       Widget buildIllustration({bool includeKey = false}) {
         return Image.asset(
@@ -371,6 +630,37 @@ class _BakuganPreviewState extends State<BakuganPreview>
   }
 
   Widget _buildModel({bool isDeck = false}) {
+    if (_usesObjViewer) {
+      return IgnorePointer(
+        ignoring: isDeck || widget.disableInteraction || !widget.isLarge,
+        child: _unskewPreviewContent(
+          Transform.translate(
+            offset: widget.isLarge
+                ? Offset(
+                    0,
+                    _showClosedObj
+                        ? _objClosedPreviewOffsetY
+                        : _objLargePreviewOffsetY,
+                  )
+                : Offset(0, _objSmallPreviewOffsetY),
+            child: _BakuganObjViewer(
+              key: ValueKey(
+                'obj_${widget.variant.texturePath}_${widget.isLarge}',
+              ),
+              modelPath: _objPreviewModelPath,
+              texturePath: widget.variant.texturePath,
+              cameraDistance: _showClosedObj
+                  ? _objClosedCameraDistance
+                  : _objCameraDistance,
+              enableTouch: widget.isLarge && !widget.disableInteraction,
+              autoRotate: widget.isLarge && widget.autoRotate,
+              onTap: widget.isLarge ? _toggleOpenClose : null,
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!_uses3DViewer) {
       final padding = widget.visualPaddingOverride ?? _pngPadding;
       final alignment = widget.visualAlignmentOverride ?? _pngAlignment;
@@ -1099,6 +1389,8 @@ class BakuganButton extends StatefulWidget {
   final double width, height;
   final Color? color;
   final bool useCancelSound;
+  final double textFontSize;
+  final double iconSize;
 
   const BakuganButton({
     super.key,
@@ -1110,6 +1402,8 @@ class BakuganButton extends StatefulWidget {
     this.icon,
     this.iconOnly = false,
     this.useCancelSound = false,
+    this.textFontSize = 30,
+    this.iconSize = 28,
   });
 
   @override
@@ -1176,18 +1470,26 @@ class _BakuganButtonState extends State<BakuganButton>
             child: Center(
               child: widget.icon != null
                   ? (widget.iconOnly
-                        ? Icon(widget.icon, size: 40, color: Colors.white)
+                        ? Icon(
+                            widget.icon,
+                            size: widget.iconSize,
+                            color: Colors.white,
+                          )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(widget.icon, size: 28, color: Colors.white),
+                              Icon(
+                                widget.icon,
+                                size: widget.iconSize,
+                                color: Colors.white,
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 widget.text,
                                 style: TextStyle(
                                   fontFamily: 'button_font',
                                   color: Colors.white,
-                                  fontSize: 30,
+                                  fontSize: widget.textFontSize,
                                   fontWeight: FontWeight.w900,
                                   shadows: [
                                     Shadow(
@@ -1205,7 +1507,7 @@ class _BakuganButtonState extends State<BakuganButton>
                       style: TextStyle(
                         fontFamily: 'button_font',
                         color: Colors.white,
-                        fontSize: 30,
+                        fontSize: widget.textFontSize,
                         fontWeight: FontWeight.w900,
                         shadows: [
                           Shadow(

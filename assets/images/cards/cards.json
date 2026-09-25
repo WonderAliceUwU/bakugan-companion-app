@@ -2872,24 +2872,16 @@
       "attributes": {
         "pyrus": 70,
         "aquos": null,
-        "ventus": null,
+        "ventus": 140,
         "haos": null,
         "darkus": null,
         "subterra": null
       },
       "descriptions": {
-        "en": "Play during a battle on one of your opponent's Gate Cards. Your Bakugan gains G-Power based on its Attribute.",
-        "es": "Juega esta carta durante una batalla en una de las Gate Cards de tu oponente. Tu Bakugan gana G-Power segun su Atributo."
+        "en": "Play during a battle. Your Bakugan gains G-Power based on its Attribute.",
+        "es": "Juega esta carta durante una batalla. Tu Bakugan gana G-Power según su Atributo."
       },
-      "effects": [
-        {
-          "type": "attribute_bonus_self",
-          "timing": "during_battle",
-          "condition": {
-            "on_opponents_gate": true
-          }
-        }
-      ],
+      "effects": [],
       "rules": []
     },
     "aquos_2": {
@@ -3956,8 +3948,8 @@
         "subterra": null
       },
       "descriptions": {
-        "en": "Play before you roll. If your roll results in a battle, both players add one of their used or unused Bakugan to the battle before the Gate Card is revealed. Add up G-Powers to see who wins. Put all Bakugan in their players' used piles after battle.",
-        "es": "Juega esta carta antes de lanzar. Si tu lanzamiento provoca una batalla, ambos jugadores anaden uno de sus Bakugan usados o sin usar a la batalla antes de revelar la Gate Card. Se suman los G-Power para ver quien gana. Todos los Bakugan van a las pilas de usadas despues de la batalla."
+        "en": "Play before you roll. If your roll results in a battle, both players add one of their used or unused Bakugan to the battle before the Gate Card is revealed. Add up G-Powers to see who wins.",
+        "es": "Juega esta carta antes de lanzar. Si tu lanzamiento provoca una batalla, ambos jugadores anaden uno de sus Bakugan usados o sin usar a la batalla antes de revelar la Gate Card. Se suman los G-Power para ver quien gana."
       },
       "effects": [
         {
@@ -3966,10 +3958,6 @@
           "condition": {
             "battle_this_roll": true
           }
-        },
-        {
-          "type": "all_bakugan_used_after_combo_battle",
-          "timing": "after_battle"
         }
       ],
       "rules": []

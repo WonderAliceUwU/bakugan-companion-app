@@ -13,7 +13,45 @@ class BakuganApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'body_font',
       ),
+      builder: (context, child) => _BakuganScaledSurface(child: child),
       home: const VideoSplashScreen(),
+    );
+  }
+}
+
+const Size _bakuganDesignSize = Size(2560, 1440);
+
+class _BakuganScaledSurface extends StatelessWidget {
+  final Widget? child;
+
+  const _BakuganScaledSurface({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final designMediaQuery = mediaQuery.copyWith(
+      size: _bakuganDesignSize,
+      padding: EdgeInsets.zero,
+      viewPadding: EdgeInsets.zero,
+      viewInsets: EdgeInsets.zero,
+      systemGestureInsets: EdgeInsets.zero,
+    );
+
+    return ColoredBox(
+      color: Colors.black,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+        clipBehavior: Clip.hardEdge,
+        child: MediaQuery(
+          data: designMediaQuery,
+          child: SizedBox(
+            width: _bakuganDesignSize.width,
+            height: _bakuganDesignSize.height,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -150,7 +150,8 @@ class GateCard {
                 .toString()
                 .toLowerCase();
             final abilityCount = switch (scope) {
-              'all_used_piles' => ownerUsedAbilityCards + opponentUsedAbilityCards,
+              'all_used_piles' =>
+                ownerUsedAbilityCards + opponentUsedAbilityCards,
               'opponent_used_pile' => opponentUsedAbilityCards,
               _ => ownerUsedAbilityCards,
             };
@@ -177,7 +178,8 @@ class GateCard {
           if (condition['lowest_printed'] == true && !isLowestPrinted) {
             continue;
           }
-          final minDistinctAttributes = condition['min_distinct_owner_attributes'];
+          final minDistinctAttributes =
+              condition['min_distinct_owner_attributes'];
           if (minDistinctAttributes is num) {
             final distinctAttributeCount = teamBakugans
                 .map((bakugan) => bakugan.attribute.toLowerCase())
@@ -189,7 +191,8 @@ class GateCard {
             }
           }
 
-          final ownerHasNamedInUsed = condition['owner_has_named_bakugan_in_used_pile'];
+          final ownerHasNamedInUsed =
+              condition['owner_has_named_bakugan_in_used_pile'];
           if (ownerHasNamedInUsed is List) {
             final hasNamedUsed = ownerUsedBakugans.any(
               (bakugan) => _matchesNamedTargets(bakugan, ownerHasNamedInUsed),
@@ -243,7 +246,8 @@ class GateCard {
       if (effect is Map && effect['type'] == 'attribute_bonus') {
         final condition = effect['condition'];
         if (condition is Map) {
-          final requiredBattleAttributes = condition['battle_contains_any_attributes'];
+          final requiredBattleAttributes =
+              condition['battle_contains_any_attributes'];
           if (requiredBattleAttributes is List) {
             final battleAttributeSet = battleAttributes
                 .map((attribute) => attribute.toLowerCase())
@@ -409,12 +413,8 @@ class GateCard {
         effect['target'] == 'lowest_printed_bakugan',
   );
 
-  ({
-    bool left,
-    bool right,
-    Set<String> leftClasses,
-    Set<String> rightClasses,
-  }) abilityRestrictions({
+  ({bool left, bool right, Set<String> leftClasses, Set<String> rightClasses})
+  abilityRestrictions({
     required int leftPrintedGPower,
     required int rightPrintedGPower,
     required int leftUsedGateCards,
@@ -435,11 +435,12 @@ class GateCard {
       }
 
       final target = (effect['target'] ?? '').toString().toLowerCase();
-      final classes = ((effect['classes'] as List?)
-                  ?.map((entry) => entry.toString().toLowerCase())
-                  .where((entry) => entry.isNotEmpty) ??
-              const Iterable<String>.empty())
-          .toSet();
+      final classes =
+          ((effect['classes'] as List?)
+                      ?.map((entry) => entry.toString().toLowerCase())
+                      .where((entry) => entry.isNotEmpty) ??
+                  const Iterable<String>.empty())
+              .toSet();
 
       void forbidBoth() {
         if (classes.isEmpty) {
@@ -556,16 +557,16 @@ class GateCard {
             rightVariant.attribute.toLowerCase(),
           };
           final hasForbiddenPresence = missingAttributes.any(
-            (attribute) => battleAttributes.contains(
-              attribute.toString().toLowerCase(),
-            ),
+            (attribute) =>
+                battleAttributes.contains(attribute.toString().toLowerCase()),
           );
           if (hasForbiddenPresence) {
             continue;
           }
         }
 
-        final dynamic thresholdRaw = condition['printed_g_power_difference_gte'];
+        final dynamic thresholdRaw =
+            condition['printed_g_power_difference_gte'];
         if (thresholdRaw is num &&
             (leftPrintedGPower - rightPrintedGPower).abs() <
                 thresholdRaw.toInt()) {
@@ -624,11 +625,12 @@ class GateCard {
         continue;
       }
 
-      final classes = ((effect['classes'] as List?)
-                  ?.map((entry) => entry.toString().toLowerCase())
-                  .where((entry) => entry.isNotEmpty) ??
-              const Iterable<String>.empty())
-          .toSet();
+      final classes =
+          ((effect['classes'] as List?)
+                      ?.map((entry) => entry.toString().toLowerCase())
+                      .where((entry) => entry.isNotEmpty) ??
+                  const Iterable<String>.empty())
+              .toSet();
       if (classes.isNotEmpty &&
           !classes.contains(sourceCard.cardClass.toLowerCase())) {
         continue;
@@ -636,8 +638,12 @@ class GateCard {
 
       final target = (effect['target'] ?? 'battle').toString().toLowerCase();
       if (target == 'lowest_printed_bakugan') {
-        final sourcePrinted = sourceIsLeft ? leftPrintedGPower : rightPrintedGPower;
-        final opponentPrinted = sourceIsLeft ? rightPrintedGPower : leftPrintedGPower;
+        final sourcePrinted = sourceIsLeft
+            ? leftPrintedGPower
+            : rightPrintedGPower;
+        final opponentPrinted = sourceIsLeft
+            ? rightPrintedGPower
+            : leftPrintedGPower;
         if (sourcePrinted >= opponentPrinted) {
           continue;
         }
@@ -711,7 +717,8 @@ class AbilityCard {
 
         final condition = effect['condition'];
         if (condition is Map &&
-            condition['opponent_attribute_matches_highest_gate_bonus'] == true &&
+            condition['opponent_attribute_matches_highest_gate_bonus'] ==
+                true &&
             !opponentAttributeMatchesHighestGateBonus) {
           continue;
         }
@@ -731,7 +738,8 @@ class AbilityCard {
                 opponentAttribute?.toLowerCase() ?? '';
             final matchesAttribute = opponentAttributeIn.any(
               (attribute) =>
-                  attribute.toString().toLowerCase() == normalizedOpponentAttribute,
+                  attribute.toString().toLowerCase() ==
+                  normalizedOpponentAttribute,
             );
             if (!matchesAttribute) continue;
           }
@@ -768,11 +776,12 @@ class AbilityCard {
         continue;
       }
 
-      final classes = ((effect['classes'] as List?)
-                  ?.map((entry) => entry.toString().toLowerCase())
-                  .where((entry) => entry.isNotEmpty) ??
-              const Iterable<String>.empty())
-          .toSet();
+      final classes =
+          ((effect['classes'] as List?)
+                      ?.map((entry) => entry.toString().toLowerCase())
+                      .where((entry) => entry.isNotEmpty) ??
+                  const Iterable<String>.empty())
+              .toSet();
       if (classes.isNotEmpty &&
           !classes.contains(sourceCard.cardClass.toLowerCase())) {
         continue;
@@ -780,8 +789,12 @@ class AbilityCard {
 
       final target = (effect['target'] ?? 'battle').toString().toLowerCase();
       if (target == 'lowest_printed_bakugan') {
-        final sourcePrinted = sourceIsLeft ? leftPrintedGPower : rightPrintedGPower;
-        final opponentPrinted = sourceIsLeft ? rightPrintedGPower : leftPrintedGPower;
+        final sourcePrinted = sourceIsLeft
+            ? leftPrintedGPower
+            : rightPrintedGPower;
+        final opponentPrinted = sourceIsLeft
+            ? rightPrintedGPower
+            : leftPrintedGPower;
         if (sourcePrinted >= opponentPrinted) {
           continue;
         }
@@ -838,7 +851,8 @@ class AbilityCard {
   }
 
   bool get setsAllPrintedGPowerToZero => effects.any(
-    (effect) => effect is Map && effect['type'] == 'set_all_printed_g_power_to_zero',
+    (effect) =>
+        effect is Map && effect['type'] == 'set_all_printed_g_power_to_zero',
   );
 
   bool get returnsOneUsedGateToOwnerIfOpponentHasMoreUsedGates => effects.any(
@@ -849,7 +863,8 @@ class AbilityCard {
   );
 
   bool get removesLosingBakuganFromGame => effects.any(
-    (effect) => effect is Map && effect['type'] == 'remove_loser_bakugan_from_game',
+    (effect) =>
+        effect is Map && effect['type'] == 'remove_loser_bakugan_from_game',
   );
 
   bool get supportsBeforeBattle => timings.contains('start_of_battle');
@@ -1076,89 +1091,449 @@ String? _matchCardImagePath({
 
 List<Bakugan> availableBakugans = [];
 
+const _seasonOneModelsRoot = 'assets/models/Season 1 - Battle Brawlers/';
+const _seasonTwoModelsRoot = 'assets/models/Season 2 - New Vestroia/';
+const _normalBakuganAttributes = [
+  'pyrus',
+  'aquos',
+  'subterra',
+  'haos',
+  'darkus',
+  'ventus',
+];
+
+final Map<String, String> _normalTexturePathsByModelAndAttribute = {};
+
+String? normalTexturePathForModel(String modelPath, String attribute) {
+  return _normalTexturePathsByModelAndAttribute['$modelPath|${attribute.toLowerCase()}'];
+}
+
+const _legacyGPowerBySpeciesAndAttribute = <String, int>{
+  'apollonir|pyrus': 700,
+  'bee striker|aquos': 430,
+  'blade tigrerra|haos': 580,
+  'centipoid|darkus': 530,
+  'centipoid|subterra': 560,
+  'clayf|pyrus': 500,
+  'cosmic ingram|ventus': 560,
+  'dragonoid|darkus': 400,
+  'dragonoid|haos': 550,
+  'dragonoid|pyrus': 600,
+  'el condor|haos': 580,
+  'fear ripper|haos': 610,
+  'fencer|aquos': 550,
+  'fourtress|aquos': 580,
+  'fourtress|darkus': 480,
+  'gorem|aquos': 480,
+  'gorem|darkus': 520,
+  'griffon|aquos': 500,
+  'griffon|haos': 550,
+  'hammer gorem|subterra': 480,
+  'harpus|aquos': 520,
+  'harpus|darkus': 400,
+  'harpus|haos': 570,
+  'juggernoid|pyrus': 540,
+  'lars lion|aquos': 620,
+  'leefram|ventus': 680,
+  'limulus|ventus': 450,
+  'monarus|aquos': 570,
+  'monarus|haos': 570,
+  'monarus|ventus': 410,
+  'naga|haos': 560,
+  'naga|pyrus': 600,
+  'nemus|pyrus': 690,
+  'neo dragonoid|haos': 660,
+  'neo dragonoid|pyrus': 510,
+  'oberus|aquos': 550,
+  'preyas diablo|aquos': 470,
+  'rattleoid|haos': 460,
+  'ravenoid|aquos': 500,
+  'reaper|aquos': 490,
+  'sirenoid|darkus': 570,
+  'spin ravenoid|ventus': 650,
+  'stinglash|aquos': 440,
+  'stinglash|darkus': 480,
+  'stinglash|pyrus': 510,
+  'stinglash|subterra': 420,
+  'tentaclear|subterra': 590,
+  'warius|subterra': 550,
+  'warius|ventus': 600,
+  'wired|haos': 720,
+};
+
+const _legacyBannedSpeciesAndAttributes = {
+  'gorem|darkus',
+  'hammer gorem|subterra',
+  'harpus|haos',
+};
+
+String _modelSpeciesRoot(String path) {
+  final root = path.startsWith(_seasonOneModelsRoot)
+      ? _seasonOneModelsRoot
+      : _seasonTwoModelsRoot;
+  final relativePath = path.substring(root.length);
+  final speciesFolder = relativePath.split('/').first;
+  return '$root$speciesFolder';
+}
+
+String _speciesNameFromRoot(String speciesRoot) {
+  final name = speciesRoot.split('/').last;
+  return switch (name) {
+    'Preyas II Angelo' => 'Preyas Angelo',
+    'Preyas II Diablo' => 'Preyas Diablo',
+    _ => name,
+  };
+}
+
+bool _isVisualObj(String path) {
+  final lowerPath = path.toLowerCase();
+  return lowerPath.endsWith('.obj') && !lowerPath.contains('hitbox');
+}
+
+int _visualModelPriority(String path) {
+  final fileName = path.split('/').last.toLowerCase();
+  if (fileName.contains('open')) return 0;
+  if (fileName.contains('stand')) return 1;
+  if (fileName.contains('closed')) return 2;
+  return 3;
+}
+
+bool _isNormalTexture(String path) {
+  final lowerPath = path.toLowerCase();
+  if (!lowerPath.endsWith('.png') &&
+      !lowerPath.endsWith('.jpg') &&
+      !lowerPath.endsWith('.jpeg')) {
+    return false;
+  }
+
+  final pathWithoutSpaces = lowerPath.replaceAll(' ', '');
+  if (path.startsWith(_seasonOneModelsRoot)) {
+    return pathWithoutSpaces.contains('/textures/core/') ||
+        pathWithoutSpaces.contains('/textures/cores/');
+  }
+
+  final relativePath = path.substring(_seasonTwoModelsRoot.length).split('/');
+  return relativePath.length == 3 &&
+      relativePath[1].toLowerCase() == 'textures';
+}
+
+List<String> _attributeAliases(String attribute) {
+  return switch (attribute) {
+    'subterra' => ['subterra', 'subeterra'],
+    'ventus' => ['ventus', 'ventis'],
+    _ => [attribute],
+  };
+}
+
+String _speciesNameFromImageSlug(String slug) {
+  return slug
+      .split('_')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
+}
+
+String _assetSlug(String value) {
+  return value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+      .replaceAll(RegExp(r'_+'), '_')
+      .replaceAll(RegExp(r'^_|_$'), '');
+}
+
+bool _isRenderableModelFallback(String path) {
+  final lowerPath = path.toLowerCase();
+  return lowerPath.endsWith('.glb') ||
+      lowerPath.endsWith('.gltf') ||
+      lowerPath.endsWith('.png') ||
+      lowerPath.endsWith('.jpg') ||
+      lowerPath.endsWith('.jpeg');
+}
+
+int _modelFallbackPriority(String path) {
+  final lowerPath = path.toLowerCase();
+  if (lowerPath.endsWith('.glb') || lowerPath.endsWith('.gltf')) return 0;
+  return 1;
+}
+
+Map<String, Map<String, String>> _findModelFallbacks(List<String> assetPaths) {
+  final candidates = <String, List<({String path, bool exact})>>{};
+
+  for (final path in assetPaths) {
+    if (!path.startsWith(_seasonTwoModelsRoot) ||
+        !_isRenderableModelFallback(path)) {
+      continue;
+    }
+
+    // Legacy Season 2 assets are kept as one renderable file per species.
+    // Ignore nested Model/Textures assets here; those are handled by the OBJ
+    // discovery above.
+    final relativePath = path.substring(_seasonTwoModelsRoot.length).split('/');
+    if (relativePath.length != 2) continue;
+
+    final speciesSlug = _assetSlug(relativePath.first);
+    final normalizedStem = _assetSlug(
+      relativePath.last.replaceFirst(RegExp(r'\.[^.]+$'), ''),
+    );
+    for (final attribute in _normalBakuganAttributes) {
+      final matches = _attributeAliases(
+        attribute,
+      ).map((alias) => '${speciesSlug}_$alias');
+      final matchingStem = matches.firstWhere(
+        (expectedStem) =>
+            normalizedStem == expectedStem ||
+            normalizedStem.startsWith('${expectedStem}_'),
+        orElse: () => '',
+      );
+      if (matchingStem.isEmpty) continue;
+
+      final speciesName = _speciesNameFromImageSlug(speciesSlug);
+      final key = '$speciesName|$attribute';
+      candidates.putIfAbsent(key, () => []).add((
+        path: path,
+        exact: normalizedStem == matchingStem,
+      ));
+    }
+  }
+
+  final fallbacks = <String, Map<String, String>>{};
+  for (final entry in candidates.entries) {
+    final separator = entry.key.lastIndexOf('|');
+    final speciesName = entry.key.substring(0, separator);
+    final attribute = entry.key.substring(separator + 1);
+    final ranked = entry.value
+      ..sort((a, b) {
+        final formatCompare = _modelFallbackPriority(
+          a.path,
+        ).compareTo(_modelFallbackPriority(b.path));
+        if (formatCompare != 0) return formatCompare;
+        final exactCompare = (b.exact ? 1 : 0).compareTo(a.exact ? 1 : 0);
+        if (exactCompare != 0) return exactCompare;
+        return a.path.length.compareTo(b.path.length);
+      });
+    fallbacks.putIfAbsent(speciesName, () => {})[attribute] = ranked.first.path;
+  }
+  return fallbacks;
+}
+
+Map<String, Map<String, String>> _findImageFallbacks(List<String> assetPaths) {
+  const imageRoot = 'assets/images/bakugan/';
+  final candidates = <String, List<({String path, bool exact})>>{};
+
+  for (final path in assetPaths) {
+    if (!path.startsWith(imageRoot) ||
+        (!path.toLowerCase().endsWith('.png') &&
+            !path.toLowerCase().endsWith('.jpg') &&
+            !path.toLowerCase().endsWith('.jpeg'))) {
+      continue;
+    }
+
+    final relativePath = path.substring(imageRoot.length).split('/');
+    if (relativePath.length != 2) continue;
+
+    final speciesSlug = relativePath.first.toLowerCase();
+    final fileName = relativePath.last.toLowerCase();
+    final stem = fileName.replaceFirst(RegExp(r'\.[^.]+$'), '');
+    final normalizedStem = stem
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+
+    for (final attribute in _normalBakuganAttributes) {
+      final expectedStem = '${speciesSlug}_$attribute';
+      if (normalizedStem != expectedStem &&
+          !normalizedStem.startsWith('${expectedStem}_')) {
+        continue;
+      }
+
+      final speciesName = _speciesNameFromImageSlug(speciesSlug);
+      final key = '$speciesName|$attribute';
+      candidates.putIfAbsent(key, () => []).add((
+        path: path,
+        exact: normalizedStem == expectedStem,
+      ));
+    }
+  }
+
+  final fallbacks = <String, Map<String, String>>{};
+  for (final entry in candidates.entries) {
+    final separator = entry.key.lastIndexOf('|');
+    final speciesName = entry.key.substring(0, separator);
+    final attribute = entry.key.substring(separator + 1);
+    final ranked = entry.value
+      ..sort((a, b) {
+        final exactCompare = (b.exact ? 1 : 0).compareTo(a.exact ? 1 : 0);
+        if (exactCompare != 0) return exactCompare;
+        return a.path.length.compareTo(b.path.length);
+      });
+    fallbacks.putIfAbsent(speciesName, () => {})[attribute] = ranked.first.path;
+  }
+  return fallbacks;
+}
+
+String? _findNormalTexture(
+  String speciesRoot,
+  String attribute,
+  List<String> assetPaths,
+) {
+  final aliases = _attributeAliases(attribute);
+  final candidates = assetPaths.where((path) {
+    if (!_isNormalTexture(path) ||
+        !_modelSpeciesRoot(path).startsWith(speciesRoot)) {
+      return false;
+    }
+    final fileName = path.split('/').last.toLowerCase().replaceAll(' ', '');
+    return aliases.any(fileName.contains);
+  }).toList()..sort();
+
+  return candidates.isEmpty ? null : candidates.first;
+}
+
+Color _colorForBakuganAttribute(String attribute) {
+  return switch (attribute) {
+    'pyrus' => Colors.red,
+    'aquos' => Colors.blue,
+    'subterra' => Colors.brown,
+    'haos' => Colors.limeAccent,
+    'darkus' => Colors.deepPurple,
+    'ventus' => Colors.teal,
+    _ => Colors.red,
+  };
+}
+
+int _gPowerFor(String speciesName, String attribute) {
+  return _legacyGPowerBySpeciesAndAttribute['${speciesName.toLowerCase()}|$attribute'] ??
+      0;
+}
+
+bool isBannedBakuganVariant(BakuganVariant variant) {
+  return _legacyBannedSpeciesAndAttributes.contains(
+    '${variant.speciesName.toLowerCase()}|${variant.attribute.toLowerCase()}',
+  );
+}
+
 Future<void> loadAvailableBakugans() async {
   if (availableBakugans.isNotEmpty) return;
   try {
     final AssetManifest manifest = await AssetManifest.loadFromAssetBundle(
       rootBundle,
     );
-    final bakuganAssetPaths = manifest
-        .listAssets()
-        .where(
-          (String key) =>
-              key.startsWith('assets/models/') &&
-              (key.endsWith('.glb') ||
-                  key.endsWith('.gltf') ||
-                  key.endsWith('.png')),
-        )
-        .toList();
-
-    Map<String, List<BakuganVariant>> grouped = {};
-
-    for (var path in bakuganAssetPaths) {
-      final String fileNameWithExtension = path.split('/').last;
-      final int extensionIndex = fileNameWithExtension.lastIndexOf('.');
-      final String fileName = extensionIndex >= 0
-          ? fileNameWithExtension.substring(0, extensionIndex)
-          : fileNameWithExtension;
-      List<String> parts = fileName.split('_');
-
-      // Allow filenames like `gorem_darkus_520g_banned` without breaking
-      // species grouping or metadata parsing.
-      if (parts.isNotEmpty && parts.last.toLowerCase() == 'banned') {
-        parts.removeLast();
-      }
-
-      // Extract G-Power if present (e.g., "550g")
-      int gPower = 0;
-      if (parts.isNotEmpty && parts.last.endsWith('g')) {
-        gPower =
-            int.tryParse(parts.last.substring(0, parts.last.length - 1)) ?? 0;
-        parts.removeLast(); // Remove the gPower part for further processing
-      }
-
-      if (parts.isEmpty) {
-        continue;
-      }
-
-      String attribute = parts.last.toLowerCase();
-      String speciesName = parts.length > 1
-          ? parts
-                .sublist(0, parts.length - 1)
-                .map((word) => word[0].toUpperCase() + word.substring(1))
-                .join(' ')
-          : fileName[0].toUpperCase() + fileName.substring(1);
-
-      Color color = Colors.red;
-      if (attribute.contains('pyrus')) {
-        color = Colors.red;
-      } else if (attribute.contains('aquos')) {
-        color = Colors.blue;
-      } else if (attribute.contains('subterra')) {
-        color = Colors.brown;
-      } else if (attribute.contains('haos')) {
-        color = Colors.limeAccent;
-      } else if (attribute.contains('darkus')) {
-        color = Colors.deepPurple;
-      } else if (attribute.contains('ventus')) {
-        color = Colors.teal;
-      }
-      grouped
-          .putIfAbsent(speciesName, () => [])
-          .add(
-            BakuganVariant(
-              attribute: attribute,
-              modelPath: path,
-              color: color,
-              gPower: gPower,
-              speciesName: speciesName,
-            ),
-          );
+    final allAssetPaths = manifest.listAssets().toList();
+    final assetPaths = allAssetPaths.where((String key) {
+      return key.startsWith(_seasonOneModelsRoot) ||
+          key.startsWith(_seasonTwoModelsRoot);
+    }).toList();
+    final modelPaths = assetPaths.where(_isVisualObj).toList();
+    final modelPathsBySpeciesRoot = <String, List<String>>{};
+    for (final modelPath in modelPaths) {
+      modelPathsBySpeciesRoot
+          .putIfAbsent(_modelSpeciesRoot(modelPath), () => [])
+          .add(modelPath);
     }
 
-    availableBakugans = grouped.entries
-        .map((e) => Bakugan(name: e.key, variants: e.value))
-        .toList();
+    _normalTexturePathsByModelAndAttribute.clear();
+    final grouped = <String, List<BakuganVariant>>{};
+    final sortedSpeciesRoots = modelPathsBySpeciesRoot.keys.toList()..sort();
+    for (final speciesRoot in sortedSpeciesRoots) {
+      final modelCandidates = modelPathsBySpeciesRoot[speciesRoot]!
+        ..sort((a, b) {
+          final priority = _visualModelPriority(
+            a,
+          ).compareTo(_visualModelPriority(b));
+          if (priority != 0) return priority;
+          return a.length.compareTo(b.length);
+        });
+      final modelPath = modelCandidates.first;
+      String? closedModelPath;
+      for (final candidate in modelCandidates) {
+        if (candidate.split('/').last.toLowerCase().contains('closed')) {
+          closedModelPath = candidate;
+          break;
+        }
+      }
+      final speciesName = _speciesNameFromRoot(speciesRoot);
+      final variants = <BakuganVariant>[];
+
+      for (final attribute in _normalBakuganAttributes) {
+        final texturePath = _findNormalTexture(
+          speciesRoot,
+          attribute,
+          assetPaths,
+        );
+        if (texturePath == null) {
+          variants.clear();
+          break;
+        }
+        _normalTexturePathsByModelAndAttribute['$modelPath|$attribute'] =
+            texturePath;
+        variants.add(
+          BakuganVariant(
+            attribute: attribute,
+            modelPath: modelPath,
+            closedModelPath: closedModelPath,
+            texturePath: texturePath,
+            color: _colorForBakuganAttribute(attribute),
+            gPower: _gPowerFor(speciesName, attribute),
+            speciesName: speciesName,
+          ),
+        );
+      }
+
+      if (variants.isNotEmpty) {
+        grouped[speciesName] = variants;
+      }
+    }
+
+    // Some legacy Bakugan have a dedicated GLB or ball image in the model
+    // library but no OBJ/textures. Prefer those assets over old illustrations.
+    final modelFallbacks = _findModelFallbacks(allAssetPaths);
+    for (final entry in modelFallbacks.entries) {
+      if (grouped.containsKey(entry.key)) continue;
+
+      final variants = <BakuganVariant>[];
+      for (final attribute in _normalBakuganAttributes) {
+        final modelPath = entry.value[attribute];
+        if (modelPath == null) continue;
+        variants.add(
+          BakuganVariant(
+            attribute: attribute,
+            modelPath: modelPath,
+            color: _colorForBakuganAttribute(attribute),
+            gPower: _gPowerFor(entry.key, attribute),
+            speciesName: entry.key,
+          ),
+        );
+      }
+      if (variants.isNotEmpty) grouped[entry.key] = variants;
+    }
+
+    // Keep the old illustration fallback only for Bakugan without a dedicated
+    // model-library asset.
+    final imageFallbacks = _findImageFallbacks(allAssetPaths);
+    for (final entry in imageFallbacks.entries) {
+      if (grouped.containsKey(entry.key)) continue;
+
+      final variants = <BakuganVariant>[];
+      for (final attribute in _normalBakuganAttributes) {
+        final imagePath = entry.value[attribute];
+        if (imagePath == null) continue;
+        variants.add(
+          BakuganVariant(
+            attribute: attribute,
+            modelPath: imagePath,
+            color: _colorForBakuganAttribute(attribute),
+            gPower: _gPowerFor(entry.key, attribute),
+            speciesName: entry.key,
+          ),
+        );
+      }
+      if (variants.isNotEmpty) grouped[entry.key] = variants;
+    }
+
+    availableBakugans =
+        grouped.entries
+            .map((entry) => Bakugan(name: entry.key, variants: entry.value))
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
 
     if (availableBakugans.isEmpty) {
       _loadFallback();
@@ -1176,9 +1551,12 @@ Future<void> _loadFallback() async {
       variants: [
         BakuganVariant(
           attribute: 'pyrus',
-          modelPath: 'assets/models/dragonoid/dragonoid_pyrus_510g.glb',
+          modelPath:
+              'assets/models/Season 1 - Battle Brawlers/Dragonoid/Dragonoid Stand.obj',
+          texturePath:
+              'assets/models/Season 1 - Battle Brawlers/Dragonoid/Textures/Core/Pyrus Dragonoid.png',
           color: Colors.red,
-          gPower: 550,
+          gPower: 600,
           speciesName: 'Dragonoid',
         ),
       ],

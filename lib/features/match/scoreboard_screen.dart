@@ -1779,6 +1779,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                   attribute: variant.attribute,
                   gPower: variant.gPower,
                   modelPath: variant.modelPath,
+                  texturePath: variant.texturePath,
                   imagePath: _historyBakuganImagePath(
                     speciesName: variant.speciesName,
                     attribute: variant.attribute,
@@ -2500,6 +2501,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                             gPower: leftBakugan?.gPower ?? 0,
                                             modelPath:
                                                 leftBakugan?.modelPath ?? '',
+                                            texturePath:
+                                                leftBakugan?.texturePath,
                                             imagePath:
                                                 leftBakuganSpecies.isEmpty ||
                                                     leftBakuganAttribute.isEmpty
@@ -2526,6 +2529,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                             gPower: rightBakugan?.gPower ?? 0,
                                             modelPath:
                                                 rightBakugan?.modelPath ?? '',
+                                            texturePath:
+                                                rightBakugan?.texturePath,
                                             imagePath:
                                                 rightBakuganSpecies.isEmpty ||
                                                     rightBakuganAttribute.isEmpty

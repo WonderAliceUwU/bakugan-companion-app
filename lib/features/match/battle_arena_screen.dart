@@ -825,7 +825,8 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   bool _isPreyasDiablo(BakuganVariant variant) =>
-      variant.speciesName.trim().toLowerCase() == 'preyas diablo';
+      variant.speciesName.trim().toLowerCase() == 'preyas diablo' ||
+      variant.speciesName.trim().toLowerCase() == 'preyas ii diablo';
 
   String? _preyasDiabloPrimaryAttribute(BakuganVariant variant) {
     if (!_isPreyasDiablo(variant)) return null;
@@ -860,6 +861,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return BakuganVariant(
       attribute: attribute.toLowerCase(),
       modelPath: variant.modelPath,
+      texturePath: normalTexturePathForModel(variant.modelPath, attribute),
       color: _colorForAttribute(attribute),
       gPower: variant.gPower,
       speciesName: variant.speciesName,

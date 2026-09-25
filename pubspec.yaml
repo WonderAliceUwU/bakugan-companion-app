@@ -55,6 +55,7 @@ flutter:
     - assets/images/cards/new_vestroia/
     - assets/music/menu/Title.flac
     - assets/music/menu/Menu.flac
+    - assets/music/menu/Store.flac
     - assets/music/arena/
     - assets/music/battle/before_ability.flac
     - assets/music/battle/after_ability.flac
@@ -80,7 +81,9 @@ flutter:
     - assets/images/bakugan/clayf/
     - assets/images/bakugan/cosmic_ingram/
     - assets/images/bakugan/dragonoid/
+    - assets/images/bakugan/el_condor/
     - assets/images/bakugan/fear_ripper/
+    - assets/images/bakugan/fencer/
     - assets/images/bakugan/fourtress/
     - assets/images/bakugan/gorem/
     - assets/images/bakugan/griffon/
@@ -88,6 +91,8 @@ flutter:
     - assets/images/bakugan/harpus/
     - assets/images/bakugan/juggernoid/
     - assets/images/bakugan/limulus/
+    - assets/images/bakugan/lars_lion/
+    - assets/images/bakugan/leefram/
     - assets/images/bakugan/monarus/
     - assets/images/bakugan/naga/
     - assets/images/bakugan/nemus/
@@ -98,42 +103,155 @@ flutter:
     - assets/images/bakugan/ravenoid/
     - assets/images/bakugan/reaper/
     - assets/images/bakugan/sirenoid/
+    - assets/images/bakugan/spin_ravenoid/
     - assets/images/bakugan/stinglash/
     - assets/images/bakugan/tentaclear/
     - assets/images/bakugan/warius/
     - assets/images/bakugan/wired/
-    # Carpetas de modelos
-    - assets/models/dragonoid/
-    - assets/models/gorem/
-    - assets/models/fear_ripper/
-    - assets/models/griffon/
-    - assets/models/sirenoid/
-    - assets/models/ravenoid/
-    - assets/models/centipoid/
-    - assets/models/reaper/
-    - assets/models/monarus/
-    - assets/models/harpus/
-    - assets/models/blade_tigrerra/
-    - assets/models/hammer_gorem/
-    - assets/models/fourtress/
-    - assets/models/preyas_diablo/
-    - assets/models/rattleoid/
-    - assets/models/stinglash/
-    - assets/models/tentaclear/
-    - assets/models/juggernoid/
-    - assets/models/neo_dragonoid/
-    - assets/models/bee_striker/
-    - assets/models/cosmic_ingram/
-    - assets/models/nemus/
-    - assets/models/wired/
-    - assets/models/apollonir/
-    - assets/models/clayf/
-    - assets/models/el_condor/
-    - assets/models/fencer/
-    - assets/models/lars_lion/
-    - assets/models/leefram/
-    - assets/models/limulus/
-    - assets/models/naga/
-    - assets/models/oberus/
-    - assets/models/spin_ravenoid/
-    - assets/models/warius/
+    # Modelos OBJ y texturas normales por temporada
+    - assets/models/Season 1 - Battle Brawlers/Alpha Hydranoid/
+    - assets/models/Season 1 - Battle Brawlers/Apollonir/
+    - assets/models/Season 1 - Battle Brawlers/Battle Ax Vladitor/
+    - assets/models/Season 1 - Battle Brawlers/Bee Striker/
+    - assets/models/Season 1 - Battle Brawlers/Blade Tigrerra/
+    - assets/models/Season 1 - Battle Brawlers/Centipoid/
+    - assets/models/Season 1 - Battle Brawlers/Centorrior/
+    - assets/models/Season 1 - Battle Brawlers/Clayf/
+    - assets/models/Season 1 - Battle Brawlers/Cycloid/
+    - assets/models/Season 1 - Battle Brawlers/Delta Dragonoid/
+    - assets/models/Season 1 - Battle Brawlers/Dragonoid/
+    - assets/models/Season 1 - Battle Brawlers/Druman/
+    - assets/models/Season 1 - Battle Brawlers/Dual Hydranoid/
+    - assets/models/Season 1 - Battle Brawlers/El Condor/
+    - assets/models/Season 1 - Battle Brawlers/Exedra/
+    - assets/models/Season 1 - Battle Brawlers/Exedra/Mock/
+    - assets/models/Season 1 - Battle Brawlers/Falconeer/
+    - assets/models/Season 1 - Battle Brawlers/Fear Ripper/
+    - assets/models/Season 1 - Battle Brawlers/Fifth Paladin/
+    - assets/models/Season 1 - Battle Brawlers/Fourtress/
+    - assets/models/Season 1 - Battle Brawlers/Frosch/
+    - assets/models/Season 1 - Battle Brawlers/Gargonoid/
+    - assets/models/Season 1 - Battle Brawlers/Gorem/
+    - assets/models/Season 1 - Battle Brawlers/Griffon/
+    - assets/models/Season 1 - Battle Brawlers/Hairadee/
+    - assets/models/Season 1 - Battle Brawlers/Hammer Gorem/
+    - assets/models/Season 1 - Battle Brawlers/Harpus/
+    - assets/models/Season 1 - Battle Brawlers/Hydranoid/
+    - assets/models/Season 1 - Battle Brawlers/Hynoid/
+    - assets/models/Season 1 - Battle Brawlers/Hynoid/Blitzwolfer/
+    - assets/models/Season 1 - Battle Brawlers/Juggernoid/
+    - assets/models/Season 1 - Battle Brawlers/Lars Lion/
+    - assets/models/Season 1 - Battle Brawlers/Laserman/
+    - assets/models/Season 1 - Battle Brawlers/Leonidas/
+    - assets/models/Season 1 - Battle Brawlers/Limulus/
+    - assets/models/Season 1 - Battle Brawlers/Manion/
+    - assets/models/Season 1 - Battle Brawlers/Mantris/
+    - assets/models/Season 1 - Battle Brawlers/Mecha Chamelia/
+    - assets/models/Season 1 - Battle Brawlers/Mock Dragonoid/
+    - assets/models/Season 1 - Battle Brawlers/Monarus/
+    - assets/models/Season 1 - Battle Brawlers/Oberus/
+    - assets/models/Season 1 - Battle Brawlers/Omega Leonidas/
+    - assets/models/Season 1 - Battle Brawlers/Preyas/
+    - assets/models/Season 1 - Battle Brawlers/Preyas II Angelo/
+    - assets/models/Season 1 - Battle Brawlers/Preyas II Diablo/
+    - assets/models/Season 1 - Battle Brawlers/Rabeeder/
+    - assets/models/Season 1 - Battle Brawlers/Rattleoid/
+    - assets/models/Season 1 - Battle Brawlers/Ravenoid/
+    - assets/models/Season 1 - Battle Brawlers/Reaper/
+    - assets/models/Season 1 - Battle Brawlers/Robotallion/
+    - assets/models/Season 1 - Battle Brawlers/Saurus/
+    - assets/models/Season 1 - Battle Brawlers/Serpenoid/
+    - assets/models/Season 1 - Battle Brawlers/Siege/
+    - assets/models/Season 1 - Battle Brawlers/Naga/
+    - assets/models/Season 1 - Battle Brawlers/Sirenoid/
+    - assets/models/Season 1 - Battle Brawlers/Skyress/
+    - assets/models/Season 1 - Battle Brawlers/Stinglash/
+    - assets/models/Season 1 - Battle Brawlers/Storm Skyress/
+    - assets/models/Season 1 - Battle Brawlers/Tayghen/
+    - assets/models/Season 1 - Battle Brawlers/Tentaclear/
+    - assets/models/Season 1 - Battle Brawlers/Terrorclaw/
+    - assets/models/Season 1 - Battle Brawlers/Tigrerra/
+    - assets/models/Season 1 - Battle Brawlers/Tricloid/
+    - assets/models/Season 1 - Battle Brawlers/Tuskor/
+    - assets/models/Season 1 - Battle Brawlers/Ultimate Dragonoid/
+    - assets/models/Season 1 - Battle Brawlers/Vladitor/
+    - assets/models/Season 1 - Battle Brawlers/Warius/
+    - assets/models/Season 1 - Battle Brawlers/Wavern/
+    - assets/models/Season 1 - Battle Brawlers/Wormquake/
+    - assets/models/Season 2 - New Vestroia/Cosmic Ingram/
+    - assets/models/Season 2 - New Vestroia/Fencer/
+    - assets/models/Season 2 - New Vestroia/Leefram/
+    - assets/models/Season 2 - New Vestroia/MAC Spider/Model/
+    - assets/models/Season 2 - New Vestroia/Nemus/
+    - assets/models/Season 2 - New Vestroia/Neo Dragonoid/Model/
+    - assets/models/Season 2 - New Vestroia/Spin Ravenoid/
+    - assets/models/Season 2 - New Vestroia/Wired/
+    - assets/models/Season 1 - Battle Brawlers/Alpha Hydranoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Apollonir/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Battle Ax Vladitor/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Bee Striker/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Blade Tigrerra/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Centipoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Centorrior/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Clayf/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Cycloid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Delta Dragonoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Dragonoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Druman/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Dual Hydranoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/El Condor/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Exedra/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Falconeer/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Fear Ripper/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Fifth Paladin/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Fourtress/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Frosch/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Gargonoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Gorem/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Griffon/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Hairadee/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Hammer Gorem/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Harpus/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Hydranoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Hynoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Juggernoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Lars Lion/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Laserman/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Leonidas/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Limulus/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Manion/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Mantris/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Mecha Chamelia/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Mock Dragonoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Monarus/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Naga/Textures/Cores/
+    - assets/models/Season 1 - Battle Brawlers/Oberus/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Omega Leonidas/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Preyas II Angelo/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Preyas II Diablo/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Preyas/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Rabeeder/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Rattleoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Ravenoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Reaper/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Robotallion/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Saurus/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Serpenoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Siege/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Sirenoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Skyress/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Stinglash/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Storm Skyress/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Tayghen/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Tentaclear/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Terrorclaw/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Tigrerra/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Tricloid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Tuskor/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Ultimate Dragonoid/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Vladitor/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Warius/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Wavern/Textures/Core/
+    - assets/models/Season 1 - Battle Brawlers/Wormquake/Textures/Core/
+    - assets/models/Season 2 - New Vestroia/MAC Spider/Textures/
+    - assets/models/Season 2 - New Vestroia/Neo Dragonoid/Textures/

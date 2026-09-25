@@ -145,6 +145,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     await Navigator.of(context).push(_fadeRoute(const MatchHistoryScreen()));
   }
 
+  Future<void> _navigateToInventory() async {
+    await Navigator.of(context).push(_fadeRoute(const InventoryScreen()));
+    if (mounted) {
+      await _playBackgroundMusic('music/menu/Title.flac');
+    }
+  }
+
   Future<String?> _showPathPrompt({
     required String title,
     required String confirmLabel,
@@ -571,6 +578,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: _navigateToHistory,
                         width: buttonWidth,
                         height: 100,
+                      ),
+                      BakuganButton(
+                        text: 'INVENTORY',
+                        onPressed: _navigateToInventory,
+                        width: buttonWidth,
+                        height: 100,
+                        color: Colors.cyanAccent,
                       ),
                       BakuganButton(
                         text: 'BACKUP / IMPORT',
@@ -1395,11 +1409,18 @@ class _MatchHistoryScreenState extends State<MatchHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _historyFuture = LeaderboardRepository.instance.loadStore();
+    _historyFuture = _loadHistory();
+  }
+
+  Future<LeaderboardStore> _loadHistory() async {
+    // Historical entries can contain model paths from before the OBJ migration.
+    // Load the current catalogue before resolving those entries in the UI.
+    await loadAvailableBakugans();
+    return LeaderboardRepository.instance.loadStore();
   }
 
   Future<void> _reload() async {
-    final future = LeaderboardRepository.instance.loadStore();
+    final future = _loadHistory();
     setState(() => _historyFuture = future);
     await future;
   }
@@ -1601,9 +1622,7 @@ class _MatchHistoryCardState extends State<_MatchHistoryCard> {
             ],
           ),
           children: _isExpanded
-              ? [
-                  _MatchHistoryExpandedContent(entry: entry),
-                ]
+              ? [_MatchHistoryExpandedContent(entry: entry)]
               : const [],
         ),
       ),
@@ -1652,7 +1671,8 @@ class _MatchHistoryExpandedContent extends StatelessWidget {
           spacing: 14,
           runSpacing: 14,
           children: [
-            for (final player in entry.players) _HistoryPlayerCard(player: player),
+            for (final player in entry.players)
+              _HistoryPlayerCard(player: player),
           ],
         ),
         const SizedBox(height: 18),
@@ -1848,10 +1868,7 @@ class _HistoryGateCardTicks extends StatelessWidget {
                         Colors.cyanAccent,
                         Colors.purpleAccent.withValues(alpha: 0.8),
                       ]
-                    : [
-                        Colors.blueGrey.withValues(alpha: 0.4),
-                        Colors.black87,
-                      ],
+                    : [Colors.blueGrey.withValues(alpha: 0.4), Colors.black87],
               ),
               border: Border.all(
                 color: isFilled ? Colors.cyanAccent : Colors.white10,
@@ -1974,10 +1991,8 @@ class _HistoryAbilityMiniCard extends StatelessWidget {
         child: Image.asset(
           imagePath,
           fit: BoxFit.cover,
-          errorBuilder: (_, error, stackTrace) => Image.asset(
-            'assets/images/cards/anverse.png',
-            fit: BoxFit.cover,
-          ),
+          errorBuilder: (_, error, stackTrace) =>
+              Image.asset('assets/images/cards/anverse.png', fit: BoxFit.cover),
         ),
       ),
     );
@@ -2093,10 +2108,7 @@ class _HistoryBattleRow extends StatelessWidget {
                     ),
                   ),
                   for (final card in battle.externalAbilitiesUsed)
-                    _HistoryAbilityMiniCard(
-                      card: card,
-                      borderRadius: 2,
-                    ),
+                    _HistoryAbilityMiniCard(card: card, borderRadius: 2),
                 ],
               ),
             ),
@@ -2119,8 +2131,9 @@ class _HistoryBattleCompetitor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment:
-          isLeftSide ? MainAxisAlignment.start : MainAxisAlignment.end,
+      mainAxisAlignment: isLeftSide
+          ? MainAxisAlignment.start
+          : MainAxisAlignment.end,
       children: [
         if (isLeftSide) ...[
           _HistoryBattleBakuganMini(side: side),
@@ -2135,10 +2148,7 @@ class _HistoryBattleCompetitor extends StatelessWidget {
                   alignment: WrapAlignment.center,
                   children: [
                     for (final card in side.abilitiesUsed)
-                      _HistoryAbilityMiniCard(
-                        card: card,
-                        borderRadius: 2,
-                      ),
+                      _HistoryAbilityMiniCard(card: card, borderRadius: 2),
                   ],
                 ),
               ),
@@ -2155,10 +2165,7 @@ class _HistoryBattleCompetitor extends StatelessWidget {
                   alignment: WrapAlignment.center,
                   children: [
                     for (final card in side.abilitiesUsed)
-                      _HistoryAbilityMiniCard(
-                        card: card,
-                        borderRadius: 2,
-                      ),
+                      _HistoryAbilityMiniCard(card: card, borderRadius: 2),
                   ],
                 ),
               ),
@@ -2175,9 +2182,7 @@ class _HistoryBattleCompetitor extends StatelessWidget {
 class _HistoryBattleBakuganMini extends StatelessWidget {
   final MatchHistoryBattleSideEntry side;
 
-  const _HistoryBattleBakuganMini({
-    required this.side,
-  });
+  const _HistoryBattleBakuganMini({required this.side});
 
   @override
   Widget build(BuildContext context) {
@@ -2284,10 +2289,7 @@ class _HistoryBakuganMiniBorderPainter extends CustomPainter {
   final Color color;
   final Color? glowColor;
 
-  const _HistoryBakuganMiniBorderPainter({
-    required this.color,
-    this.glowColor,
-  });
+  const _HistoryBakuganMiniBorderPainter({required this.color, this.glowColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2396,38 +2398,50 @@ Color _historyAttributeColor(String attribute) {
 }
 
 BakuganVariant? _historyVariantFromEntry(MatchHistoryBakuganEntry entry) {
+  final speciesKey = entry.speciesName.trim().toLowerCase();
+  final attributeKey = entry.attribute.trim().toLowerCase();
+  for (final bakugan in availableBakugans) {
+    if (bakugan.name.trim().toLowerCase() != speciesKey) {
+      continue;
+    }
+
+    final matchingVariants = bakugan.variants
+        .where(
+          (variant) =>
+              variant.attribute.trim().toLowerCase() == attributeKey,
+        )
+        .toList();
+
+    // Prefer the current catalogue. This also migrates old history entries
+    // whose GLB path was removed when the OBJ models were added.
+    for (final variant in matchingVariants) {
+      if (entry.modelPath?.trim() == variant.modelPath.trim()) {
+        return variant;
+      }
+    }
+    if (entry.gPower > 0) {
+      for (final variant in matchingVariants) {
+        if (variant.gPower == entry.gPower) return variant;
+      }
+    }
+    if (matchingVariants.isNotEmpty) return matchingVariants.first;
+  }
+
+  // Keep rendering entries created with the new format even if the catalogue
+  // has not finished loading yet.
   final modelPath = entry.modelPath?.trim() ?? '';
   if (modelPath.isNotEmpty) {
+    final texturePath = entry.texturePath?.trim();
     return BakuganVariant(
       attribute: entry.attribute,
       modelPath: modelPath,
+      texturePath: texturePath == null || texturePath.isEmpty
+          ? null
+          : texturePath,
       color: _historyAttributeColor(entry.attribute),
       gPower: entry.gPower,
       speciesName: entry.speciesName,
     );
-  }
-
-  for (final bakugan in availableBakugans) {
-    if (bakugan.name.trim().toLowerCase() !=
-        entry.speciesName.trim().toLowerCase()) {
-      continue;
-    }
-    for (final variant in bakugan.variants) {
-      if (variant.attribute.trim().toLowerCase() !=
-          entry.attribute.trim().toLowerCase()) {
-        continue;
-      }
-      if (entry.gPower > 0 && variant.gPower != entry.gPower) {
-        continue;
-      }
-      return variant;
-    }
-    for (final variant in bakugan.variants) {
-      if (variant.attribute.trim().toLowerCase() ==
-          entry.attribute.trim().toLowerCase()) {
-        return variant;
-      }
-    }
   }
 
   return null;

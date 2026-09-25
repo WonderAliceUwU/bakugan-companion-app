@@ -4,6 +4,8 @@ part of '../../main.dart';
 class BakuganVariant {
   final String attribute;
   final String modelPath;
+  final String? closedModelPath;
+  final String? texturePath;
   final Color color;
   final int gPower;
   final String speciesName;
@@ -11,6 +13,8 @@ class BakuganVariant {
   BakuganVariant({
     required this.attribute,
     required this.modelPath,
+    this.closedModelPath,
+    this.texturePath,
     required this.color,
     required this.gPower,
     required this.speciesName,
@@ -22,6 +26,151 @@ class Bakugan {
   final List<BakuganVariant> variants;
 
   Bakugan({required this.name, required this.variants});
+}
+
+String bakuganVariantInventoryKey({
+  required String speciesName,
+  required String attribute,
+  required String modelPath,
+}) {
+  return '${speciesName.trim().toLowerCase()}|'
+      '${attribute.trim().toLowerCase()}|'
+      '${modelPath.trim()}';
+}
+
+String bakuganVariantKey(BakuganVariant variant) {
+  return bakuganVariantInventoryKey(
+    speciesName: variant.speciesName,
+    attribute: variant.attribute,
+    modelPath: variant.modelPath,
+  );
+}
+
+class SavedBakuganVariant {
+  final String speciesName;
+  final String attribute;
+  final String modelPath;
+  final String? closedModelPath;
+  final String? texturePath;
+  final int gPower;
+
+  const SavedBakuganVariant({
+    required this.speciesName,
+    required this.attribute,
+    required this.modelPath,
+    required this.closedModelPath,
+    required this.texturePath,
+    required this.gPower,
+  });
+
+  factory SavedBakuganVariant.fromVariant(BakuganVariant variant) {
+    return SavedBakuganVariant(
+      speciesName: variant.speciesName,
+      attribute: variant.attribute,
+      modelPath: variant.modelPath,
+      closedModelPath: variant.closedModelPath,
+      texturePath: variant.texturePath,
+      gPower: variant.gPower,
+    );
+  }
+
+  factory SavedBakuganVariant.fromJson(Map<String, dynamic> json) {
+    return SavedBakuganVariant(
+      speciesName: (json['speciesName'] ?? json['name'] ?? '')
+          .toString()
+          .trim(),
+      attribute: (json['attribute'] ?? '').toString().trim().toLowerCase(),
+      modelPath: (json['modelPath'] ?? '').toString().trim(),
+      closedModelPath: json['closedModelPath']?.toString(),
+      texturePath: json['texturePath']?.toString(),
+      gPower: (json['gPower'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  String get inventoryKey => bakuganVariantInventoryKey(
+    speciesName: speciesName,
+    attribute: attribute,
+    modelPath: modelPath,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'speciesName': speciesName,
+    'attribute': attribute,
+    'modelPath': modelPath,
+    if (closedModelPath != null) 'closedModelPath': closedModelPath,
+    if (texturePath != null) 'texturePath': texturePath,
+    'gPower': gPower,
+  };
+}
+
+class BakuganInventoryState {
+  final bool isConfigured;
+  final List<SavedBakuganVariant> bakugans;
+
+  const BakuganInventoryState({
+    this.isConfigured = false,
+    this.bakugans = const [],
+  });
+
+  factory BakuganInventoryState.fromJson(dynamic raw) {
+    if (raw is! Map) return const BakuganInventoryState();
+    final rawBakugans = raw['bakugans'];
+    return BakuganInventoryState(
+      isConfigured: raw['configured'] == true,
+      bakugans: rawBakugans is List
+          ? rawBakugans
+                .whereType<Map>()
+                .map(
+                  (entry) => SavedBakuganVariant.fromJson(
+                    Map<String, dynamic>.from(entry),
+                  ),
+                )
+                .where(
+                  (entry) =>
+                      entry.speciesName.isNotEmpty &&
+                      entry.attribute.isNotEmpty &&
+                      entry.modelPath.isNotEmpty,
+                )
+                .toList()
+          : const [],
+    ).normalized();
+  }
+
+  Map<String, dynamic> toJson() => {
+    'configured': isConfigured,
+    'bakugans': bakugans.map((entry) => entry.toJson()).toList(),
+  };
+
+  BakuganInventoryState normalized() {
+    final unique = <String, SavedBakuganVariant>{};
+    for (final entry in bakugans) {
+      if (entry.speciesName.isEmpty ||
+          entry.attribute.isEmpty ||
+          entry.modelPath.isEmpty) {
+        continue;
+      }
+      unique[entry.inventoryKey] = entry;
+    }
+    final sorted = unique.values.toList()
+      ..sort((a, b) {
+        final speciesCompare = a.speciesName.toLowerCase().compareTo(
+          b.speciesName.toLowerCase(),
+        );
+        if (speciesCompare != 0) return speciesCompare;
+        return a.attribute.compareTo(b.attribute);
+      });
+    return BakuganInventoryState(isConfigured: isConfigured, bakugans: sorted);
+  }
+
+  BakuganInventoryState copyWith({
+    bool? isConfigured,
+    List<SavedBakuganVariant>? bakugans,
+  }) {
+    return BakuganInventoryState(
+      isConfigured: isConfigured ?? this.isConfigured,
+      bakugans: bakugans ?? this.bakugans,
+    );
+  }
 }
 
 class PlayerData {
@@ -327,12 +476,14 @@ class LeaderboardStore {
   final LeaderboardData currentLeaderboard;
   final List<LeaderboardSeason> archivedSeasons;
   final List<MatchHistoryEntry> matchHistory;
+  final BakuganInventoryState bakuganInventory;
 
   const LeaderboardStore({
     required this.currentSeasonNumber,
     required this.currentLeaderboard,
     this.archivedSeasons = const [],
     this.matchHistory = const [],
+    this.bakuganInventory = const BakuganInventoryState(),
   });
 
   factory LeaderboardStore.fromJson(Map<String, dynamic> json) {
@@ -366,6 +517,9 @@ class LeaderboardStore {
                 )
                 .toList()
           : const [],
+      bakuganInventory: BakuganInventoryState.fromJson(
+        json['bakuganInventory'],
+      ),
     );
   }
 
@@ -374,6 +528,7 @@ class LeaderboardStore {
     'currentLeaderboard': currentLeaderboard.toJson(),
     'archivedSeasons': archivedSeasons.map((entry) => entry.toJson()).toList(),
     'matchHistory': matchHistory.map((entry) => entry.toJson()).toList(),
+    'bakuganInventory': bakuganInventory.toJson(),
   };
 
   LeaderboardStore copyWith({
@@ -381,12 +536,14 @@ class LeaderboardStore {
     LeaderboardData? currentLeaderboard,
     List<LeaderboardSeason>? archivedSeasons,
     List<MatchHistoryEntry>? matchHistory,
+    BakuganInventoryState? bakuganInventory,
   }) {
     return LeaderboardStore(
       currentSeasonNumber: currentSeasonNumber ?? this.currentSeasonNumber,
       currentLeaderboard: currentLeaderboard ?? this.currentLeaderboard,
       archivedSeasons: archivedSeasons ?? this.archivedSeasons,
       matchHistory: matchHistory ?? this.matchHistory,
+      bakuganInventory: bakuganInventory ?? this.bakuganInventory,
     );
   }
 }
@@ -574,6 +731,7 @@ class MatchHistoryBakuganEntry {
   final String attribute;
   final int gPower;
   final String? modelPath;
+  final String? texturePath;
   final String? imagePath;
 
   const MatchHistoryBakuganEntry({
@@ -581,6 +739,7 @@ class MatchHistoryBakuganEntry {
     required this.attribute,
     required this.gPower,
     required this.modelPath,
+    this.texturePath,
     required this.imagePath,
   });
 
@@ -590,6 +749,7 @@ class MatchHistoryBakuganEntry {
       attribute: (json['attribute'] ?? '').toString(),
       gPower: (json['gPower'] as num?)?.toInt() ?? 0,
       modelPath: json['modelPath']?.toString(),
+      texturePath: json['texturePath']?.toString(),
       imagePath: json['imagePath']?.toString(),
     );
   }
@@ -604,6 +764,7 @@ class MatchHistoryBakuganEntry {
         attribute: '',
         gPower: 0,
         modelPath: null,
+        texturePath: null,
         imagePath: null,
       );
     }
@@ -614,6 +775,7 @@ class MatchHistoryBakuganEntry {
       attribute: attribute,
       gPower: int.tryParse(match.group(3) ?? '') ?? 0,
       modelPath: null,
+      texturePath: null,
       imagePath: null,
     );
   }
@@ -623,6 +785,7 @@ class MatchHistoryBakuganEntry {
     'attribute': attribute,
     'gPower': gPower,
     'modelPath': modelPath,
+    'texturePath': texturePath,
     'imagePath': imagePath,
   };
 }
@@ -1096,6 +1259,17 @@ class LeaderboardRepository {
     return _persistStore(store.copyWith(matchHistory: updatedHistory));
   }
 
+  Future<LeaderboardStore> saveBakuganInventory(
+    Iterable<BakuganVariant> activeVariants,
+  ) async {
+    final store = await loadStore();
+    final inventory = BakuganInventoryState(
+      isConfigured: true,
+      bakugans: activeVariants.map(SavedBakuganVariant.fromVariant).toList(),
+    ).normalized();
+    return _persistStore(store.copyWith(bakuganInventory: inventory));
+  }
+
   LeaderboardStore _defaultStore() {
     return LeaderboardStore(
       currentSeasonNumber: _currentSeasonNumber,
@@ -1167,6 +1341,7 @@ class LeaderboardRepository {
       archivedSeasons: archivedSeasons,
       matchHistory: List<MatchHistoryEntry>.from(store.matchHistory)
         ..sort((a, b) => b.playedAt.compareTo(a.playedAt)),
+      bakuganInventory: store.bakuganInventory.normalized(),
     );
   }
 
