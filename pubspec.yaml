@@ -46,6 +46,7 @@ flutter:
     - assets/images/Menu.png
     - assets/images/menu-2.png
     - assets/images/selection-bg.png
+    - assets/images/inventory_bg.jpeg
     - assets/images/match-bg.png
     - assets/images/logo.png
     - assets/images/cards/anverse.png
@@ -147,7 +148,6 @@ flutter:
     - assets/models/Season 1 - Battle Brawlers/Manion/
     - assets/models/Season 1 - Battle Brawlers/Mantris/
     - assets/models/Season 1 - Battle Brawlers/Mecha Chamelia/
-    - assets/models/Season 1 - Battle Brawlers/Mock Dragonoid/
     - assets/models/Season 1 - Battle Brawlers/Monarus/
     - assets/models/Season 1 - Battle Brawlers/Oberus/
     - assets/models/Season 1 - Battle Brawlers/Omega Leonidas/
@@ -222,7 +222,6 @@ flutter:
     - assets/models/Season 1 - Battle Brawlers/Manion/Textures/Core/
     - assets/models/Season 1 - Battle Brawlers/Mantris/Textures/Core/
     - assets/models/Season 1 - Battle Brawlers/Mecha Chamelia/Textures/Core/
-    - assets/models/Season 1 - Battle Brawlers/Mock Dragonoid/Textures/Core/
     - assets/models/Season 1 - Battle Brawlers/Monarus/Textures/Core/
     - assets/models/Season 1 - Battle Brawlers/Naga/Textures/Cores/
     - assets/models/Season 1 - Battle Brawlers/Oberus/Textures/Core/

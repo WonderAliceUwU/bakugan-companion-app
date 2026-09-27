@@ -37,7 +37,9 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   late AudioPlayer _sfxPlayer;
   bool _inventoryLoaded = false;
   bool _inventoryConfigured = false;
+  bool _collectionMode = true;
   Set<String> _includedInventoryKeys = <String>{};
+  Map<String, int> _savedGPowerByInventoryKey = <String, int>{};
 
   @override
   void initState() {
@@ -53,8 +55,13 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     setState(() {
       _inventoryConfigured = store.bakuganInventory.isConfigured;
       _includedInventoryKeys = store.bakuganInventory.bakugans
+          .where((entry) => entry.gPower > 0)
           .map((entry) => entry.inventoryKey)
           .toSet();
+      _savedGPowerByInventoryKey = {
+        for (final entry in store.bakuganInventory.bakugans)
+          if (entry.gPower > 0) entry.inventoryKey: entry.gPower,
+      };
       _inventoryLoaded = true;
     });
   }
@@ -112,8 +119,24 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   }
 
   List<Bakugan> _visibleBakugans() {
+    BakuganVariant withSavedGPower(BakuganVariant variant) {
+      final savedGPower =
+          _savedGPowerByInventoryKey[bakuganVariantKey(variant)];
+      return savedGPower == null
+          ? variant
+          : variant.copyWith(gPower: savedGPower);
+    }
+
+    final allCatalogBakugans = availableBakugans
+        .map(
+          (bakugan) => Bakugan(
+            name: bakugan.name,
+            variants: bakugan.variants.map(withSavedGPower).toList(),
+          ),
+        )
+        .toList();
     final inventoryFiltered = _inventoryConfigured
-        ? availableBakugans
+        ? allCatalogBakugans
               .map(
                 (bakugan) => Bakugan(
                   name: bakugan.name,
@@ -128,11 +151,14 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
               )
               .where((bakugan) => bakugan.variants.isNotEmpty)
               .toList()
-        : [...availableBakugans];
+        : <Bakugan>[];
+    final sourceBakugans = _collectionMode
+        ? inventoryFiltered
+        : allCatalogBakugans;
 
     final species = _selectedAttribute == null
-        ? inventoryFiltered
-        : inventoryFiltered
+        ? sourceBakugans
+        : sourceBakugans
               .where(
                 (bakugan) => bakugan.variants.any(
                   (variant) =>
@@ -233,9 +259,27 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   void _setSortMode(_BakuganSortMode mode) {
     if (_selectedAttribute == null || _sortMode == mode) return;
     _playClick();
-    final currentSpeciesName = _visibleBakugans()[selectedBakuganIndex].name;
+    final visibleBakugans = _visibleBakugans();
+    final currentSpeciesName = _hasSelectedBakugan(visibleBakugans)
+        ? visibleBakugans[selectedBakuganIndex].name
+        : null;
     setState(() {
       _sortMode = mode;
+      _syncSelectionWithVisibleBakugans(
+        preferredSpeciesName: currentSpeciesName,
+      );
+    });
+  }
+
+  void _setCollectionMode(bool enabled) {
+    if (_collectionMode == enabled) return;
+    _playClick();
+    final currentBakugans = _visibleBakugans();
+    final currentSpeciesName = _hasSelectedBakugan(currentBakugans)
+        ? currentBakugans[selectedBakuganIndex].name
+        : null;
+    setState(() {
+      _collectionMode = enabled;
       _syncSelectionWithVisibleBakugans(
         preferredSpeciesName: currentSpeciesName,
       );
@@ -376,6 +420,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
 
   void _addBakugan() {
     final visibleBakugans = _visibleBakugans();
+    if (!_hasSelectedBakugan(visibleBakugans)) return;
     final species = visibleBakugans[selectedBakuganIndex];
     final variant = species.variants[selectedVariantIndex];
 
@@ -427,6 +472,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     required PlayerData currentPlayer,
     required Bakugan currentSpecies,
     required BakuganVariant currentVariant,
+    required bool hasVisibleBakugans,
     required bool currentIsTaken,
     required String? currentStatusLabel,
   }) {
@@ -492,6 +538,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                             currentPlayer: currentPlayer,
                             currentSpecies: currentSpecies,
                             currentVariant: currentVariant,
+                            hasVisibleBakugans: hasVisibleBakugans,
                             currentIsTaken: currentIsTaken,
                             currentStatusLabel: currentStatusLabel,
                           ),
@@ -611,6 +658,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     required PlayerData currentPlayer,
     required Bakugan currentSpecies,
     required BakuganVariant currentVariant,
+    required bool hasVisibleBakugans,
     required bool currentIsTaken,
     required String? currentStatusLabel,
   }) {
@@ -640,116 +688,133 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                 colorForAttribute: _colorForAttribute,
                 onAttributeTap: _openAttributePicker,
                 onSortTap: _openSortPicker,
+                collectionMode: _collectionMode,
+                onCollectionModeToggle: () =>
+                    _setCollectionMode(!_collectionMode),
               ),
               const SizedBox(height: 7),
               Expanded(
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: constraints.maxWidth < 880 ? 82 : 104,
-                      child: _buildCompactAttributeRail(currentSpecies),
-                    ),
-                    Expanded(
-                      child: BakuganPreview(
-                        key: ValueKey(
-                          'compact_large_${currentVariant.modelPath}_${currentVariant.attribute}_${currentVariant.texturePath}',
-                        ),
-                        variant: currentVariant,
-                        isLarge: true,
-                        speciesName: currentSpecies.name,
-                        isTaken: currentIsTaken,
-                        statusLabel: currentStatusLabel,
-                        centerLargeFooter: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: carouselHeight,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, size: 24),
-                      color: Colors.white70,
-                      onPressed: () {
-                        _playClick();
-                        _carouselController.previousPage(
-                          duration: const Duration(milliseconds: 260),
-                          curve: Curves.easeOut,
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _carouselController,
-                        itemCount: visibleBakugans.length,
-                        onPageChanged: (index) => setState(() {
-                          selectedBakuganIndex = index;
-                          selectedVariantIndex = _preferredVariantIndex(
-                            visibleBakugans[index],
-                          );
-                        }),
-                        itemBuilder: (context, index) {
-                          final item = visibleBakugans[index];
-                          final variant = _primaryVariantForSpecies(item);
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 7),
+                child: hasVisibleBakugans
+                    ? Row(
+                        children: [
+                          SizedBox(
+                            width: constraints.maxWidth < 880 ? 82 : 104,
+                            child: _buildCompactAttributeRail(currentSpecies),
+                          ),
+                          Expanded(
                             child: BakuganPreview(
                               key: ValueKey(
-                                'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                                'compact_large_${currentVariant.modelPath}_${currentVariant.attribute}_${currentVariant.texturePath}',
                               ),
-                              variant: variant,
-                              isSelected: selectedBakuganIndex == index,
-                              speciesName: item.name,
-                              autoRotate: false,
+                              variant: currentVariant,
+                              isLarge: true,
+                              speciesName: currentSpecies.name,
+                              isTaken: currentIsTaken,
+                              statusLabel: currentStatusLabel,
+                              centerLargeFooter: true,
                             ),
+                          ),
+                        ],
+                      )
+                    : Center(
+                        child: _SelectionInfoPanel(
+                          text: _emptySelectionMessage,
+                        ),
+                      ),
+              ),
+              if (hasVisibleBakugans)
+                SizedBox(
+                  height: carouselHeight,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios, size: 24),
+                        color: Colors.white70,
+                        onPressed: () {
+                          _playClick();
+                          _carouselController.previousPage(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOut,
                           );
                         },
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios, size: 24),
-                      color: Colors.white70,
-                      onPressed: () {
-                        _playClick();
-                        _carouselController.nextPage(
-                          duration: const Duration(milliseconds: 260),
-                          curve: Curves.easeOut,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: BakuganButton(
-                      text: currentIsTaken ? 'PICKED' : 'ADD',
-                      onPressed: _addBakugan,
-                      width: double.infinity,
-                      height: 62,
-                      color: currentIsTaken ? Colors.grey : Colors.blueAccent,
-                      textFontSize: 21,
-                    ),
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _carouselController,
+                          itemCount: visibleBakugans.length,
+                          onPageChanged: (index) => setState(() {
+                            selectedBakuganIndex = index;
+                            selectedVariantIndex = _preferredVariantIndex(
+                              visibleBakugans[index],
+                            );
+                          }),
+                          itemBuilder: (context, index) {
+                            final item = visibleBakugans[index];
+                            final variant = _primaryVariantForSpecies(item);
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                              ),
+                              child: BakuganPreview(
+                                key: ValueKey(
+                                  'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                                ),
+                                variant: variant,
+                                isSelected: selectedBakuganIndex == index,
+                                speciesName: item.name,
+                                autoRotate: false,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios, size: 24),
+                        color: Colors.white70,
+                        onPressed: () {
+                          _playClick();
+                          _carouselController.nextPage(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOut,
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  if (widget.players.every(
-                    (player) => player.deck.length == 3,
-                  )) ...[
-                    const SizedBox(width: 10),
+                )
+              else
+                SizedBox(height: carouselHeight),
+              if (hasVisibleBakugans)
+                Row(
+                  children: [
                     Expanded(
                       child: BakuganButton(
-                        text: 'READY',
-                        onPressed: _nextPlayer,
+                        text: currentIsTaken ? 'PICKED' : 'ADD',
+                        onPressed: _addBakugan,
                         width: double.infinity,
                         height: 62,
+                        color: currentIsTaken ? Colors.grey : Colors.blueAccent,
                         textFontSize: 21,
                       ),
                     ),
+                    if (widget.players.every(
+                      (player) => player.deck.length == 3,
+                    )) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: BakuganButton(
+                          text: 'READY',
+                          onPressed: _nextPlayer,
+                          width: double.infinity,
+                          height: 62,
+                          textFontSize: 21,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
+                )
+              else
+                const SizedBox(height: 62),
             ],
           ),
         );
@@ -819,6 +884,10 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     );
   }
 
+  String get _emptySelectionMessage => _collectionMode
+      ? 'Tu colección está vacía. Desactiva COLLECTION MODE o habilita Bakugan desde INVENTORY.'
+      : 'No hay Bakugan para este atributo. Cambia el filtro para seguir seleccionando.';
+
   @override
   Widget build(BuildContext context) {
     final visibleBakugans = _visibleBakugans();
@@ -826,96 +895,26 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     if (availableBakugans.isEmpty || !_inventoryLoaded) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    if (visibleBakugans.isEmpty) {
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/selection-bg.png'),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: 40,
-                left: 20,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                  onPressed: () {
-                    unawaited(_playUiCancelSound());
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ),
-              Positioned.fill(
-                left: 600,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    Text(
-                      widget.players[currentPlayerIndex].name.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        letterSpacing: 5,
-                        color: Colors.blueAccent,
-                      ),
-                    ),
-                    const Text(
-                      'SELECT YOUR DECK',
-                      style: TextStyle(
-                        fontFamily: 'title_font',
-                        fontSize: 50,
-                        fontWeight: FontWeight.w900,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 30.0,
-                            color: Colors.blue,
-                            offset: Offset.zero,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _BakuganCompactToolbar(
-                      selectedAttribute: _selectedAttribute,
-                      sortMode: _sortMode,
-                      sortLabel: _sortModeLabel(_sortMode),
-                      sortIcon: _sortModeIcon(_sortMode),
-                      colorForAttribute: _colorForAttribute,
-                      onAttributeTap: _openAttributePicker,
-                      onSortTap: _openSortPicker,
-                    ),
-                    const SizedBox(height: 24),
-                    _SelectionInfoPanel(
-                      text:
-                          'No hay Bakugan para este atributo. Cambia el filtro para seguir seleccionando.',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
-    if (!_hasSelectedBakugan(visibleBakugans)) {
+    final hasVisibleBakugans = visibleBakugans.isNotEmpty;
+    if (hasVisibleBakugans && !_hasSelectedBakugan(visibleBakugans)) {
       selectedBakuganIndex = 0;
     }
 
     final currentPlayer = widget.players[currentPlayerIndex];
-    final currentSpecies = visibleBakugans[selectedBakuganIndex];
+    final currentSpecies = hasVisibleBakugans
+        ? visibleBakugans[selectedBakuganIndex]
+        : availableBakugans.first;
     final preferredVariantIndex = _preferredVariantIndex(currentSpecies);
-    if (_selectedAttribute != null &&
+    if (hasVisibleBakugans &&
+        _selectedAttribute != null &&
         selectedVariantIndex != preferredVariantIndex) {
       selectedVariantIndex = preferredVariantIndex;
     }
-    final currentVariant = currentSpecies.variants[selectedVariantIndex];
+    final safeVariantIndex = selectedVariantIndex
+        .clamp(0, currentSpecies.variants.length - 1)
+        .toInt();
+    final currentVariant = currentSpecies.variants[safeVariantIndex];
     final bool currentIsBanned = _isVariantBanned(currentVariant);
     final bool currentIsTaken = _isVariantTaken(currentVariant);
     final String? currentStatusLabel = currentIsBanned
@@ -928,6 +927,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
         currentPlayer: currentPlayer,
         currentSpecies: currentSpecies,
         currentVariant: currentVariant,
+        hasVisibleBakugans: hasVisibleBakugans,
         currentIsTaken: currentIsTaken,
         currentStatusLabel: currentStatusLabel,
       );
@@ -1277,6 +1277,9 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                     colorForAttribute: _colorForAttribute,
                     onAttributeTap: _openAttributePicker,
                     onSortTap: _openSortPicker,
+                    collectionMode: _collectionMode,
+                    onCollectionModeToggle: () =>
+                        _setCollectionMode(!_collectionMode),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
@@ -1286,264 +1289,296 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                         child: SizedBox(
                           width: 900, // Fixed container for both elements
                           height: 540,
-                          child: Stack(
-                            alignment: Alignment.centerLeft,
-                            children: [
-                              // 1. LARGE PREVIEW (Placed first so it's \"behind\" the tabs if needed)
-                              Positioned(
-                                left: 100,
-                                // Gives space for the tabs to sit on the edge
-                                child: SizedBox(
-                                  width: 800,
-                                  height: 540,
-                                  child: BakuganPreview(
-                                    key: ValueKey(
-                                      'large_${currentVariant.modelPath}_${currentVariant.attribute}_${currentVariant.texturePath}',
+                          child: hasVisibleBakugans
+                              ? Stack(
+                                  alignment: Alignment.centerLeft,
+                                  children: [
+                                    // 1. LARGE PREVIEW (Placed first so it's \"behind\" the tabs if needed)
+                                    Positioned(
+                                      left: 100,
+                                      // Gives space for the tabs to sit on the edge
+                                      child: SizedBox(
+                                        width: 800,
+                                        height: 540,
+                                        child: BakuganPreview(
+                                          key: ValueKey(
+                                            'large_${currentVariant.modelPath}_${currentVariant.attribute}_${currentVariant.texturePath}',
+                                          ),
+                                          variant: currentVariant,
+                                          isLarge: true,
+                                          speciesName: currentSpecies.name,
+                                          isTaken: currentIsTaken,
+                                          statusLabel: currentStatusLabel,
+                                        ),
+                                      ),
                                     ),
-                                    variant: currentVariant,
-                                    isLarge: true,
-                                    speciesName: currentSpecies.name,
-                                    isTaken: currentIsTaken,
-                                    statusLabel: currentStatusLabel,
-                                  ),
-                                ),
-                              ),
 
-                              // 2. ATTRIBUTE SELECTOR (Placed on top, overlapping the edge)
-                              Positioned(
-                                left: 0,
-                                child: SizedBox(
-                                  height: 540,
-                                  width: 140,
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final variants = currentSpecies.variants;
-                                      const double fixedItemHeight = 90;
-                                      final isFullSet = variants.length == 6;
+                                    // 2. ATTRIBUTE SELECTOR (Placed on top, overlapping the edge)
+                                    Positioned(
+                                      left: 0,
+                                      child: SizedBox(
+                                        height: 540,
+                                        width: 140,
+                                        child: LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            final variants =
+                                                currentSpecies.variants;
+                                            const double fixedItemHeight = 90;
+                                            final isFullSet =
+                                                variants.length == 6;
 
-                                      return Stack(
-                                        clipBehavior: Clip.none,
-                                        children: variants.asMap().entries.map((
-                                          vEntry,
-                                        ) {
-                                          final index = vEntry.key;
-                                          final variant = vEntry.value;
-                                          bool isSel =
-                                              index == selectedVariantIndex;
-                                          bool isTaken = _isVariantTaken(
-                                            variant,
-                                          );
+                                            return Stack(
+                                              clipBehavior: Clip.none,
+                                              children: variants.asMap().entries.map((
+                                                vEntry,
+                                              ) {
+                                                final index = vEntry.key;
+                                                final variant = vEntry.value;
+                                                bool isSel =
+                                                    index ==
+                                                    selectedVariantIndex;
+                                                bool isTaken = _isVariantTaken(
+                                                  variant,
+                                                );
 
-                                          double top = isFullSet
-                                              ? index *
-                                                    (540 - fixedItemHeight) /
-                                                    5
-                                              : index * 90;
+                                                double top = isFullSet
+                                                    ? index *
+                                                          (540 -
+                                                              fixedItemHeight) /
+                                                          5
+                                                    : index * 90;
 
-                                          // The horizontal \"staircase\" offset
-                                          final double baseLeft =
-                                              index * -13.5 + 35;
-                                          // How much the tab should \"pop out\" to the left
-                                          const double popOutDistance = 30;
+                                                // The horizontal \"staircase\" offset
+                                                final double baseLeft =
+                                                    index * -13.5 + 35;
+                                                // How much the tab should \"pop out\" to the left
+                                                const double popOutDistance =
+                                                    30;
 
-                                          return AnimatedPositioned(
-                                            duration: const Duration(
-                                              milliseconds: 250,
-                                            ),
-                                            curve: Curves.easeOutCubic,
-                                            top: top,
-                                            // SUBTRACT to move it left (outwards)
-                                            left: isSel
-                                                ? baseLeft - popOutDistance
-                                                : baseLeft,
-                                            child: GestureDetector(
-                                              onTap: isTaken
-                                                  ? null
-                                                  : () {
-                                                      _playClick();
-                                                      setState(
-                                                        () =>
-                                                            selectedVariantIndex =
-                                                                index,
-                                                      );
-                                                    },
-                                              child: Transform(
-                                                alignment: Alignment.center,
-                                                transform: Matrix4.skewX(-0.15),
-                                                child: AnimatedContainer(
+                                                return AnimatedPositioned(
                                                   duration: const Duration(
                                                     milliseconds: 250,
                                                   ),
                                                   curve: Curves.easeOutCubic,
-                                                  // We increase width by the same distance so the right side
-                                                  // stays flush against the Preview
-                                                  width: isSel
-                                                      ? (100 + popOutDistance)
-                                                      : 100,
-                                                  height: fixedItemHeight,
-                                                  padding: const EdgeInsets.all(
-                                                    10,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: isTaken
-                                                        ? Colors.grey
-                                                              .withValues(
-                                                                alpha: 0.1,
-                                                              )
-                                                        : (isSel
-                                                              ? variant.color
+                                                  top: top,
+                                                  // SUBTRACT to move it left (outwards)
+                                                  left: isSel
+                                                      ? baseLeft -
+                                                            popOutDistance
+                                                      : baseLeft,
+                                                  child: GestureDetector(
+                                                    onTap: isTaken
+                                                        ? null
+                                                        : () {
+                                                            _playClick();
+                                                            setState(
+                                                              () =>
+                                                                  selectedVariantIndex =
+                                                                      index,
+                                                            );
+                                                          },
+                                                    child: Transform(
+                                                      alignment:
+                                                          Alignment.center,
+                                                      transform: Matrix4.skewX(
+                                                        -0.15,
+                                                      ),
+                                                      child: AnimatedContainer(
+                                                        duration:
+                                                            const Duration(
+                                                              milliseconds: 250,
+                                                            ),
+                                                        curve:
+                                                            Curves.easeOutCubic,
+                                                        // We increase width by the same distance so the right side
+                                                        // stays flush against the Preview
+                                                        width: isSel
+                                                            ? (100 +
+                                                                  popOutDistance)
+                                                            : 100,
+                                                        height: fixedItemHeight,
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              10,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: isTaken
+                                                              ? Colors.grey
                                                                     .withValues(
                                                                       alpha:
-                                                                          0.4,
+                                                                          0.1,
                                                                     )
-                                                              : Colors.black45),
-                                                    border: Border(
-                                                      top: BorderSide(
-                                                        color: isTaken
-                                                            ? Colors.grey
-                                                            : (isSel
-                                                                  ? variant
-                                                                        .color
-                                                                  : Colors
-                                                                        .white24),
-                                                        width: isSel ? 2 : 1,
-                                                      ),
-                                                      left: BorderSide(
-                                                        color: isTaken
-                                                            ? Colors.grey
-                                                            : (isSel
-                                                                  ? variant
-                                                                        .color
-                                                                  : Colors
-                                                                        .white24),
-                                                        width: isSel ? 2 : 1,
-                                                      ),
-                                                      bottom: BorderSide(
-                                                        color: isTaken
-                                                            ? Colors.grey
-                                                            : (isSel
-                                                                  ? variant
-                                                                        .color
-                                                                  : Colors
-                                                                        .white24),
-                                                        width: isSel ? 2 : 1,
-                                                      ),
-                                                    ),
-                                                    borderRadius:
-                                                        const BorderRadius.only(
-                                                          topLeft:
-                                                              Radius.circular(
-                                                                15,
-                                                              ),
-                                                          bottomLeft:
-                                                              Radius.circular(
-                                                                15,
-                                                              ),
-                                                        ),
-                                                    boxShadow: isSel
-                                                        ? [
-                                                            BoxShadow(
-                                                              color: variant
-                                                                  .color
-                                                                  .withValues(
-                                                                    alpha: 0.4,
-                                                                  ),
-                                                              blurRadius: 15,
-                                                              spreadRadius: 2,
+                                                              : (isSel
+                                                                    ? variant
+                                                                          .color
+                                                                          .withValues(
+                                                                            alpha:
+                                                                                0.4,
+                                                                          )
+                                                                    : Colors
+                                                                          .black45),
+                                                          border: Border(
+                                                            top: BorderSide(
+                                                              color: isTaken
+                                                                  ? Colors.grey
+                                                                  : (isSel
+                                                                        ? variant
+                                                                              .color
+                                                                        : Colors
+                                                                              .white24),
+                                                              width: isSel
+                                                                  ? 2
+                                                                  : 1,
                                                             ),
-                                                          ]
-                                                        : [],
-                                                  ),
-                                                  child: Transform(
-                                                    alignment: Alignment.center,
-                                                    transform: Matrix4.skewX(
-                                                      0.15,
-                                                    ),
-                                                    child: Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Expanded(
-                                                          child: Opacity(
-                                                            opacity: isTaken
-                                                                ? 0.3
-                                                                : 1.0,
-                                                            child:
-                                                                _showsPreyasDualAttributeIcon(
-                                                                  variant,
-                                                                )
-                                                                ? ClipRect(
-                                                                    child: FittedBox(
-                                                                      fit: BoxFit
-                                                                          .scaleDown,
-                                                                      child: Row(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.center,
-                                                                        mainAxisSize:
-                                                                            MainAxisSize.min,
-                                                                        children: [
-                                                                          Image.asset(
-                                                                            'assets/images/attributes/${variant.attribute}_game.png',
-                                                                            fit:
-                                                                                BoxFit.contain,
-                                                                          ),
-                                                                          const Padding(
-                                                                            padding: EdgeInsets.symmetric(
-                                                                              horizontal: 10,
-                                                                            ),
-                                                                            child: Text(
-                                                                              '|',
-                                                                              style: TextStyle(
-                                                                                color: Colors.white,
-                                                                                fontSize: 18,
-                                                                                fontWeight: FontWeight.w900,
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                          Image.asset(
-                                                                            'assets/images/attributes/pyrus_game.png',
-                                                                            fit:
-                                                                                BoxFit.contain,
-                                                                          ),
-                                                                        ],
-                                                                      ),
+                                                            left: BorderSide(
+                                                              color: isTaken
+                                                                  ? Colors.grey
+                                                                  : (isSel
+                                                                        ? variant
+                                                                              .color
+                                                                        : Colors
+                                                                              .white24),
+                                                              width: isSel
+                                                                  ? 2
+                                                                  : 1,
+                                                            ),
+                                                            bottom: BorderSide(
+                                                              color: isTaken
+                                                                  ? Colors.grey
+                                                                  : (isSel
+                                                                        ? variant
+                                                                              .color
+                                                                        : Colors
+                                                                              .white24),
+                                                              width: isSel
+                                                                  ? 2
+                                                                  : 1,
+                                                            ),
+                                                          ),
+                                                          borderRadius:
+                                                              const BorderRadius.only(
+                                                                topLeft:
+                                                                    Radius.circular(
+                                                                      15,
                                                                     ),
-                                                                  )
-                                                                : Image.asset(
-                                                                    'assets/images/attributes/${variant.attribute}_game.png',
-                                                                    fit: BoxFit
-                                                                        .contain,
+                                                                bottomLeft:
+                                                                    Radius.circular(
+                                                                      15,
+                                                                    ),
+                                                              ),
+                                                          boxShadow: isSel
+                                                              ? [
+                                                                  BoxShadow(
+                                                                    color: variant
+                                                                        .color
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.4,
+                                                                        ),
+                                                                    blurRadius:
+                                                                        15,
+                                                                    spreadRadius:
+                                                                        2,
                                                                   ),
+                                                                ]
+                                                              : [],
+                                                        ),
+                                                        child: Transform(
+                                                          alignment:
+                                                              Alignment.center,
+                                                          transform:
+                                                              Matrix4.skewX(
+                                                                0.15,
+                                                              ),
+                                                          child: Column(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              Expanded(
+                                                                child: Opacity(
+                                                                  opacity:
+                                                                      isTaken
+                                                                      ? 0.3
+                                                                      : 1.0,
+                                                                  child:
+                                                                      _showsPreyasDualAttributeIcon(
+                                                                        variant,
+                                                                      )
+                                                                      ? ClipRect(
+                                                                          child: FittedBox(
+                                                                            fit:
+                                                                                BoxFit.scaleDown,
+                                                                            child: Row(
+                                                                              mainAxisAlignment: MainAxisAlignment.center,
+                                                                              mainAxisSize: MainAxisSize.min,
+                                                                              children: [
+                                                                                Image.asset(
+                                                                                  'assets/images/attributes/${variant.attribute}_game.png',
+                                                                                  fit: BoxFit.contain,
+                                                                                ),
+                                                                                const Padding(
+                                                                                  padding: EdgeInsets.symmetric(
+                                                                                    horizontal: 10,
+                                                                                  ),
+                                                                                  child: Text(
+                                                                                    '|',
+                                                                                    style: TextStyle(
+                                                                                      color: Colors.white,
+                                                                                      fontSize: 18,
+                                                                                      fontWeight: FontWeight.w900,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                                Image.asset(
+                                                                                  'assets/images/attributes/pyrus_game.png',
+                                                                                  fit: BoxFit.contain,
+                                                                                ),
+                                                                              ],
+                                                                            ),
+                                                                          ),
+                                                                        )
+                                                                      : Image.asset(
+                                                                          'assets/images/attributes/${variant.attribute}_game.png',
+                                                                          fit: BoxFit
+                                                                              .contain,
+                                                                        ),
+                                                                ),
+                                                              ),
+                                                              Text(
+                                                                '${variant.gPower}G',
+                                                                style: TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w900,
+                                                                  color: isSel
+                                                                      ? Colors
+                                                                            .white
+                                                                      : Colors
+                                                                            .white70,
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
-                                                        Text(
-                                                          '${variant.gPower}G',
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.w900,
-                                                            color: isSel
-                                                                ? Colors.white
-                                                                : Colors
-                                                                      .white70,
-                                                          ),
-                                                        ),
-                                                      ],
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      );
-                                    },
+                                                );
+                                              }).toList(),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Center(
+                                  child: _SelectionInfoPanel(
+                                    text: _emptySelectionMessage,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ),
@@ -1553,88 +1588,103 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                     offset: const Offset(0, -80),
                     child: SizedBox(
                       height: 180,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios, size: 40),
-                            onPressed: () {
-                              _playClick();
-                              _carouselController.previousPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOut,
-                              );
-                            },
-                          ),
-                          SizedBox(
-                            width: 1200,
-                            child: PageView.builder(
-                              controller: _carouselController,
-                              itemCount: visibleBakugans.length,
-                              onPageChanged: (idx) => setState(() {
-                                selectedBakuganIndex = idx;
-                                selectedVariantIndex = _preferredVariantIndex(
-                                  visibleBakugans[idx],
-                                );
-                              }),
-                              itemBuilder: (context, idx) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 15,
-                                ),
-                                child: BakuganPreview(
-                                  key: ValueKey(
-                                    'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
+                      child: hasVisibleBakugans
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios,
+                                    size: 40,
                                   ),
-                                  variant: _primaryVariantForSpecies(
-                                    visibleBakugans[idx],
-                                  ),
-                                  isSelected: selectedBakuganIndex == idx,
-                                  speciesName: visibleBakugans[idx].name,
+                                  onPressed: () {
+                                    _playClick();
+                                    _carouselController.previousPage(
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      curve: Curves.easeOut,
+                                    );
+                                  },
                                 ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_forward_ios, size: 40),
-                            onPressed: () {
-                              _playClick();
-                              _carouselController.nextPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOut,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                                SizedBox(
+                                  width: 1200,
+                                  child: PageView.builder(
+                                    controller: _carouselController,
+                                    itemCount: visibleBakugans.length,
+                                    onPageChanged: (idx) => setState(() {
+                                      selectedBakuganIndex = idx;
+                                      selectedVariantIndex =
+                                          _preferredVariantIndex(
+                                            visibleBakugans[idx],
+                                          );
+                                    }),
+                                    itemBuilder: (context, idx) => Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 15,
+                                      ),
+                                      child: BakuganPreview(
+                                        key: ValueKey(
+                                          'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
+                                        ),
+                                        variant: _primaryVariantForSpecies(
+                                          visibleBakugans[idx],
+                                        ),
+                                        isSelected: selectedBakuganIndex == idx,
+                                        speciesName: visibleBakugans[idx].name,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 40,
+                                  ),
+                                  onPressed: () {
+                                    _playClick();
+                                    _carouselController.nextPage(
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      curve: Curves.easeOut,
+                                    );
+                                  },
+                                ),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
                     ),
                   ),
                   Transform.translate(
                     offset: const Offset(0, -20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        BakuganButton(
-                          text: currentIsTaken ? 'ALREADY PICKED' : 'ADD',
-                          onPressed: _addBakugan,
-                          width: 320,
-                          height: 90,
-                          color: currentIsTaken
-                              ? Colors.grey
-                              : Colors.blueAccent,
-                        ),
-                        if (widget.players.every(
-                          (p) => p.deck.length == 3,
-                        )) ...[
-                          const SizedBox(width: 25),
-                          BakuganButton(
-                            text: 'READY',
-                            onPressed: _nextPlayer,
-                            width: 240,
-                            height: 90,
-                          ),
-                        ],
-                      ],
-                    ),
+                    child: hasVisibleBakugans
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              BakuganButton(
+                                text: currentIsTaken ? 'ALREADY PICKED' : 'ADD',
+                                onPressed: _addBakugan,
+                                width: 320,
+                                height: 90,
+                                color: currentIsTaken
+                                    ? Colors.grey
+                                    : Colors.blueAccent,
+                              ),
+                              if (widget.players.every(
+                                (p) => p.deck.length == 3,
+                              )) ...[
+                                const SizedBox(width: 25),
+                                BakuganButton(
+                                  text: 'READY',
+                                  onPressed: _nextPlayer,
+                                  width: 240,
+                                  height: 90,
+                                ),
+                              ],
+                            ],
+                          )
+                        : const SizedBox(height: 90),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -1656,6 +1706,8 @@ class _BakuganCompactToolbar extends StatelessWidget {
   final Color Function(String attribute) colorForAttribute;
   final VoidCallback onAttributeTap;
   final VoidCallback onSortTap;
+  final bool? collectionMode;
+  final VoidCallback? onCollectionModeToggle;
 
   const _BakuganCompactToolbar({
     this.width,
@@ -1666,6 +1718,8 @@ class _BakuganCompactToolbar extends StatelessWidget {
     required this.colorForAttribute,
     required this.onAttributeTap,
     required this.onSortTap,
+    this.collectionMode,
+    this.onCollectionModeToggle,
   });
 
   @override
@@ -1673,8 +1727,10 @@ class _BakuganCompactToolbar extends StatelessWidget {
     final canSort = selectedAttribute != null;
     return SizedBox(
       width: width ?? 900,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 8,
         children: [
           _ToolbarTriggerButton(
             label: selectedAttribute == null
@@ -1689,7 +1745,6 @@ class _BakuganCompactToolbar extends StatelessWidget {
                 : 'assets/images/attributes/${selectedAttribute!}_game.png',
             onTap: onAttributeTap,
           ),
-          const SizedBox(width: 16),
           _ToolbarTriggerButton(
             label: 'ORDER: $sortLabel',
             icon: sortIcon,
@@ -1697,6 +1752,17 @@ class _BakuganCompactToolbar extends StatelessWidget {
             isEnabled: canSort,
             onTap: onSortTap,
           ),
+          if (collectionMode != null && onCollectionModeToggle != null)
+            _ToolbarTriggerButton(
+              label: collectionMode!
+                  ? 'COLLECTION MODE: OWNED'
+                  : 'COLLECTION MODE: ALL',
+              icon: collectionMode!
+                  ? Icons.inventory_2_rounded
+                  : Icons.grid_view_rounded,
+              accentColor: collectionMode! ? Colors.cyanAccent : Colors.white38,
+              onTap: onCollectionModeToggle!,
+            ),
         ],
       ),
     );
@@ -1921,20 +1987,6 @@ List<Offset> _buildInnerHexagonPoints(Offset center, double radius) {
       center.dy + sin(angle) * radius,
     );
   });
-}
-
-class _HexagonClipper extends CustomClipper<Path> {
-  final double radiusFraction;
-
-  const _HexagonClipper({required this.radiusFraction});
-
-  @override
-  Path getClip(Size size) => _buildInnerHexagonPath(size, radiusFraction);
-
-  @override
-  bool shouldReclip(covariant _HexagonClipper oldClipper) {
-    return oldClipper.radiusFraction != radiusFraction;
-  }
 }
 
 class _AttributeWheelSector extends StatelessWidget {
@@ -2312,7 +2364,7 @@ class _ToolbarTriggerButton extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.62),
+              color: Colors.black.withValues(alpha: 0.38),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: accentColor.withValues(alpha: 0.9),

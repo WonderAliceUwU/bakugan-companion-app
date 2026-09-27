@@ -1,7 +1,5 @@
 part of '../../main.dart';
 
-enum _InventorySection { bakugans, cards }
-
 class CardCatalogEntry {
   final String key;
   final String name;
@@ -106,6 +104,22 @@ Future<List<CardCatalogEntry>> loadCardCatalog() async {
   return result;
 }
 
+Color _inventoryCardAccent(CardCatalogEntry card) {
+  final palette = card.type == 'gate'
+      ? _gateDescriptionAccentColors
+      : _abilityDescriptionAccentColors;
+  final fallback = card.type == 'gate' ? 'silver' : 'blue';
+  return palette[card.cardClass] ?? palette[fallback]!;
+}
+
+List<Color> _inventoryCardGradient(CardCatalogEntry card) {
+  final palette = card.type == 'gate'
+      ? _gateDescriptionBorderGradients
+      : _abilityDescriptionBorderGradients;
+  final fallback = card.type == 'gate' ? 'silver' : 'blue';
+  return palette[card.cardClass] ?? palette[fallback]!;
+}
+
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
 
@@ -114,21 +128,12 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _cardSearchController = TextEditingController();
-  _InventorySection _section = _InventorySection.bakugans;
-  Set<String> _includedKeys = <String>{};
+  Map<String, int> _savedGPowerByInventoryKey = <String, int>{};
   bool _isLoading = true;
-  Future<List<CardCatalogEntry>>? _cardsFuture;
-  Future<void> _saveQueue = Future<void>.value();
-  String _searchQuery = '';
-  String _cardSearchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
-    _cardSearchController.addListener(_onCardSearchChanged);
     unawaited(_playStoreMusic());
     unawaited(_loadInventory());
   }
@@ -145,14 +150,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _loadInventory() async {
     await loadAvailableBakugans();
     final store = await LeaderboardRepository.instance.loadStore();
-    final savedKeys = store.bakuganInventory.bakugans
-        .map((entry) => entry.inventoryKey)
-        .toSet();
+    final savedGPower = {
+      for (final entry in store.bakuganInventory.bakugans)
+        if (entry.gPower > 0) entry.inventoryKey: entry.gPower,
+    };
     if (!mounted) return;
     setState(() {
-      _includedKeys = store.bakuganInventory.isConfigured
-          ? savedKeys
-          : _allVariants.map(bakuganVariantKey).toSet();
+      _savedGPowerByInventoryKey = savedGPower;
       _isLoading = false;
     });
   }
@@ -161,122 +165,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
     for (final bakugan in availableBakugans) ...bakugan.variants,
   ];
 
-  List<BakuganVariant> get _activeVariants => _allVariants
-      .where((variant) => _includedKeys.contains(bakuganVariantKey(variant)))
-      .toList();
-
-  List<Bakugan> get _filteredBakugans {
-    final query = _searchQuery.trim().toLowerCase();
-    return availableBakugans.where((bakugan) {
-      if (query.isNotEmpty &&
-          !bakugan.name.toLowerCase().contains(query) &&
-          !bakugan.variants.any(
-            (variant) => variant.attribute.toLowerCase().contains(query),
-          )) {
-        return false;
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Bakugan> get _activeBakugans {
-    return availableBakugans
-        .map(
-          (bakugan) => Bakugan(
-            name: bakugan.name,
-            variants: bakugan.variants
-                .where(
-                  (variant) =>
-                      _includedKeys.contains(bakuganVariantKey(variant)),
-                )
-                .toList(),
-          ),
-        )
-        .where((bakugan) => bakugan.variants.isNotEmpty)
-        .toList();
-  }
-
-  List<CardCatalogEntry> _filterCards(List<CardCatalogEntry> cards) {
-    final query = _cardSearchQuery.trim().toLowerCase();
-    if (query.isEmpty) return cards;
-    return cards
-        .where(
-          (card) =>
-              card.name.toLowerCase().contains(query) ||
-              card.typeLabel.toLowerCase().contains(query) ||
-              card.description.toLowerCase().contains(query),
-        )
-        .toList();
-  }
-
-  void _onSearchChanged() {
-    if (!mounted) return;
-    setState(() => _searchQuery = _searchController.text);
-  }
-
-  void _onCardSearchChanged() {
-    if (!mounted) return;
-    setState(() => _cardSearchQuery = _cardSearchController.text);
-  }
-
-  void _selectSection(_InventorySection section) {
-    unawaited(_playUiConfirmSound());
-    setState(() {
-      _section = section;
-      if (section == _InventorySection.cards) {
-        _cardsFuture ??= loadCardCatalog();
-      }
-    });
-  }
-
-  void _toggleVariant(BakuganVariant variant) {
-    final key = bakuganVariantKey(variant);
-    setState(() {
-      if (_includedKeys.contains(key)) {
-        _includedKeys.remove(key);
-      } else {
-        _includedKeys.add(key);
-      }
-    });
-    _queueSave();
-  }
-
-  void _toggleSpecies(Bakugan bakugan, bool enabled) {
-    setState(() {
-      for (final variant in bakugan.variants) {
-        final key = bakuganVariantKey(variant);
-        if (enabled) {
-          _includedKeys.add(key);
-        } else {
-          _includedKeys.remove(key);
-        }
-      }
-    });
-    _queueSave();
-  }
-
-  void _queueSave() {
-    final snapshot = _activeVariants.toList();
-    _saveQueue = _saveQueue.then((_) async {
-      await LeaderboardRepository.instance.saveBakuganInventory(snapshot);
-    });
-  }
+  List<BakuganVariant> get _activeVariants => [
+    for (final variant in _allVariants)
+      if ((_savedGPowerByInventoryKey[bakuganVariantKey(variant)] ?? 0) > 0)
+        variant.copyWith(
+          gPower: _savedGPowerByInventoryKey[bakuganVariantKey(variant)],
+        ),
+  ];
 
   Future<void> _openBakuganCarousel() async {
-    if (_activeBakugans.isEmpty) return;
     await Navigator.of(context).push(
-      _zoomRoute(BakuganInventoryCarouselScreen(bakugans: _activeBakugans)),
+      _zoomRoute(
+        BakuganInventoryCarouselScreen(
+          bakugans: availableBakugans,
+          initialGPowerByInventoryKey: _savedGPowerByInventoryKey,
+          onInventoryChanged: (activeVariants) {
+            if (!mounted) return;
+            setState(() {
+              _savedGPowerByInventoryKey = {
+                for (final variant in activeVariants)
+                  bakuganVariantKey(variant): variant.gPower,
+              };
+            });
+          },
+        ),
+      ),
     );
+  }
+
+  Future<void> _openCardsScreen() async {
+    await Navigator.of(context).push(_zoomRoute(const InventoryCardsScreen()));
   }
 
   @override
   void dispose() {
-    _searchController
-      ..removeListener(_onSearchChanged)
-      ..dispose();
-    _cardSearchController
-      ..removeListener(_onCardSearchChanged)
-      ..dispose();
     super.dispose();
   }
 
@@ -295,16 +217,78 @@ class _InventoryScreenState extends State<InventoryScreen> {
         child: Column(
           children: [
             _buildHeader(),
-            _buildSectionNavigation(),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: _section == _InventorySection.bakugans
-                    ? _buildBakuganSection()
-                    : _buildCardsSection(),
-              ),
-            ),
+            Expanded(child: _buildInventoryEntryPoints()),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInventoryEntryPoints() {
+    final compact = MediaQuery.sizeOf(context).width < 1200;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1120),
+          child: compact
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _InventoryEntryButton(
+                      label: 'BAKUGAN',
+                      subtitle: 'Manage the Bakugan available in selection',
+                      color: Colors.cyanAccent,
+                      emblem: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                      onTap: _openBakuganCarousel,
+                    ),
+                    const SizedBox(height: 22),
+                    _InventoryEntryButton(
+                      label: 'CARDS',
+                      subtitle: 'Browse every card in the app',
+                      color: Colors.amberAccent,
+                      emblem: const Icon(
+                        Icons.style_rounded,
+                        color: Colors.amberAccent,
+                        size: 76,
+                      ),
+                      onTap: _openCardsScreen,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _InventoryEntryButton(
+                        label: 'BAKUGAN',
+                        subtitle: 'Manage the Bakugan available in selection',
+                        color: Colors.cyanAccent,
+                        emblem: Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                        onTap: _openBakuganCarousel,
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: _InventoryEntryButton(
+                        label: 'CARDS',
+                        subtitle: 'Browse every card in the app',
+                        color: Colors.amberAccent,
+                        emblem: const Icon(
+                          Icons.style_rounded,
+                          color: Colors.amberAccent,
+                          size: 90,
+                        ),
+                        onTap: _openCardsScreen,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -316,7 +300,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/selection-bg.png'),
+            image: AssetImage('assets/images/inventory_bg.jpeg'),
             fit: BoxFit.cover,
           ),
         ),
@@ -425,517 +409,350 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
     );
   }
-
-  Widget _buildSectionNavigation() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 42, vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: _InventoryNavButton(
-              icon: Icons.blur_on_rounded,
-              label: 'BAKUGAN',
-              subtitle: 'Choose what appears in battles',
-              color: Colors.cyanAccent,
-              selected: _section == _InventorySection.bakugans,
-              onTap: () => _selectSection(_InventorySection.bakugans),
-            ),
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: _InventoryNavButton(
-              icon: Icons.style_rounded,
-              label: 'CARDS',
-              subtitle: 'Browse every card in the app',
-              color: Colors.amberAccent,
-              selected: _section == _InventorySection.cards,
-              onTap: () => _selectSection(_InventorySection.cards),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBakuganSection() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 1600;
-        final filteredBakugans = _filteredBakugans;
-        final horizontalPadding = isCompact ? 24.0 : 42.0;
-        final columns = constraints.maxWidth >= 1180 ? 2 : 1;
-        return Column(
-          key: const ValueKey(_InventorySection.bakugans),
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                4,
-                horizontalPadding,
-                10,
-              ),
-              child: isCompact
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildSearchField(_searchController, 'Search Bakugan'),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: BakuganButton(
-                            text: 'OPEN CAROUSEL',
-                            icon: Icons.view_carousel_rounded,
-                            onPressed: _openBakuganCarousel,
-                            width: min(280, constraints.maxWidth),
-                            height: 62,
-                            color: Colors.cyanAccent,
-                            textFontSize: 21,
-                            iconSize: 23,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: _buildSearchField(
-                            _searchController,
-                            'Search Bakugan',
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        BakuganButton(
-                          text: 'OPEN CAROUSEL',
-                          icon: Icons.view_carousel_rounded,
-                          onPressed: _openBakuganCarousel,
-                          width: 300,
-                          height: 70,
-                          color: Colors.cyanAccent,
-                          textFontSize: 25,
-                          iconSize: 26,
-                        ),
-                      ],
-                    ),
-            ),
-            Expanded(
-              child: filteredBakugans.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'NO BAKUGAN MATCHES YOUR SEARCH',
-                        style: TextStyle(
-                          color: Colors.white60,
-                          fontFamily: 'button_font',
-                          letterSpacing: 1.3,
-                        ),
-                      ),
-                    )
-                  : GridView.builder(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        6,
-                        horizontalPadding,
-                        32,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        crossAxisSpacing: 18,
-                        mainAxisSpacing: 18,
-                        childAspectRatio: isCompact
-                            ? (columns == 2 ? 2.28 : 2.1)
-                            : (columns == 2 ? 2.45 : 2.3),
-                      ),
-                      itemCount: filteredBakugans.length,
-                      itemBuilder: (context, index) => _InventoryBakuganCard(
-                        bakugan: filteredBakugans[index],
-                        isIncluded: _isSpeciesIncluded(filteredBakugans[index]),
-                        isVariantIncluded: (variant) =>
-                            _includedKeys.contains(bakuganVariantKey(variant)),
-                        onToggleSpecies: (enabled) =>
-                            _toggleSpecies(filteredBakugans[index], enabled),
-                        onToggleVariant: _toggleVariant,
-                      ),
-                    ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  bool _isSpeciesIncluded(Bakugan bakugan) {
-    return bakugan.variants.any(
-      (variant) => _includedKeys.contains(bakuganVariantKey(variant)),
-    );
-  }
-
-  Widget _buildCardsSection() {
-    return FutureBuilder<List<CardCatalogEntry>>(
-      key: const ValueKey(_InventorySection.cards),
-      future: _cardsFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'CARD LIBRARY UNAVAILABLE\n${snapshot.error}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
-              ),
-            );
-          }
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.amberAccent),
-          );
-        }
-
-        final cards = _filterCards(snapshot.data!);
-        if (cards.isEmpty) {
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(42, 4, 42, 10),
-                child: _buildSearchField(_cardSearchController, 'Search cards'),
-              ),
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    'NO CARDS MATCH YOUR SEARCH',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontFamily: 'button_font',
-                      letterSpacing: 1.3,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(42, 4, 42, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildSearchField(
-                      _cardSearchController,
-                      'Search cards',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    '${cards.length} CARDS',
-                    style: const TextStyle(
-                      color: Colors.amberAccent,
-                      fontFamily: 'button_font',
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(child: _CardCarousel(cards: cards)),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildSearchField(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
-        prefixIcon: const Icon(Icons.search_rounded, color: Colors.cyanAccent),
-        suffixIcon: controller.text.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.clear_rounded, color: Colors.white54),
-                onPressed: controller.clear,
-              ),
-        filled: true,
-        fillColor: Colors.black.withValues(alpha: 0.62),
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-          borderSide: BorderSide(color: Colors.cyanAccent, width: 1.6),
-        ),
-      ),
-    );
-  }
 }
 
-class _InventoryNavButton extends StatelessWidget {
-  final IconData icon;
+class _InventoryEntryButton extends StatelessWidget {
   final String label;
   final String subtitle;
   final Color color;
-  final bool selected;
+  final Widget emblem;
   final VoidCallback onTap;
 
-  const _InventoryNavButton({
-    required this.icon,
+  const _InventoryEntryButton({
     required this.label,
     required this.subtitle,
     required this.color,
-    required this.selected,
+    required this.emblem,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: selected ? 0.82 : 0.54),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: color.withValues(alpha: selected ? 0.9 : 0.25),
-            width: selected ? 2 : 1,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.18),
-                    blurRadius: 18,
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.white70,
-                      fontFamily: 'button_font',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                ],
+      onTap: () {
+        unawaited(_playUiConfirmSound());
+        onTap();
+      },
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.skewX(-0.12),
+        child: Container(
+          height: 260,
+          padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: color.withValues(alpha: 0.72), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.22),
+                blurRadius: 26,
+                spreadRadius: 2,
               ),
+            ],
+          ),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(0.12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(child: emblem),
+                const SizedBox(height: 12),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontFamily: 'button_font',
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontFamily: 'button_font',
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
             ),
-            Icon(
-              selected
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_off_rounded,
-              color: color.withValues(alpha: selected ? 1 : 0.5),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _InventoryBakuganCard extends StatelessWidget {
-  final Bakugan bakugan;
-  final bool isIncluded;
-  final bool Function(BakuganVariant variant) isVariantIncluded;
-  final ValueChanged<bool> onToggleSpecies;
-  final ValueChanged<BakuganVariant> onToggleVariant;
+class _InventoryToggleButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool active;
+  final VoidCallback onTap;
 
-  const _InventoryBakuganCard({
-    required this.bakugan,
-    required this.isIncluded,
-    required this.isVariantIncluded,
-    required this.onToggleSpecies,
-    required this.onToggleVariant,
+  const _InventoryToggleButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.active,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final previewVariant = bakugan.variants.first;
-    final includedCount = bakugan.variants.where(isVariantIncluded).length;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.74),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isIncluded
-              ? previewVariant.color.withValues(alpha: 0.72)
-              : Colors.white12,
-          width: isIncluded ? 1.6 : 1,
-        ),
-        boxShadow: isIncluded
-            ? [
+    return Opacity(
+      opacity: active ? 1 : 0.72,
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.skewX(-0.15),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.38),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: color.withValues(alpha: active ? 0.9 : 0.45),
+                width: 1.6,
+              ),
+              boxShadow: [
                 BoxShadow(
-                  color: previewVariant.color.withValues(alpha: 0.12),
-                  blurRadius: 18,
+                  color: color.withValues(alpha: active ? 0.18 : 0.08),
+                  blurRadius: 16,
+                  spreadRadius: 1,
                 ),
-              ]
-            : null,
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 160,
-            height: double.infinity,
-            child: Container(
-              color: previewVariant.color.withValues(alpha: 0.07),
-              padding: const EdgeInsets.all(8),
-              child: Opacity(
-                opacity: isIncluded ? 1 : 0.34,
-                child: BakuganPreview(
-                  key: ValueKey(
-                    'inventory_${previewVariant.modelPath}_${previewVariant.attribute}',
+              ],
+            ),
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(0.15),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: color, size: 20),
+                  const SizedBox(width: 9),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: 'button_font',
+                      fontSize: 11,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
                   ),
-                  variant: previewVariant,
-                  isDeck: true,
-                  autoRotate: false,
-                ),
+                ],
               ),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        ),
+      ),
+    );
+  }
+}
+
+class InventoryCardsScreen extends StatefulWidget {
+  const InventoryCardsScreen({super.key});
+
+  @override
+  State<InventoryCardsScreen> createState() => _InventoryCardsScreenState();
+}
+
+class _InventoryCardsScreenState extends State<InventoryCardsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  late final Future<List<CardCatalogEntry>> _cardsFuture;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _cardsFuture = loadCardCatalog();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<CardCatalogEntry> _filteredCards(List<CardCatalogEntry> cards) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return cards;
+    return cards
+        .where(
+          (card) =>
+              card.name.toLowerCase().contains(query) ||
+              card.typeLabel.toLowerCase().contains(query) ||
+              card.description.toLowerCase().contains(query),
+        )
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/inventory_bg.jpeg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.black.withValues(alpha: 0.68),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          bakugan.name.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
                             color: Colors.white,
-                            fontFamily: 'button_font',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.7,
+                            size: 28,
+                          ),
+                          onPressed: () {
+                            unawaited(_playUiCancelSound());
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'CARD LIBRARY',
+                            style: TextStyle(
+                              fontFamily: 'title_font',
+                              fontSize: 42,
+                              color: Colors.white,
+                              letterSpacing: 2,
+                              shadows: [
+                                Shadow(color: Colors.amber, blurRadius: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                        FutureBuilder<List<CardCatalogEntry>>(
+                          future: _cardsFuture,
+                          builder: (context, snapshot) => Text(
+                            snapshot.hasData
+                                ? '${_filteredCards(snapshot.data!).length} CARDS'
+                                : 'CARDS',
+                            style: const TextStyle(
+                              color: Colors.amberAccent,
+                              fontFamily: 'button_font',
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(42, 4, 42, 10),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _query = value),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search cards',
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Colors.amberAccent,
+                        ),
+                        filled: true,
+                        fillColor: Colors.black.withValues(alpha: 0.62),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 18,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.14),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.14),
+                          ),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(16)),
+                          borderSide: BorderSide(
+                            color: Colors.amberAccent,
+                            width: 1.6,
                           ),
                         ),
                       ),
-                      Switch(
-                        value: isIncluded,
-                        activeThumbColor: previewVariant.color,
-                        onChanged: onToggleSpecies,
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '$includedCount / ${bakugan.variants.length} ATTRIBUTES IN MATCHES',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                      fontFamily: 'button_font',
-                      letterSpacing: 0.7,
                     ),
                   ),
-                  const SizedBox(height: 10),
                   Expanded(
-                    child: SingleChildScrollView(
-                      child: Wrap(
-                        spacing: 7,
-                        runSpacing: 7,
-                        children: bakugan.variants
-                            .map(
-                              (variant) => _InventoryAttributeChip(
-                                variant: variant,
-                                selected: isVariantIncluded(variant),
-                                onTap: () => onToggleVariant(variant),
+                    child: FutureBuilder<List<CardCatalogEntry>>(
+                      future: _cardsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text(
+                              'CARD LIBRARY UNAVAILABLE\n${snapshot.error}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          );
+                        }
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.amberAccent,
+                            ),
+                          );
+                        }
+                        final cards = _filteredCards(snapshot.data!);
+                        if (cards.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'NO CARDS MATCH YOUR SEARCH',
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontFamily: 'button_font',
+                                letterSpacing: 1.3,
                               ),
-                            )
-                            .toList(),
-                      ),
+                            ),
+                          );
+                        }
+                        return _CardCarousel(cards: cards);
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'Tap an attribute to include or hide it',
-                    style: TextStyle(color: Colors.white38, fontSize: 10),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InventoryAttributeChip extends StatelessWidget {
-  final BakuganVariant variant;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _InventoryAttributeChip({
-    required this.variant,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected
-              ? variant.color.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.035),
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-            color: selected
-                ? variant.color.withValues(alpha: 0.8)
-                : Colors.white12,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Opacity(
-              opacity: selected ? 1 : 0.38,
-              child: Image.asset(
-                'assets/images/attributes/${variant.attribute}_game.png',
-                width: 24,
-                height: 24,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.circle, size: 16, color: variant.color),
-              ),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              '${variant.gPower}G',
-              style: TextStyle(
-                color: selected ? Colors.white : Colors.white54,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
               ),
             ),
           ],
@@ -961,7 +778,7 @@ class _CardCarouselState extends State<_CardCarousel> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.28);
+    _controller = PageController(viewportFraction: 0.32);
   }
 
   @override
@@ -985,175 +802,112 @@ class _CardCarouselState extends State<_CardCarousel> {
   Widget build(BuildContext context) {
     final selectedIndex = _selectedIndex.clamp(0, widget.cards.length - 1);
     final card = widget.cards[selectedIndex];
-    return Column(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_rounded, size: 32),
-                color: Colors.white70,
-                onPressed: () {
-                  unawaited(_playUiConfirmSound());
-                  _controller.previousPage(
-                    duration: const Duration(milliseconds: 260),
-                    curve: Curves.easeOut,
-                  );
-                },
-              ),
-              Expanded(
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: widget.cards.length,
-                  onPageChanged: (index) {
-                    setState(() => _selectedIndex = index);
-                    unawaited(_playUiConfirmSound());
-                  },
-                  itemBuilder: (context, index) {
-                    final item = widget.cards[index];
-                    final selected = index == _selectedIndex;
-                    return AnimatedScale(
-                      scale: selected ? 1 : 0.84,
-                      duration: const Duration(milliseconds: 180),
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: 842 / 1130,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: selected
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.amberAccent.withValues(
-                                          alpha: 0.34,
-                                        ),
-                                        blurRadius: 26,
-                                        spreadRadius: 3,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Image.asset(
-                              item.imagePath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Image.asset(
-                                    'assets/images/cards/anverse.png',
-                                    fit: BoxFit.cover,
-                                  ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 32),
-                color: Colors.white70,
-                onPressed: () {
-                  unawaited(_playUiConfirmSound());
-                  _controller.nextPage(
-                    duration: const Duration(milliseconds: 260),
-                    curve: Curves.easeOut,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(44, 4, 44, 22),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 840),
-            padding: const EdgeInsets.fromLTRB(22, 15, 22, 14),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.amberAccent.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        card.name.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.amberAccent,
-                          fontFamily: 'button_font',
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${card.typeLabel}  /  ${card.cardClass.toUpperCase()}',
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        card.description,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final descriptionWidth = min(940.0, constraints.maxWidth - 64);
+        return Column(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_rounded, size: 32),
+                    color: Colors.white70,
+                    onPressed: () {
+                      unawaited(_playUiConfirmSound());
+                      _controller.previousPage(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOut,
+                      );
+                    },
                   ),
-                ),
-                if (card.attributes.isNotEmpty) ...[
-                  const SizedBox(width: 20),
-                  SizedBox(
-                    width: 240,
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 5,
-                      alignment: WrapAlignment.end,
-                      children: card.attributes.entries
-                          .where((entry) => entry.value > 0)
-                          .map(
-                            (entry) => Text(
-                              '${entry.key.toUpperCase()} ${entry.value}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _controller,
+                      itemCount: widget.cards.length,
+                      onPageChanged: (index) {
+                        setState(() => _selectedIndex = index);
+                        unawaited(_playUiConfirmSound());
+                      },
+                      itemBuilder: (context, index) {
+                        final item = widget.cards[index];
+                        final selected = index == _selectedIndex;
+                        return LayoutBuilder(
+                          builder: (context, itemConstraints) {
+                            final cardWidth = min(
+                              440.0,
+                              itemConstraints.maxWidth * 0.88,
+                            );
+                            return AnimatedScale(
+                              scale: selected ? 1 : 0.84,
+                              duration: const Duration(milliseconds: 180),
+                              child: Center(
+                                child: InteractiveCard(
+                                  imagePath: item.imagePath,
+                                  width: cardWidth,
+                                  onTap: () {},
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 32),
+                    color: Colors.white70,
+                    onPressed: () {
+                      unawaited(_playUiConfirmSound());
+                      _controller.nextPage(
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                  ),
                 ],
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
+              child: FramedDescriptionPanel(
+                width: descriptionWidth,
+                esText: card.description.isEmpty
+                    ? 'No description available.'
+                    : card.description,
+                maxHeight: 220,
+                frameGradient: _inventoryCardGradient(card),
+                accentColor: _inventoryCardAccent(card),
+                title: card.name,
+                headerAction: Text(
+                  '${card.typeLabel}  /  ${card.cardClass.toUpperCase()}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
 class BakuganInventoryCarouselScreen extends StatefulWidget {
   final List<Bakugan> bakugans;
+  final Map<String, int>? initialGPowerByInventoryKey;
+  final ValueChanged<List<BakuganVariant>>? onInventoryChanged;
 
-  const BakuganInventoryCarouselScreen({super.key, required this.bakugans});
+  const BakuganInventoryCarouselScreen({
+    super.key,
+    required this.bakugans,
+    this.initialGPowerByInventoryKey,
+    this.onInventoryChanged,
+  });
 
   @override
   State<BakuganInventoryCarouselScreen> createState() =>
@@ -1163,19 +917,476 @@ class BakuganInventoryCarouselScreen extends StatefulWidget {
 class _BakuganInventoryCarouselScreenState
     extends State<BakuganInventoryCarouselScreen> {
   final PageController _carouselController = PageController(
-    viewportFraction: 0.2,
+    viewportFraction: 0.14,
   );
+  static const List<String> _attributeWheelOrder = [
+    'pyrus',
+    'subterra',
+    'haos',
+    'darkus',
+    'aquos',
+    'ventus',
+  ];
+
   int _selectedBakuganIndex = 0;
   int _selectedVariantIndex = 0;
+  String? _selectedAttribute;
+  _BakuganSortMode _sortMode = _BakuganSortMode.alphabetical;
+  bool _collectionMode = false;
+  final Map<String, int> _gPowerOverrides = <String, int>{};
+  Future<void> _saveQueue = Future<void>.value();
 
-  Bakugan get _currentBakugan => widget.bakugans[_selectedBakuganIndex];
+  @override
+  void initState() {
+    super.initState();
+    _gPowerOverrides.addAll(widget.initialGPowerByInventoryKey ?? const {});
+  }
+
+  List<BakuganVariant> get _allVariants => [
+    for (final bakugan in widget.bakugans) ...bakugan.variants,
+  ];
+
+  BakuganVariant _effectiveVariant(BakuganVariant variant) {
+    final override = _gPowerOverrides[bakuganVariantKey(variant)];
+    return override == null ? variant : variant.copyWith(gPower: override);
+  }
+
+  List<BakuganVariant> get _activeVariants => [
+    for (final variant in _allVariants)
+      if (_isVariantOwned(variant)) _effectiveVariant(variant),
+  ];
+
+  bool _isVariantOwned(BakuganVariant variant) {
+    return (_gPowerOverrides[bakuganVariantKey(variant)] ?? 0) > 0;
+  }
+
+  void _setCollectionMode(bool enabled) {
+    if (_collectionMode == enabled) return;
+    unawaited(_playUiConfirmSound());
+    final currentBakugans = _visibleBakugans;
+    final currentSpeciesName = _selectedBakuganIndex < currentBakugans.length
+        ? currentBakugans[_selectedBakuganIndex].name
+        : null;
+    setState(() {
+      _collectionMode = enabled;
+      _syncSelection(preferredSpeciesName: currentSpeciesName);
+    });
+  }
+
+  Future<void> _clearAllGPower() async {
+    if (_activeVariants.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 180,
+            vertical: 140,
+          ),
+          child: _SelectionOverlayShell(
+            title: 'CLEAR ALL G POWER',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'This removes every saved G-Power from your collection.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'button_font',
+                    fontSize: 15,
+                    color: Colors.white70,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BakuganButton(
+                      text: 'CANCEL',
+                      onPressed: () => Navigator.of(context).pop(false),
+                      width: 180,
+                      height: 62,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 14),
+                    BakuganButton(
+                      text: 'CLEAR ALL',
+                      onPressed: () => Navigator.of(context).pop(true),
+                      width: 200,
+                      height: 62,
+                      color: Colors.redAccent,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    final currentBakugans = _visibleBakugans;
+    final currentSpeciesName = _selectedBakuganIndex < currentBakugans.length
+        ? currentBakugans[_selectedBakuganIndex].name
+        : null;
+    setState(() {
+      for (final variant in _allVariants) {
+        _gPowerOverrides[bakuganVariantKey(variant)] = 0;
+      }
+      _syncSelection(preferredSpeciesName: currentSpeciesName);
+    });
+    _queueInventorySave();
+  }
+
+  void _queueInventorySave() {
+    final snapshot = _activeVariants.toList();
+    widget.onInventoryChanged?.call(snapshot);
+    _saveQueue = _saveQueue.then((_) async {
+      await LeaderboardRepository.instance.saveBakuganInventory(snapshot);
+    });
+  }
+
+  Bakugan _effectiveBakugan(Bakugan bakugan) {
+    return Bakugan(
+      name: bakugan.name,
+      variants: bakugan.variants.map(_effectiveVariant).toList(),
+    );
+  }
+
+  List<Bakugan> get _visibleBakugans {
+    final allBakugans = widget.bakugans.map(_effectiveBakugan).toList();
+    final sourceBakugans = _collectionMode
+        ? allBakugans
+              .map(
+                (bakugan) => Bakugan(
+                  name: bakugan.name,
+                  variants: bakugan.variants.where(_isVariantOwned).toList(),
+                ),
+              )
+              .where((bakugan) => bakugan.variants.isNotEmpty)
+              .toList()
+        : allBakugans;
+    final visible = sourceBakugans
+        .where(
+          (bakugan) =>
+              _selectedAttribute == null ||
+              bakugan.variants.any(
+                (variant) =>
+                    variant.attribute.toLowerCase() == _selectedAttribute,
+              ),
+        )
+        .toList();
+
+    visible.sort((a, b) {
+      switch (_sortMode) {
+        case _BakuganSortMode.alphabetical:
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case _BakuganSortMode.gPowerAsc:
+          return _primaryVariantForSpecies(
+            a,
+          ).gPower.compareTo(_primaryVariantForSpecies(b).gPower);
+        case _BakuganSortMode.gPowerDesc:
+          return _primaryVariantForSpecies(
+            b,
+          ).gPower.compareTo(_primaryVariantForSpecies(a).gPower);
+      }
+    });
+    return visible;
+  }
+
+  Bakugan get _currentBakugan => _visibleBakugans[_selectedBakuganIndex];
   BakuganVariant get _currentVariant =>
       _currentBakugan.variants[_selectedVariantIndex];
 
+  int _preferredVariantIndex(Bakugan species) {
+    if (_selectedAttribute == null) return 0;
+    final index = species.variants.indexWhere(
+      (variant) => variant.attribute.toLowerCase() == _selectedAttribute,
+    );
+    return index >= 0 ? index : 0;
+  }
+
+  BakuganVariant _primaryVariantForSpecies(Bakugan species) {
+    return species.variants[_preferredVariantIndex(species)];
+  }
+
+  void _syncSelection({String? preferredSpeciesName}) {
+    final visibleBakugans = _visibleBakugans;
+    if (visibleBakugans.isEmpty) {
+      _selectedBakuganIndex = 0;
+      _selectedVariantIndex = 0;
+      return;
+    }
+
+    final currentSpeciesName =
+        preferredSpeciesName ??
+        (_selectedBakuganIndex < visibleBakugans.length
+            ? visibleBakugans[_selectedBakuganIndex].name
+            : null);
+    final matchingIndex = currentSpeciesName == null
+        ? -1
+        : visibleBakugans.indexWhere(
+            (bakugan) => bakugan.name == currentSpeciesName,
+          );
+    _selectedBakuganIndex = matchingIndex >= 0 ? matchingIndex : 0;
+    _selectedVariantIndex = _preferredVariantIndex(
+      visibleBakugans[_selectedBakuganIndex],
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_carouselController.hasClients) return;
+      _carouselController.jumpToPage(_selectedBakuganIndex);
+    });
+  }
+
+  Color _colorForAttribute(String attribute) {
+    switch (attribute.trim().toLowerCase()) {
+      case 'pyrus':
+        return const Color(0xFFFF6B3D);
+      case 'aquos':
+        return const Color(0xFF3DA5FF);
+      case 'subterra':
+        return const Color(0xFFD4A037);
+      case 'haos':
+        return const Color(0xFFF1E68A);
+      case 'darkus':
+        return const Color(0xFF9B59FF);
+      case 'ventus':
+        return const Color(0xFF45D483);
+      default:
+        return Colors.blueAccent;
+    }
+  }
+
+  String _sortModeLabel(_BakuganSortMode mode) {
+    switch (mode) {
+      case _BakuganSortMode.alphabetical:
+        return 'A-Z';
+      case _BakuganSortMode.gPowerAsc:
+        return 'LOW G';
+      case _BakuganSortMode.gPowerDesc:
+        return 'HIGH G';
+    }
+  }
+
+  IconData _sortModeIcon(_BakuganSortMode mode) {
+    switch (mode) {
+      case _BakuganSortMode.alphabetical:
+        return Icons.sort_by_alpha_rounded;
+      case _BakuganSortMode.gPowerAsc:
+        return Icons.arrow_upward_rounded;
+      case _BakuganSortMode.gPowerDesc:
+        return Icons.arrow_downward_rounded;
+    }
+  }
+
+  bool _showsPreyasDualAttributeIcon(BakuganVariant variant) {
+    return variant.speciesName.trim().toLowerCase() == 'preyas diablo' &&
+        variant.attribute.toLowerCase() != 'pyrus';
+  }
+
+  Future<void> _editGPower(BakuganVariant variant) async {
+    final editedText = await _showSkewedInputPrompt(
+      context: context,
+      title:
+          '${variant.speciesName.toUpperCase()}  /  ${variant.attribute.toUpperCase()}',
+      confirmLabel: 'SAVE',
+      initialValue: '${variant.gPower}',
+      subtitle: 'Set the saved G-Power value for this Bakugan variant.',
+      hintText: 'Enter G-Power',
+      suffixText: 'G',
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      autofocus: true,
+    );
+
+    final key = bakuganVariantKey(variant);
+    final previousValue = _gPowerOverrides[key] ?? 0;
+    final editedValue = int.tryParse(editedText?.trim() ?? '');
+    if (editedValue == null || editedValue == previousValue) return;
+    setState(() {
+      _gPowerOverrides[key] = editedValue;
+    });
+    _queueInventorySave();
+  }
+
+  Widget _buildInventoryToolbar(BoxConstraints constraints) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        _BakuganCompactToolbar(
+          width: min(1200.0, max(900.0, constraints.maxWidth - 280)),
+          selectedAttribute: _selectedAttribute,
+          sortMode: _sortMode,
+          sortLabel: _sortModeLabel(_sortMode),
+          sortIcon: _sortModeIcon(_sortMode),
+          colorForAttribute: _colorForAttribute,
+          onAttributeTap: _openAttributePicker,
+          onSortTap: _openSortPicker,
+          collectionMode: _collectionMode,
+          onCollectionModeToggle: () => _setCollectionMode(!_collectionMode),
+        ),
+        _InventoryToggleButton(
+          icon: Icons.clear_all_rounded,
+          label: 'CLEAR ALL G POWER',
+          color: Colors.redAccent,
+          active: _activeVariants.isNotEmpty,
+          onTap: _clearAllGPower,
+        ),
+      ],
+    );
+  }
+
+  void _setAttributeFilter(String? attribute) {
+    final currentSpeciesName =
+        _visibleBakugans.isNotEmpty &&
+            _selectedBakuganIndex < _visibleBakugans.length
+        ? _visibleBakugans[_selectedBakuganIndex].name
+        : null;
+    unawaited(_playUiConfirmSound());
+    setState(() {
+      _selectedAttribute = attribute;
+      if (attribute == null) _sortMode = _BakuganSortMode.alphabetical;
+      _syncSelection(preferredSpeciesName: currentSpeciesName);
+    });
+  }
+
+  void _setSortMode(_BakuganSortMode mode) {
+    if (_selectedAttribute == null || _sortMode == mode) return;
+    final currentSpeciesName =
+        _visibleBakugans.isNotEmpty &&
+            _selectedBakuganIndex < _visibleBakugans.length
+        ? _visibleBakugans[_selectedBakuganIndex].name
+        : null;
+    unawaited(_playUiConfirmSound());
+    setState(() {
+      _sortMode = mode;
+      _syncSelection(preferredSpeciesName: currentSpeciesName);
+    });
+  }
+
+  Future<void> _openAttributePicker() async {
+    unawaited(_playUiConfirmSound());
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 180,
+            vertical: 110,
+          ),
+          child: _SelectionOverlayShell(
+            title: 'FILTER BY ATTRIBUTE',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _AttributeWheelPicker(
+                  selectedAttribute: _selectedAttribute,
+                  orderedAttributes: _attributeWheelOrder,
+                  colorForAttribute: _colorForAttribute,
+                  onSelectAttribute: (attribute) {
+                    Navigator.of(context).pop();
+                    _setAttributeFilter(attribute);
+                  },
+                  onClear: () {
+                    Navigator.of(context).pop();
+                    _setAttributeFilter(null);
+                  },
+                ),
+                const SizedBox(height: 18),
+                const SizedBox(
+                  width: 500,
+                  child: Text(
+                    'Tap a sector to filter by attribute.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'button_font',
+                      fontSize: 12,
+                      color: Colors.white54,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openSortPicker() async {
+    if (_selectedAttribute == null) return;
+    unawaited(_playUiConfirmSound());
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 220,
+            vertical: 120,
+          ),
+          child: _SelectionOverlayShell(
+            title: 'ORDER BY',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _SortChip(
+                  label: 'A-Z',
+                  icon: Icons.sort_by_alpha_rounded,
+                  isSelected: _sortMode == _BakuganSortMode.alphabetical,
+                  isEnabled: true,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _setSortMode(_BakuganSortMode.alphabetical);
+                  },
+                ),
+                const SizedBox(width: 12),
+                _SortChip(
+                  label: 'LOW G',
+                  icon: Icons.arrow_upward_rounded,
+                  isSelected: _sortMode == _BakuganSortMode.gPowerAsc,
+                  isEnabled: true,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _setSortMode(_BakuganSortMode.gPowerAsc);
+                  },
+                ),
+                const SizedBox(width: 12),
+                _SortChip(
+                  label: 'HIGH G',
+                  icon: Icons.arrow_downward_rounded,
+                  isSelected: _sortMode == _BakuganSortMode.gPowerDesc,
+                  isEnabled: true,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _setSortMode(_BakuganSortMode.gPowerDesc);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _setBakugan(int index) {
+    final visibleBakugans = _visibleBakugans;
     setState(() {
       _selectedBakuganIndex = index;
-      _selectedVariantIndex = 0;
+      _selectedVariantIndex = _preferredVariantIndex(visibleBakugans[index]);
     });
   }
 
@@ -1187,22 +1398,162 @@ class _BakuganInventoryCarouselScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = MediaQuery.sizeOf(context).width < 1600;
-    final bakugan = _currentBakugan;
+    final visibleBakugans = _visibleBakugans;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/selection-bg.png'),
+            image: AssetImage('assets/images/inventory_bg.jpeg'),
             fit: BoxFit.cover,
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  IconButton(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.08),
+                        Colors.black.withValues(alpha: 0.18),
+                        Colors.redAccent.withValues(alpha: 0.18),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 1800;
+                  final horizontalPadding = isCompact ? 16.0 : 44.0;
+                  final topSpacing = isCompact ? 18.0 : 42.0;
+
+                  if (visibleBakugans.isEmpty) {
+                    return _buildEmptyFilteredState(
+                      horizontalPadding: horizontalPadding,
+                      topSpacing: topSpacing,
+                      constraints: constraints,
+                    );
+                  }
+
+                  final bakugan = _currentBakugan;
+                  final stageHeight = min(
+                    540.0,
+                    max(360.0, constraints.maxHeight - 390 - topSpacing),
+                  );
+                  final carouselWidth = max(520.0, constraints.maxWidth - 128);
+
+                  return Column(
+                    children: [
+                      _buildCarouselHeader(
+                        horizontalPadding: horizontalPadding,
+                        topSpacing: topSpacing,
+                        constraints: constraints,
+                      ),
+                      Expanded(
+                        child: Transform.translate(
+                          offset: Offset(0, isCompact ? -4 : -40),
+                          child: Center(
+                            child: _buildSelectionStage(
+                              bakugan: bakugan,
+                              constraints: constraints,
+                              stageHeight: stageHeight,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: Offset(0, isCompact ? -4 : -80),
+                        child: _buildSpeciesCarousel(
+                          visibleBakugans: visibleBakugans,
+                          width: carouselWidth,
+                          height: isCompact ? 150 : 180,
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          bottom: isCompact ? 8 : 12,
+                          top: 4,
+                        ),
+                        child: Text(
+                          '${visibleBakugans.length} BAKUGAN',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontFamily: 'button_font',
+                            fontSize: isCompact ? 9 : 11,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCarouselHeader({
+    required double horizontalPadding,
+    required double topSpacing,
+    required BoxConstraints constraints,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: topSpacing,
+        left: horizontalPadding,
+        right: horizontalPadding,
+      ),
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.skewX(-0.08),
+        child: Container(
+          width: double.infinity,
+          clipBehavior: Clip.antiAlias,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.black.withValues(alpha: 0.54),
+                const Color(0xCC071018),
+                Colors.black.withValues(alpha: 0.42),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.cyanAccent.withValues(alpha: 0.22),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 22,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.skewX(0.08),
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: _buildInventoryToolbar(constraints),
+                ),
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     color: Colors.white,
                     onPressed: () {
@@ -1210,169 +1561,281 @@ class _BakuganInventoryCarouselScreenState
                       Navigator.of(context).pop();
                     },
                   ),
-                  Expanded(
-                    child: Text(
-                      'BAKUGAN CAROUSEL',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'title_font',
-                        fontSize: isCompact ? 26 : 34,
-                        color: Colors.white,
-                        letterSpacing: 1.3,
-                        shadows: [Shadow(color: Colors.cyan, blurRadius: 18)],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isCompact ? 16 : 44,
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: isCompact ? 104 : 142,
-                        child: _buildAttributeRail(bakugan),
-                      ),
-                      Expanded(
-                        child: BakuganPreview(
-                          key: ValueKey(
-                            'inventory_carousel_${_currentVariant.modelPath}_${_currentVariant.attribute}',
-                          ),
-                          variant: _currentVariant,
-                          isLarge: true,
-                          speciesName: bakugan.name,
-                          centerLargeFooter: true,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-              SizedBox(
-                height: isCompact ? 120 : 152,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_rounded, size: 34),
-                      color: Colors.white70,
-                      onPressed: () {
-                        _carouselController.previousPage(
-                          duration: const Duration(milliseconds: 280),
-                          curve: Curves.easeOut,
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _carouselController,
-                        itemCount: widget.bakugans.length,
-                        onPageChanged: _setBakugan,
-                        itemBuilder: (context, index) {
-                          final item = widget.bakugans[index];
-                          final variant = item.variants.first;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: BakuganPreview(
-                              key: ValueKey(
-                                'inventory_carousel_thumb_${variant.modelPath}_${variant.attribute}',
-                              ),
-                              variant: variant,
-                              speciesName: item.name,
-                              isSelected: index == _selectedBakuganIndex,
-                              autoRotate: false,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 34,
-                      ),
-                      color: Colors.white70,
-                      onPressed: () {
-                        _carouselController.nextPage(
-                          duration: const Duration(milliseconds: 280),
-                          curve: Curves.easeOut,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(bottom: isCompact ? 8 : 12, top: 4),
-                child: Text(
-                  '${widget.bakugans.length} BAKUGAN  /  ${widget.bakugans.fold<int>(0, (sum, item) => sum + item.variants.length)} ACTIVE VARIANTS',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontFamily: 'button_font',
-                    fontSize: isCompact ? 9 : 11,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAttributeRail(Bakugan bakugan) {
+  Widget _buildEmptyFilteredState({
+    required double horizontalPadding,
+    required double topSpacing,
+    required BoxConstraints constraints,
+  }) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildCarouselHeader(
+          horizontalPadding: horizontalPadding,
+          topSpacing: topSpacing,
+          constraints: constraints,
+        ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            child: Center(
+              child: _SelectionInfoPanel(
+                text: _collectionMode
+                    ? 'No hay Bakugan en tu colección. Desactiva COLLECTION MODE para habilitar nuevos Bakugan.'
+                    : 'No hay Bakugan para este atributo.',
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectionStage({
+    required Bakugan bakugan,
+    required BoxConstraints constraints,
+    required double stageHeight,
+  }) {
+    final stageWidth = min(900.0, max(720.0, constraints.maxWidth - 32));
+    final attributeRailWidth = min(140.0, stageWidth * 0.16);
+    final previewLeft = attributeRailWidth - 40;
+
+    return SizedBox(
+      width: stageWidth,
+      height: stageHeight,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: previewLeft,
+            child: SizedBox(
+              width: stageWidth - previewLeft,
+              height: stageHeight,
+              child: BakuganPreview(
+                key: ValueKey(
+                  'inventory_carousel_large_${_currentVariant.modelPath}_${_currentVariant.attribute}_${_currentVariant.texturePath}',
+                ),
+                variant: _currentVariant,
+                isLarge: true,
+                speciesName: bakugan.name,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            child: SizedBox(
+              height: stageHeight,
+              width: attributeRailWidth,
+              child: _buildSelectionAttributeRail(bakugan, stageHeight),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionAttributeRail(Bakugan bakugan, double stageHeight) {
+    const fixedItemHeight = 90.0;
+    final isFullSet = bakugan.variants.length == 6;
+    return Stack(
+      clipBehavior: Clip.none,
       children: bakugan.variants.asMap().entries.map((entry) {
         final index = entry.key;
         final variant = entry.value;
-        final selected = index == _selectedVariantIndex;
-        return GestureDetector(
-          onTap: () {
-            unawaited(_playUiConfirmSound());
-            setState(() => _selectedVariantIndex = index);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected
-                  ? variant.color.withValues(alpha: 0.28)
-                  : Colors.black.withValues(alpha: 0.58),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected ? variant.color : Colors.white12,
-                width: selected ? 2 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Image.asset(
-                  'assets/images/attributes/${variant.attribute}_game.png',
-                  width: 30,
-                  height: 30,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Icon(Icons.circle, color: variant.color),
+        final isSelected = index == _selectedVariantIndex;
+        final top = isFullSet
+            ? index * (stageHeight - fixedItemHeight) / 5
+            : index * fixedItemHeight;
+        const popOutDistance = 30.0;
+
+        return AnimatedPositioned(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          top: top,
+          left: isSelected
+              ? index * -13.5 + 35 - popOutDistance
+              : index * -13.5 + 35,
+          child: GestureDetector(
+            onTap: () {
+              unawaited(_playUiConfirmSound());
+              setState(() => _selectedVariantIndex = index);
+            },
+            onLongPress: () => _editGPower(variant),
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(-0.15),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                width: isSelected ? 100 + popOutDistance : 100,
+                height: fixedItemHeight,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? variant.color.withValues(alpha: 0.4)
+                      : Colors.black45,
+                  border: Border(
+                    top: BorderSide(
+                      color: isSelected ? variant.color : Colors.white24,
+                      width: isSelected ? 2 : 1,
+                    ),
+                    left: BorderSide(
+                      color: isSelected ? variant.color : Colors.white24,
+                      width: isSelected ? 2 : 1,
+                    ),
+                    bottom: BorderSide(
+                      color: isSelected ? variant.color : Colors.white24,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    bottomLeft: Radius.circular(15),
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: variant.color.withValues(alpha: 0.4),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : [],
                 ),
-                const SizedBox(width: 7),
-                Text(
-                  '${variant.gPower}G',
-                  style: TextStyle(
-                    color: selected ? Colors.white : Colors.white60,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(0.15),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Opacity(
+                          opacity: 1,
+                          child: _showsPreyasDualAttributeIcon(variant)
+                              ? ClipRect(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Image.asset(
+                                          'assets/images/attributes/${variant.attribute}_game.png',
+                                          fit: BoxFit.contain,
+                                        ),
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                          ),
+                                          child: Text(
+                                            '|',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                        Image.asset(
+                                          'assets/images/attributes/pyrus_game.png',
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : Image.asset(
+                                  'assets/images/attributes/${variant.attribute}_game.png',
+                                  fit: BoxFit.contain,
+                                ),
+                        ),
+                      ),
+                      Text(
+                        '${variant.gPower}G',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: isSelected ? Colors.white : Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildSpeciesCarousel({
+    required List<Bakugan> visibleBakugans,
+    required double width,
+    required double height,
+  }) {
+    return SizedBox(
+      height: height,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios, size: 40),
+            color: Colors.cyanAccent,
+            onPressed: () {
+              unawaited(_playUiConfirmSound());
+              _carouselController.previousPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            },
+          ),
+          SizedBox(
+            width: width,
+            child: PageView.builder(
+              controller: _carouselController,
+              padEnds: false,
+              itemCount: visibleBakugans.length,
+              onPageChanged: _setBakugan,
+              itemBuilder: (context, index) {
+                final variant = _primaryVariantForSpecies(
+                  visibleBakugans[index],
+                );
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  child: BakuganPreview(
+                    key: ValueKey(
+                      'inventory_carousel_thumb_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                    ),
+                    variant: variant,
+                    isSelected: _selectedBakuganIndex == index,
+                    speciesName: visibleBakugans[index].name,
+                    gridOpacityOverride: 0.14,
+                  ),
+                );
+              },
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios, size: 40),
+            color: Colors.cyanAccent,
+            onPressed: () {
+              unawaited(_playUiConfirmSound());
+              _carouselController.nextPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

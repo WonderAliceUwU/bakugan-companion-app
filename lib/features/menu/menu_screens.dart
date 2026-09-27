@@ -107,6 +107,203 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
   }
 }
 
+Future<String?> _showSkewedInputPrompt({
+  required BuildContext context,
+  required String title,
+  required String confirmLabel,
+  required String initialValue,
+  String? subtitle,
+  Future<String?> Function()? onExplore,
+  String? hintText,
+  String? suffixText,
+  TextInputType? keyboardType,
+  List<TextInputFormatter>? inputFormatters,
+  bool autofocus = false,
+}) async {
+  var currentValue = initialValue;
+  final result = await showDialog<String>(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: Center(
+              child: Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.skewX(-0.08),
+                child: Container(
+                  width: 760,
+                  padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.cyanAccent.withValues(alpha: 0.55),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.cyanAccent.withValues(alpha: 0.16),
+                        blurRadius: 28,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.skewX(0.08),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 18),
+                        TextFormField(
+                          key: ValueKey(currentValue),
+                          initialValue: currentValue,
+                          autofocus: autofocus,
+                          keyboardType: keyboardType,
+                          inputFormatters: inputFormatters,
+                          onChanged: (value) => currentValue = value,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: hintText ?? '/path/to/leaderboard.json',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.35),
+                            ),
+                            suffixText: suffixText,
+                            suffixStyle: const TextStyle(color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.08),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.18),
+                              ),
+                            ),
+                            focusedBorder: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(16),
+                              ),
+                              borderSide: BorderSide(
+                                color: Colors.cyanAccent,
+                                width: 1.6,
+                              ),
+                            ),
+                          ),
+                          onFieldSubmitted: (value) {
+                            currentValue = value;
+                            _playUiConfirmSound();
+                            Navigator.of(context).pop(value.trim());
+                          },
+                        ),
+                        if (onExplore != null) ...[
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.cyanAccent,
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final exploredPath = await onExplore();
+                                if (exploredPath == null ||
+                                    exploredPath.isEmpty) {
+                                  return;
+                                }
+                                currentValue = exploredPath;
+                                setState(() {});
+                              },
+                              icon: const Icon(
+                                Icons.folder_open_rounded,
+                                size: 18,
+                              ),
+                              label: const Text('EXPLORE'),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                _playUiCancelSound();
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text(
+                                'CANCEL',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.cyanAccent,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 12,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              onPressed: () {
+                                _playUiConfirmSound();
+                                Navigator.of(context).pop(currentValue.trim());
+                              },
+                              child: Text(confirmLabel),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+  return result;
+}
+
 class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
 
@@ -159,167 +356,14 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     required Future<String?> Function() onExplore,
     String? subtitle,
   }) async {
-    final controller = TextEditingController(text: initialPath);
-    final result = await showDialog<String>(
+    return _showSkewedInputPrompt(
       context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Center(
-            child: Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.skewX(-0.08),
-              child: Container(
-                width: 760,
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.cyanAccent.withValues(alpha: 0.55),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.cyanAccent.withValues(alpha: 0.16),
-                      blurRadius: 28,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.skewX(0.08),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
-                      TextField(
-                        controller: controller,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: '/path/to/leaderboard.json',
-                          hintStyle: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.35),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.08),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.18),
-                            ),
-                          ),
-                          focusedBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(16)),
-                            borderSide: BorderSide(
-                              color: Colors.cyanAccent,
-                              width: 1.6,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.cyanAccent,
-                            textStyle: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                          onPressed: () async {
-                            final exploredPath = await onExplore();
-                            if (exploredPath == null || exploredPath.isEmpty) {
-                              return;
-                            }
-                            controller.text = exploredPath;
-                            controller.selection = TextSelection.collapsed(
-                              offset: controller.text.length,
-                            );
-                          },
-                          icon: const Icon(Icons.folder_open_rounded, size: 18),
-                          label: const Text('EXPLORE'),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              _playUiCancelSound();
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text(
-                              'CANCEL',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.cyanAccent,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              textStyle: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                            onPressed: () {
-                              _playUiConfirmSound();
-                              Navigator.of(context).pop(controller.text.trim());
-                            },
-                            child: Text(confirmLabel),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+      title: title,
+      confirmLabel: confirmLabel,
+      initialValue: initialPath,
+      subtitle: subtitle,
+      onExplore: onExplore,
     );
-    controller.dispose();
-    return result;
   }
 
   Future<void> _exportBackup() async {
@@ -2407,8 +2451,7 @@ BakuganVariant? _historyVariantFromEntry(MatchHistoryBakuganEntry entry) {
 
     final matchingVariants = bakugan.variants
         .where(
-          (variant) =>
-              variant.attribute.trim().toLowerCase() == attributeKey,
+          (variant) => variant.attribute.trim().toLowerCase() == attributeKey,
         )
         .toList();
 

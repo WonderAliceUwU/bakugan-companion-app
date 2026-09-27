@@ -19,6 +19,18 @@ class BakuganVariant {
     required this.gPower,
     required this.speciesName,
   });
+
+  BakuganVariant copyWith({int? gPower}) {
+    return BakuganVariant(
+      attribute: attribute,
+      modelPath: modelPath,
+      closedModelPath: closedModelPath,
+      texturePath: texturePath,
+      color: color,
+      gPower: gPower ?? this.gPower,
+      speciesName: speciesName,
+    );
+  }
 }
 
 class Bakugan {

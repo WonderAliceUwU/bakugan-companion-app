@@ -1108,59 +1108,6 @@ String? normalTexturePathForModel(String modelPath, String attribute) {
   return _normalTexturePathsByModelAndAttribute['$modelPath|${attribute.toLowerCase()}'];
 }
 
-const _legacyGPowerBySpeciesAndAttribute = <String, int>{
-  'apollonir|pyrus': 700,
-  'bee striker|aquos': 430,
-  'blade tigrerra|haos': 580,
-  'centipoid|darkus': 530,
-  'centipoid|subterra': 560,
-  'clayf|pyrus': 500,
-  'cosmic ingram|ventus': 560,
-  'dragonoid|darkus': 400,
-  'dragonoid|haos': 550,
-  'dragonoid|pyrus': 600,
-  'el condor|haos': 580,
-  'fear ripper|haos': 610,
-  'fencer|aquos': 550,
-  'fourtress|aquos': 580,
-  'fourtress|darkus': 480,
-  'gorem|aquos': 480,
-  'gorem|darkus': 520,
-  'griffon|aquos': 500,
-  'griffon|haos': 550,
-  'hammer gorem|subterra': 480,
-  'harpus|aquos': 520,
-  'harpus|darkus': 400,
-  'harpus|haos': 570,
-  'juggernoid|pyrus': 540,
-  'lars lion|aquos': 620,
-  'leefram|ventus': 680,
-  'limulus|ventus': 450,
-  'monarus|aquos': 570,
-  'monarus|haos': 570,
-  'monarus|ventus': 410,
-  'naga|haos': 560,
-  'naga|pyrus': 600,
-  'nemus|pyrus': 690,
-  'neo dragonoid|haos': 660,
-  'neo dragonoid|pyrus': 510,
-  'oberus|aquos': 550,
-  'preyas diablo|aquos': 470,
-  'rattleoid|haos': 460,
-  'ravenoid|aquos': 500,
-  'reaper|aquos': 490,
-  'sirenoid|darkus': 570,
-  'spin ravenoid|ventus': 650,
-  'stinglash|aquos': 440,
-  'stinglash|darkus': 480,
-  'stinglash|pyrus': 510,
-  'stinglash|subterra': 420,
-  'tentaclear|subterra': 590,
-  'warius|subterra': 550,
-  'warius|ventus': 600,
-  'wired|haos': 720,
-};
-
 const _legacyBannedSpeciesAndAttributes = {
   'gorem|darkus',
   'hammer gorem|subterra',
@@ -1400,10 +1347,7 @@ Color _colorForBakuganAttribute(String attribute) {
   };
 }
 
-int _gPowerFor(String speciesName, String attribute) {
-  return _legacyGPowerBySpeciesAndAttribute['${speciesName.toLowerCase()}|$attribute'] ??
-      0;
-}
+int _gPowerFor(String speciesName, String attribute) => 0;
 
 bool isBannedBakuganVariant(BakuganVariant variant) {
   return _legacyBannedSpeciesAndAttributes.contains(
@@ -1556,7 +1500,7 @@ Future<void> _loadFallback() async {
           texturePath:
               'assets/models/Season 1 - Battle Brawlers/Dragonoid/Textures/Core/Pyrus Dragonoid.png',
           color: Colors.red,
-          gPower: 600,
+          gPower: _gPowerFor('Dragonoid', 'pyrus'),
           speciesName: 'Dragonoid',
         ),
       ],

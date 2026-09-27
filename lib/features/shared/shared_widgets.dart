@@ -248,6 +248,7 @@ class BakuganPreview extends StatefulWidget {
   final EdgeInsets? visualPaddingOverride;
   final Widget? frameBackground;
   final bool showGridBackground;
+  final double? gridOpacityOverride;
   final bool showIllustrationShadow;
   final Offset illustrationShadowOffset;
   final double illustrationShadowOpacity;
@@ -275,6 +276,7 @@ class BakuganPreview extends StatefulWidget {
     this.visualPaddingOverride,
     this.frameBackground,
     this.showGridBackground = true,
+    this.gridOpacityOverride,
     this.showIllustrationShadow = false,
     this.illustrationShadowOffset = const Offset(14, 18),
     this.illustrationShadowOpacity = 0.42,
@@ -483,7 +485,9 @@ class _BakuganPreviewState extends State<BakuganPreview>
                         child: CustomPaint(
                           painter: GridPainter(
                             color: themeColor.withValues(
-                              alpha: widget.isLarge ? 0.12 : 0.05,
+                              alpha:
+                                  widget.gridOpacityOverride ??
+                                  (widget.isLarge ? 0.12 : 0.05),
                             ),
                           ),
                         ),
