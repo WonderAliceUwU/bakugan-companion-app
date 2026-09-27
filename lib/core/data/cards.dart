@@ -1091,8 +1091,8 @@ String? _matchCardImagePath({
 
 List<Bakugan> availableBakugans = [];
 
-const _seasonOneModelsRoot = 'assets/models/Season 1 - Battle Brawlers/';
-const _seasonTwoModelsRoot = 'assets/models/Season 2 - New Vestroia/';
+const _seasonOneModelsRoot = 'assets/models/Season_1_Battle_Brawlers/';
+const _seasonTwoModelsRoot = 'assets/models/Season_2_New_Vestroia/';
 const _normalBakuganAttributes = [
   'pyrus',
   'aquos',
@@ -1124,7 +1124,8 @@ String _modelSpeciesRoot(String path) {
 }
 
 String _speciesNameFromRoot(String speciesRoot) {
-  final name = speciesRoot.split('/').last;
+  final rawFolder = speciesRoot.split('/').last;
+  final name = rawFolder.replaceAll('_', ' ');
   return switch (name) {
     'Preyas II Angelo' => 'Preyas Angelo',
     'Preyas II Diablo' => 'Preyas Diablo',
@@ -1172,7 +1173,7 @@ List<String> _attributeAliases(String attribute) {
   };
 }
 
-String _speciesNameFromImageSlug(String slug) {
+String _speciesNameFromSlug(String slug) {
   return slug
       .split('_')
       .where((part) => part.isNotEmpty)
@@ -1186,135 +1187,6 @@ String _assetSlug(String value) {
       .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
       .replaceAll(RegExp(r'_+'), '_')
       .replaceAll(RegExp(r'^_|_$'), '');
-}
-
-bool _isRenderableModelFallback(String path) {
-  final lowerPath = path.toLowerCase();
-  return lowerPath.endsWith('.glb') ||
-      lowerPath.endsWith('.gltf') ||
-      lowerPath.endsWith('.png') ||
-      lowerPath.endsWith('.jpg') ||
-      lowerPath.endsWith('.jpeg');
-}
-
-int _modelFallbackPriority(String path) {
-  final lowerPath = path.toLowerCase();
-  if (lowerPath.endsWith('.glb') || lowerPath.endsWith('.gltf')) return 0;
-  return 1;
-}
-
-Map<String, Map<String, String>> _findModelFallbacks(List<String> assetPaths) {
-  final candidates = <String, List<({String path, bool exact})>>{};
-
-  for (final path in assetPaths) {
-    if (!path.startsWith(_seasonTwoModelsRoot) ||
-        !_isRenderableModelFallback(path)) {
-      continue;
-    }
-
-    // Legacy Season 2 assets are kept as one renderable file per species.
-    // Ignore nested Model/Textures assets here; those are handled by the OBJ
-    // discovery above.
-    final relativePath = path.substring(_seasonTwoModelsRoot.length).split('/');
-    if (relativePath.length != 2) continue;
-
-    final speciesSlug = _assetSlug(relativePath.first);
-    final normalizedStem = _assetSlug(
-      relativePath.last.replaceFirst(RegExp(r'\.[^.]+$'), ''),
-    );
-    for (final attribute in _normalBakuganAttributes) {
-      final matches = _attributeAliases(
-        attribute,
-      ).map((alias) => '${speciesSlug}_$alias');
-      final matchingStem = matches.firstWhere(
-        (expectedStem) =>
-            normalizedStem == expectedStem ||
-            normalizedStem.startsWith('${expectedStem}_'),
-        orElse: () => '',
-      );
-      if (matchingStem.isEmpty) continue;
-
-      final speciesName = _speciesNameFromImageSlug(speciesSlug);
-      final key = '$speciesName|$attribute';
-      candidates.putIfAbsent(key, () => []).add((
-        path: path,
-        exact: normalizedStem == matchingStem,
-      ));
-    }
-  }
-
-  final fallbacks = <String, Map<String, String>>{};
-  for (final entry in candidates.entries) {
-    final separator = entry.key.lastIndexOf('|');
-    final speciesName = entry.key.substring(0, separator);
-    final attribute = entry.key.substring(separator + 1);
-    final ranked = entry.value
-      ..sort((a, b) {
-        final formatCompare = _modelFallbackPriority(
-          a.path,
-        ).compareTo(_modelFallbackPriority(b.path));
-        if (formatCompare != 0) return formatCompare;
-        final exactCompare = (b.exact ? 1 : 0).compareTo(a.exact ? 1 : 0);
-        if (exactCompare != 0) return exactCompare;
-        return a.path.length.compareTo(b.path.length);
-      });
-    fallbacks.putIfAbsent(speciesName, () => {})[attribute] = ranked.first.path;
-  }
-  return fallbacks;
-}
-
-Map<String, Map<String, String>> _findImageFallbacks(List<String> assetPaths) {
-  const imageRoot = 'assets/images/bakugan/';
-  final candidates = <String, List<({String path, bool exact})>>{};
-
-  for (final path in assetPaths) {
-    if (!path.startsWith(imageRoot) ||
-        (!path.toLowerCase().endsWith('.png') &&
-            !path.toLowerCase().endsWith('.jpg') &&
-            !path.toLowerCase().endsWith('.jpeg'))) {
-      continue;
-    }
-
-    final relativePath = path.substring(imageRoot.length).split('/');
-    if (relativePath.length != 2) continue;
-
-    final speciesSlug = relativePath.first.toLowerCase();
-    final fileName = relativePath.last.toLowerCase();
-    final stem = fileName.replaceFirst(RegExp(r'\.[^.]+$'), '');
-    final normalizedStem = stem
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'_+'), '_');
-
-    for (final attribute in _normalBakuganAttributes) {
-      final expectedStem = '${speciesSlug}_$attribute';
-      if (normalizedStem != expectedStem &&
-          !normalizedStem.startsWith('${expectedStem}_')) {
-        continue;
-      }
-
-      final speciesName = _speciesNameFromImageSlug(speciesSlug);
-      final key = '$speciesName|$attribute';
-      candidates.putIfAbsent(key, () => []).add((
-        path: path,
-        exact: normalizedStem == expectedStem,
-      ));
-    }
-  }
-
-  final fallbacks = <String, Map<String, String>>{};
-  for (final entry in candidates.entries) {
-    final separator = entry.key.lastIndexOf('|');
-    final speciesName = entry.key.substring(0, separator);
-    final attribute = entry.key.substring(separator + 1);
-    final ranked = entry.value
-      ..sort((a, b) {
-        final exactCompare = (b.exact ? 1 : 0).compareTo(a.exact ? 1 : 0);
-        if (exactCompare != 0) return exactCompare;
-        return a.path.length.compareTo(b.path.length);
-      });
-    fallbacks.putIfAbsent(speciesName, () => {})[attribute] = ranked.first.path;
-  }
-  return fallbacks;
 }
 
 String? _findNormalTexture(
@@ -1355,6 +1227,15 @@ bool isBannedBakuganVariant(BakuganVariant variant) {
   );
 }
 
+// =============================================================================
+// BAKUGAN MODEL LOADING PIPELINE
+// Divided into 3 explicit stages for clear maintenance and future deprecation:
+//
+// Stage 1 (Primary / Modern): OBJ 3D Models with Core Textures (Season 1 & 2)
+// Stage 2 (Legacy 3D Mode): Single GLB 3D Models in Season Folders (e.g. Nemus, Cosmic Ingram)
+// Stage 3 (Legacy 2D Mode): Ball PNG Images in Season Folders (e.g. Fencer, Leefram)
+// =============================================================================
+
 Future<void> loadAvailableBakugans() async {
   if (availableBakugans.isNotEmpty) return;
   try {
@@ -1362,116 +1243,22 @@ Future<void> loadAvailableBakugans() async {
       rootBundle,
     );
     final allAssetPaths = manifest.listAssets().toList();
-    final assetPaths = allAssetPaths.where((String key) {
+    final modelAssetPaths = allAssetPaths.where((String key) {
       return key.startsWith(_seasonOneModelsRoot) ||
           key.startsWith(_seasonTwoModelsRoot);
     }).toList();
-    final modelPaths = assetPaths.where(_isVisualObj).toList();
-    final modelPathsBySpeciesRoot = <String, List<String>>{};
-    for (final modelPath in modelPaths) {
-      modelPathsBySpeciesRoot
-          .putIfAbsent(_modelSpeciesRoot(modelPath), () => [])
-          .add(modelPath);
-    }
 
     _normalTexturePathsByModelAndAttribute.clear();
     final grouped = <String, List<BakuganVariant>>{};
-    final sortedSpeciesRoots = modelPathsBySpeciesRoot.keys.toList()..sort();
-    for (final speciesRoot in sortedSpeciesRoots) {
-      final modelCandidates = modelPathsBySpeciesRoot[speciesRoot]!
-        ..sort((a, b) {
-          final priority = _visualModelPriority(
-            a,
-          ).compareTo(_visualModelPriority(b));
-          if (priority != 0) return priority;
-          return a.length.compareTo(b.length);
-        });
-      final modelPath = modelCandidates.first;
-      String? closedModelPath;
-      for (final candidate in modelCandidates) {
-        if (candidate.split('/').last.toLowerCase().contains('closed')) {
-          closedModelPath = candidate;
-          break;
-        }
-      }
-      final speciesName = _speciesNameFromRoot(speciesRoot);
-      final variants = <BakuganVariant>[];
 
-      for (final attribute in _normalBakuganAttributes) {
-        final texturePath = _findNormalTexture(
-          speciesRoot,
-          attribute,
-          assetPaths,
-        );
-        if (texturePath == null) {
-          variants.clear();
-          break;
-        }
-        _normalTexturePathsByModelAndAttribute['$modelPath|$attribute'] =
-            texturePath;
-        variants.add(
-          BakuganVariant(
-            attribute: attribute,
-            modelPath: modelPath,
-            closedModelPath: closedModelPath,
-            texturePath: texturePath,
-            color: _colorForBakuganAttribute(attribute),
-            gPower: _gPowerFor(speciesName, attribute),
-            speciesName: speciesName,
-          ),
-        );
-      }
+    // --- STAGE 1: Modern OBJ 3D Models with Core Textures ---
+    _loadStage1ObjModels(modelAssetPaths, grouped);
 
-      if (variants.isNotEmpty) {
-        grouped[speciesName] = variants;
-      }
-    }
+    // --- STAGE 2 (Legacy): Standalone GLB 3D Models ---
+    _loadStage2LegacyGlbModels(modelAssetPaths, grouped);
 
-    // Some legacy Bakugan have a dedicated GLB or ball image in the model
-    // library but no OBJ/textures. Prefer those assets over old illustrations.
-    final modelFallbacks = _findModelFallbacks(allAssetPaths);
-    for (final entry in modelFallbacks.entries) {
-      if (grouped.containsKey(entry.key)) continue;
-
-      final variants = <BakuganVariant>[];
-      for (final attribute in _normalBakuganAttributes) {
-        final modelPath = entry.value[attribute];
-        if (modelPath == null) continue;
-        variants.add(
-          BakuganVariant(
-            attribute: attribute,
-            modelPath: modelPath,
-            color: _colorForBakuganAttribute(attribute),
-            gPower: _gPowerFor(entry.key, attribute),
-            speciesName: entry.key,
-          ),
-        );
-      }
-      if (variants.isNotEmpty) grouped[entry.key] = variants;
-    }
-
-    // Keep the old illustration fallback only for Bakugan without a dedicated
-    // model-library asset.
-    final imageFallbacks = _findImageFallbacks(allAssetPaths);
-    for (final entry in imageFallbacks.entries) {
-      if (grouped.containsKey(entry.key)) continue;
-
-      final variants = <BakuganVariant>[];
-      for (final attribute in _normalBakuganAttributes) {
-        final imagePath = entry.value[attribute];
-        if (imagePath == null) continue;
-        variants.add(
-          BakuganVariant(
-            attribute: attribute,
-            modelPath: imagePath,
-            color: _colorForBakuganAttribute(attribute),
-            gPower: _gPowerFor(entry.key, attribute),
-            speciesName: entry.key,
-          ),
-        );
-      }
-      if (variants.isNotEmpty) grouped[entry.key] = variants;
-    }
+    // --- STAGE 3 (Legacy): Season Folder Ball PNG Images ---
+    _loadStage3LegacyImageModels(modelAssetPaths, grouped);
 
     availableBakugans =
         grouped.entries
@@ -1488,6 +1275,173 @@ Future<void> loadAvailableBakugans() async {
   }
 }
 
+/// Stage 1 (Primary / Modern): Discovers OBJ 3D models with texture maps per attribute.
+void _loadStage1ObjModels(
+  List<String> modelAssetPaths,
+  Map<String, List<BakuganVariant>> grouped,
+) {
+  final objPaths = modelAssetPaths.where(_isVisualObj).toList();
+  final modelPathsBySpeciesRoot = <String, List<String>>{};
+  for (final objPath in objPaths) {
+    modelPathsBySpeciesRoot
+        .putIfAbsent(_modelSpeciesRoot(objPath), () => [])
+        .add(objPath);
+  }
+
+  final sortedSpeciesRoots = modelPathsBySpeciesRoot.keys.toList()..sort();
+  for (final speciesRoot in sortedSpeciesRoots) {
+    final modelCandidates = modelPathsBySpeciesRoot[speciesRoot]!
+      ..sort((a, b) {
+        final priority = _visualModelPriority(
+          a,
+        ).compareTo(_visualModelPriority(b));
+        if (priority != 0) return priority;
+        return a.length.compareTo(b.length);
+      });
+    final modelPath = modelCandidates.first;
+    String? closedModelPath;
+    for (final candidate in modelCandidates) {
+      if (candidate.split('/').last.toLowerCase().contains('closed')) {
+        closedModelPath = candidate;
+        break;
+      }
+    }
+    final speciesName = _speciesNameFromRoot(speciesRoot);
+    final variants = <BakuganVariant>[];
+
+    for (final attribute in _normalBakuganAttributes) {
+      final texturePath = _findNormalTexture(
+        speciesRoot,
+        attribute,
+        modelAssetPaths,
+      );
+      if (texturePath == null) {
+        variants.clear();
+        break;
+      }
+      _normalTexturePathsByModelAndAttribute['$modelPath|$attribute'] =
+          texturePath;
+      variants.add(
+        BakuganVariant(
+          attribute: attribute,
+          modelPath: modelPath,
+          closedModelPath: closedModelPath,
+          texturePath: texturePath,
+          color: _colorForBakuganAttribute(attribute),
+          gPower: _gPowerFor(speciesName, attribute),
+          speciesName: speciesName,
+        ),
+      );
+    }
+
+    if (variants.isNotEmpty) {
+      grouped[speciesName] = variants;
+    }
+  }
+}
+
+/// Stage 2 (Legacy 3D Mode): Loads standalone GLB models directly from season model folders.
+/// Strictly limited to assets in `assets/models/` (does NOT fall back to monster illustrations).
+void _loadStage2LegacyGlbModels(
+  List<String> modelAssetPaths,
+  Map<String, List<BakuganVariant>> grouped,
+) {
+  for (final path in modelAssetPaths) {
+    final lowerPath = path.toLowerCase();
+    if (!lowerPath.endsWith('.glb') && !lowerPath.endsWith('.gltf')) continue;
+
+    final root = path.startsWith(_seasonOneModelsRoot)
+        ? _seasonOneModelsRoot
+        : _seasonTwoModelsRoot;
+    final relativePath = path.substring(root.length).split('/');
+    if (relativePath.length != 2) continue; // Ignore nested subfolder assets
+
+    final speciesSlug = _assetSlug(relativePath.first);
+    final speciesName = _speciesNameFromSlug(speciesSlug);
+    final fileName = relativePath.last
+        .toLowerCase()
+        .replaceFirst(RegExp(r'\.[^.]+$'), '');
+    final normalizedFileName = _assetSlug(fileName);
+
+    for (final attribute in _normalBakuganAttributes) {
+      final aliases = _attributeAliases(attribute);
+      final isMatch = aliases.any(
+        (alias) =>
+            normalizedFileName == '${speciesSlug}_$alias' ||
+            normalizedFileName.startsWith('${speciesSlug}_${alias}_'),
+      );
+
+      if (!isMatch) continue;
+
+      final variant = BakuganVariant(
+        attribute: attribute,
+        modelPath: path,
+        color: _colorForBakuganAttribute(attribute),
+        gPower: _gPowerFor(speciesName, attribute),
+        speciesName: speciesName,
+      );
+
+      final speciesVariants = grouped.putIfAbsent(speciesName, () => []);
+      if (!speciesVariants.any((v) => v.attribute == attribute)) {
+        speciesVariants.add(variant);
+      }
+    }
+  }
+}
+
+/// Stage 3 (Legacy 2D Ball Mode): Loads ball PNG images located inside the season model folders.
+/// Strictly limited to assets in `assets/models/`.
+void _loadStage3LegacyImageModels(
+  List<String> modelAssetPaths,
+  Map<String, List<BakuganVariant>> grouped,
+) {
+  for (final path in modelAssetPaths) {
+    final lowerPath = path.toLowerCase();
+    if (!lowerPath.endsWith('.png') &&
+        !lowerPath.endsWith('.jpg') &&
+        !lowerPath.endsWith('.jpeg')) {
+      continue;
+    }
+
+    final root = path.startsWith(_seasonOneModelsRoot)
+        ? _seasonOneModelsRoot
+        : _seasonTwoModelsRoot;
+    final relativePath = path.substring(root.length).split('/');
+    if (relativePath.length != 2) continue;
+
+    final speciesSlug = _assetSlug(relativePath.first);
+    final speciesName = _speciesNameFromSlug(speciesSlug);
+    final fileName = relativePath.last
+        .toLowerCase()
+        .replaceFirst(RegExp(r'\.[^.]+$'), '');
+    final normalizedFileName = _assetSlug(fileName);
+
+    for (final attribute in _normalBakuganAttributes) {
+      final aliases = _attributeAliases(attribute);
+      final isMatch = aliases.any(
+        (alias) =>
+            normalizedFileName == '${speciesSlug}_$alias' ||
+            normalizedFileName.startsWith('${speciesSlug}_${alias}_'),
+      );
+
+      if (!isMatch) continue;
+
+      final variant = BakuganVariant(
+        attribute: attribute,
+        modelPath: path,
+        color: _colorForBakuganAttribute(attribute),
+        gPower: _gPowerFor(speciesName, attribute),
+        speciesName: speciesName,
+      );
+
+      final speciesVariants = grouped.putIfAbsent(speciesName, () => []);
+      if (!speciesVariants.any((v) => v.attribute == attribute)) {
+        speciesVariants.add(variant);
+      }
+    }
+  }
+}
+
 Future<void> _loadFallback() async {
   availableBakugans = [
     Bakugan(
@@ -1496,9 +1450,9 @@ Future<void> _loadFallback() async {
         BakuganVariant(
           attribute: 'pyrus',
           modelPath:
-              'assets/models/Season 1 - Battle Brawlers/Dragonoid/Dragonoid Stand.obj',
+              'assets/models/Season_1_Battle_Brawlers/Dragonoid/Dragonoid Stand.obj',
           texturePath:
-              'assets/models/Season 1 - Battle Brawlers/Dragonoid/Textures/Core/Pyrus Dragonoid.png',
+              'assets/models/Season_1_Battle_Brawlers/Dragonoid/Textures/Core/Pyrus Dragonoid.png',
           color: Colors.red,
           gPower: _gPowerFor('Dragonoid', 'pyrus'),
           speciesName: 'Dragonoid',

@@ -111,7 +111,7 @@ void main() {
     expect(
       fencer.variants.map((variant) => variant.modelPath),
       contains(
-        'assets/models/Season 2 - New Vestroia/Fencer/fencer_aquos_550g.png',
+        'assets/models/Season_2_New_Vestroia/Fencer/fencer_aquos_550g.png',
       ),
     );
 
@@ -121,7 +121,7 @@ void main() {
     expect(
       nemus.variants.map((variant) => variant.modelPath),
       contains(
-        'assets/models/Season 2 - New Vestroia/Nemus/nemus_pyrus_690g.glb',
+        'assets/models/Season_2_New_Vestroia/Nemus/nemus_pyrus_690g.glb',
       ),
     );
 
@@ -133,11 +133,11 @@ void main() {
     );
     expect(
       deltaPyrus.modelPath,
-      'assets/models/Season 1 - Battle Brawlers/Delta Dragonoid/Delta Dragonoid Open.obj',
+      'assets/models/Season_1_Battle_Brawlers/Delta_Dragonoid/Delta Dragonoid Open.obj',
     );
     expect(
       deltaPyrus.closedModelPath,
-      'assets/models/Season 1 - Battle Brawlers/Delta Dragonoid/Delta Dragonoid Closed.obj',
+      'assets/models/Season_1_Battle_Brawlers/Delta_Dragonoid/Delta Dragonoid Closed.obj',
     );
 
     final naga = availableBakugans.firstWhere(
@@ -146,13 +146,13 @@ void main() {
     expect(
       naga.variants.map((variant) => variant.modelPath),
       contains(
-        'assets/models/Season 1 - Battle Brawlers/Naga/Silent Naga Open.obj',
+        'assets/models/Season_1_Battle_Brawlers/Naga/Silent Naga Open.obj',
       ),
     );
     expect(
       naga.variants.map((variant) => variant.texturePath),
       contains(
-        'assets/models/Season 1 - Battle Brawlers/Naga/Textures/Cores/Pyrus Silent Naga.png',
+        'assets/models/Season_1_Battle_Brawlers/Naga/Textures/Cores/Pyrus Silent Naga.png',
       ),
     );
   });

@@ -43,35 +43,25 @@ class Bakugan {
 String bakuganVariantInventoryKey({
   required String speciesName,
   required String attribute,
-  required String modelPath,
 }) {
-  return '${speciesName.trim().toLowerCase()}|'
-      '${attribute.trim().toLowerCase()}|'
-      '${modelPath.trim()}';
+  return '${speciesName.trim().toLowerCase()}|${attribute.trim().toLowerCase()}';
 }
 
 String bakuganVariantKey(BakuganVariant variant) {
   return bakuganVariantInventoryKey(
     speciesName: variant.speciesName,
     attribute: variant.attribute,
-    modelPath: variant.modelPath,
   );
 }
 
 class SavedBakuganVariant {
   final String speciesName;
   final String attribute;
-  final String modelPath;
-  final String? closedModelPath;
-  final String? texturePath;
   final int gPower;
 
   const SavedBakuganVariant({
     required this.speciesName,
     required this.attribute,
-    required this.modelPath,
-    required this.closedModelPath,
-    required this.texturePath,
     required this.gPower,
   });
 
@@ -79,9 +69,6 @@ class SavedBakuganVariant {
     return SavedBakuganVariant(
       speciesName: variant.speciesName,
       attribute: variant.attribute,
-      modelPath: variant.modelPath,
-      closedModelPath: variant.closedModelPath,
-      texturePath: variant.texturePath,
       gPower: variant.gPower,
     );
   }
@@ -92,9 +79,6 @@ class SavedBakuganVariant {
           .toString()
           .trim(),
       attribute: (json['attribute'] ?? '').toString().trim().toLowerCase(),
-      modelPath: (json['modelPath'] ?? '').toString().trim(),
-      closedModelPath: json['closedModelPath']?.toString(),
-      texturePath: json['texturePath']?.toString(),
       gPower: (json['gPower'] as num?)?.toInt() ?? 0,
     );
   }
@@ -102,15 +86,11 @@ class SavedBakuganVariant {
   String get inventoryKey => bakuganVariantInventoryKey(
     speciesName: speciesName,
     attribute: attribute,
-    modelPath: modelPath,
   );
 
   Map<String, dynamic> toJson() => {
     'speciesName': speciesName,
     'attribute': attribute,
-    'modelPath': modelPath,
-    if (closedModelPath != null) 'closedModelPath': closedModelPath,
-    if (texturePath != null) 'texturePath': texturePath,
     'gPower': gPower,
   };
 }
@@ -140,8 +120,7 @@ class BakuganInventoryState {
                 .where(
                   (entry) =>
                       entry.speciesName.isNotEmpty &&
-                      entry.attribute.isNotEmpty &&
-                      entry.modelPath.isNotEmpty,
+                      entry.attribute.isNotEmpty,
                 )
                 .toList()
           : const [],
@@ -156,9 +135,7 @@ class BakuganInventoryState {
   BakuganInventoryState normalized() {
     final unique = <String, SavedBakuganVariant>{};
     for (final entry in bakugans) {
-      if (entry.speciesName.isEmpty ||
-          entry.attribute.isEmpty ||
-          entry.modelPath.isEmpty) {
+      if (entry.speciesName.isEmpty || entry.attribute.isEmpty) {
         continue;
       }
       unique[entry.inventoryKey] = entry;
