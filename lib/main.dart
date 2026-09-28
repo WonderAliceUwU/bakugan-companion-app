@@ -26,6 +26,7 @@ import 'package:flutter_3d_controller/src/core/modules/obj_viewer/scene.dart'
     as obj_scene;
 
 part 'app/app.dart';
+part 'core/localization/language_settings.dart';
 part 'core/data/models.dart';
 part 'core/data/cards.dart';
 part 'features/menu/menu_screens.dart';
@@ -60,6 +61,7 @@ void main() async {
   try {
     await _bgMusicPlayer.stop();
   } catch (_) {}
+  await LanguageController.instance.init();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   runApp(const BakuganApp());
 }

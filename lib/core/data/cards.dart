@@ -45,6 +45,18 @@ class GateCard {
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
 
+  String descriptionFor(AppLanguage lang) {
+    if (lang == AppLanguage.es) {
+      return (descriptionEs?.trim().isNotEmpty ?? false)
+          ? descriptionEs!
+          : (descriptionEn ?? '');
+    } else {
+      return (descriptionEn?.trim().isNotEmpty ?? false)
+          ? descriptionEn!
+          : (descriptionEs ?? '');
+    }
+  }
+
   bool _matchesNamedTargets(BakuganVariant variant, dynamic targetsRaw) {
     final targets = targetsRaw is List
         ? targetsRaw
@@ -683,6 +695,18 @@ class AbilityCard {
   });
 
   int bonusFor(String attribute) => attributes[attribute.toLowerCase()] ?? 0;
+
+  String descriptionFor(AppLanguage lang) {
+    if (lang == AppLanguage.es) {
+      return (descriptionEs?.trim().isNotEmpty ?? false)
+          ? descriptionEs!
+          : (descriptionEn ?? '');
+    } else {
+      return (descriptionEn?.trim().isNotEmpty ?? false)
+          ? descriptionEn!
+          : (descriptionEs ?? '');
+    }
+  }
 
   int calculateBonus(BakuganVariant variant) {
     return bonusFor(variant.attribute);

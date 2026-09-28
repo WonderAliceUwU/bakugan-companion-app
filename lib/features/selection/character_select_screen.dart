@@ -199,7 +199,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          saveProfile ? 'REGISTER PLAYER' : 'INVITE PLAYER',
+                          saveProfile
+                              ? AppLocalizations.current.registerPlayerTitle
+                              : AppLocalizations.current.invitePlayerTitle,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -210,8 +212,8 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                         const SizedBox(height: 8),
                         Text(
                           saveProfile
-                              ? 'Choose a Bakugan profile photo and save this player for later.'
-                              : 'Choose a Bakugan profile photo for this temporary invited player.',
+                              ? AppLocalizations.current.registerPlayerSub
+                              : AppLocalizations.current.invitePlayerSub,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.72),
                             fontSize: 15,
@@ -228,7 +230,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                             fontWeight: FontWeight.w800,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Player name',
+                            hintText: AppLocalizations.current.playerNameHint,
                             hintStyle: TextStyle(
                               color: Colors.white.withValues(alpha: 0.35),
                             ),
@@ -309,7 +311,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                                 _playCancel();
                                 Navigator.of(context).pop();
                               },
-                              child: const Text('CANCEL'),
+                              child: Text(AppLocalizations.current.cancel),
                             ),
                             const SizedBox(width: 12),
                             FilledButton(
@@ -333,7 +335,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                                 final sanitized =
                                     _sanitizePlayerName(controller.text);
                                 if (sanitized.isEmpty) {
-                                  _showCharacterSelectMessage('Enter a player name.');
+                                  _showCharacterSelectMessage(
+                                    AppLocalizations.current.enterNameMsg(),
+                                  );
                                   return;
                                 }
                                 Navigator.of(context).pop(
@@ -343,7 +347,11 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                                   ),
                                 );
                               },
-                              child: Text(saveProfile ? 'SAVE' : 'INVITE'),
+                              child: Text(
+                                saveProfile
+                                    ? AppLocalizations.current.save
+                                    : AppLocalizations.current.invite,
+                              ),
                             ),
                           ],
                         ),
@@ -434,6 +442,8 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -465,9 +475,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
             Column(
               children: [
                 const SizedBox(height: 50),
-                const Text(
-                  'SELECT CHARACTER',
-                  style: TextStyle(
+                Text(
+                  l10n.selectCharacter,
+                  style: const TextStyle(
                     fontFamily: 'title_font',
                     fontSize: 60,
                     fontWeight: FontWeight.w900,
@@ -484,7 +494,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 15.0),
                           child: PlayerSlot(
                             displayName:
-                                _selectedPlayers[i]?.name ?? 'Selecting...',
+                                _selectedPlayers[i]?.name ?? l10n.selecting,
                             char: _selectedPlayers[i]?.character,
                             isActive: i == currentPlayerIndex,
                             isBlue: i % 2 == 0,
@@ -542,8 +552,8 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                             if (index == 0) {
                               return _ProfileActionCard(
                                 icon: Icons.person_add_alt_1_rounded,
-                                title: 'INVITE',
-                                subtitle: 'Temporary player',
+                                title: l10n.invite,
+                                subtitle: l10n.temporaryPlayer,
                                 accent: Colors.orangeAccent,
                                 onTap: () =>
                                     _openPlayerProfilePrompt(saveProfile: false),
@@ -552,8 +562,8 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                             if (index == 1) {
                               return _ProfileActionCard(
                                 icon: Icons.add_circle_rounded,
-                                title: 'REGISTER',
-                                subtitle: 'Save a player',
+                                title: l10n.register,
+                                subtitle: l10n.savePlayer,
                                 accent: Colors.cyanAccent,
                                 onTap: () =>
                                     _openPlayerProfilePrompt(saveProfile: true),

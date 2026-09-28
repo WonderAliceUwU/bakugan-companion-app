@@ -914,7 +914,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     return FramedDescriptionPanel(
       width: 620,
       title: card.name,
-      esText: card.descriptionEs ?? card.descriptionEn ?? '',
+      esText: card.descriptionFor(LanguageController.instance.cardLanguage),
       maxHeight: 300,
       frameGradient:
           _abilityDescriptionBorderGradients[card.cardClass] ??
@@ -940,7 +940,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     return FramedDescriptionPanel(
       width: 620,
       title: card.name,
-      esText: card.descriptionEs ?? card.descriptionEn ?? '',
+      esText: card.descriptionFor(LanguageController.instance.cardLanguage),
       maxHeight: 300,
       frameGradient:
           _gateDescriptionBorderGradients[card.cardClass] ??

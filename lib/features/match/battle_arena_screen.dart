@@ -4503,7 +4503,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return _buildLocalizedDescriptionPanel(
       width: 700,
       title: card.name,
-      esText: card.descriptionEs ?? card.descriptionEn ?? '',
+      esText: card.descriptionFor(LanguageController.instance.cardLanguage),
       maxHeight: 132,
       frameGradient: _gateDescriptionGradient(card.cardClass),
       accentColor: _gateDescriptionAccentColor(card.cardClass),
@@ -4632,7 +4632,9 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
               _buildLocalizedDescriptionPanel(
                 width: 550,
                 title: card.name,
-                esText: card.descriptionEs ?? card.descriptionEn ?? '',
+                esText: card.descriptionFor(
+                  LanguageController.instance.cardLanguage,
+                ),
                 maxHeight: 260,
                 frameGradient: _abilityDescriptionGradient(card.cardClass),
                 accentColor: _abilityDescriptionAccentColor(card.cardClass),
@@ -5639,7 +5641,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     return _buildLocalizedDescriptionPanel(
       width: 550,
       title: card.name,
-      esText: card.descriptionEs ?? card.descriptionEn ?? '',
+      esText: card.descriptionFor(LanguageController.instance.cardLanguage),
       maxHeight: 260,
       frameGradient: _abilityDescriptionGradient(card.cardClass),
       accentColor: _abilityDescriptionAccentColor(card.cardClass),

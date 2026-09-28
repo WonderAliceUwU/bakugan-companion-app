@@ -304,6 +304,276 @@ Future<String?> _showSkewedInputPrompt({
   return result;
 }
 
+class LanguageSettingsDialog extends StatefulWidget {
+  const LanguageSettingsDialog({super.key});
+
+  @override
+  State<LanguageSettingsDialog> createState() =>
+      _LanguageSettingsDialogState();
+}
+
+class _LanguageSettingsDialogState extends State<LanguageSettingsDialog> {
+  late AppLanguage _selectedUiLang;
+  late AppLanguage _selectedCardLang;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedUiLang = LanguageController.instance.uiLanguage;
+    _selectedCardLang = LanguageController.instance.cardLanguage;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations(_selectedUiLang);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Center(
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.skewX(-0.08),
+          child: Container(
+            width: 720,
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF07131E),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.cyanAccent.withValues(alpha: 0.8),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.cyanAccent.withValues(alpha: 0.22),
+                  blurRadius: 30,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.skewX(0.08),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.language_rounded,
+                        color: Colors.cyanAccent,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        l10n.languageSettingsTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.uiLanguageLabel.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.cyanAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildLangOptionButton(
+                        language: AppLanguage.es,
+                        isSelected: _selectedUiLang == AppLanguage.es,
+                        accentColor: Colors.cyanAccent,
+                        onTap: () {
+                          _playUiConfirmSound();
+                          setState(() => _selectedUiLang = AppLanguage.es);
+                        },
+                      ),
+                      const SizedBox(width: 14),
+                      _buildLangOptionButton(
+                        language: AppLanguage.en,
+                        isSelected: _selectedUiLang == AppLanguage.en,
+                        accentColor: Colors.cyanAccent,
+                        onTap: () {
+                          _playUiConfirmSound();
+                          setState(() => _selectedUiLang = AppLanguage.en);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    l10n.cardLanguageLabel.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.amberAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildLangOptionButton(
+                        language: AppLanguage.es,
+                        isSelected: _selectedCardLang == AppLanguage.es,
+                        accentColor: Colors.amberAccent,
+                        onTap: () {
+                          _playUiConfirmSound();
+                          setState(() => _selectedCardLang = AppLanguage.es);
+                        },
+                      ),
+                      const SizedBox(width: 14),
+                      _buildLangOptionButton(
+                        language: AppLanguage.en,
+                        isSelected: _selectedCardLang == AppLanguage.en,
+                        accentColor: Colors.amberAccent,
+                        onTap: () {
+                          _playUiConfirmSound();
+                          setState(() => _selectedCardLang = AppLanguage.en);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          color: Colors.white70,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l10n.untranslatedNote,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.cyanAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 14,
+                        ),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      onPressed: () {
+                        _playUiConfirmSound();
+                        LanguageController.instance.setLanguages(
+                          ui: _selectedUiLang,
+                          card: _selectedCardLang,
+                        );
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.check_rounded, size: 20),
+                      label: Text(l10n.ok),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLangOptionButton({
+    required AppLanguage language,
+    required bool isSelected,
+    required Color accentColor,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? accentColor.withValues(alpha: 0.18)
+                : Colors.black.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? accentColor : Colors.white24,
+              width: isSelected ? 2.0 : 1.0,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: accentColor.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                language.flag,
+                style: const TextStyle(fontSize: 22),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                language.label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white70,
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
 
@@ -462,6 +732,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _showBackupImportOptions() async {
+    final l10n = AppLocalizations.of(context);
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -490,9 +761,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'BACKUP / IMPORT',
-                        style: TextStyle(
+                      Text(
+                        l10n.backupImport,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 26,
                           fontWeight: FontWeight.w900,
@@ -500,9 +771,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Choose whether to export the current full app state or restore the entire app from a backup JSON.',
-                        style: TextStyle(
+                      Text(
+                        l10n.backupDescription,
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -533,7 +804,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                 unawaited(_exportBackup());
                               },
                               icon: const Icon(Icons.save_alt_rounded),
-                              label: const Text('BACKUP'),
+                              label: Text(l10n.exportBackup),
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -558,7 +829,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                 unawaited(_importBackup());
                               },
                               icon: const Icon(Icons.file_open_rounded),
-                              label: const Text('IMPORT'),
+                              label: Text(l10n.importBackup),
                             ),
                           ),
                         ],
@@ -574,6 +845,17 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     );
   }
 
+  Future<void> _showLanguageSettingsDialog() async {
+    _playUiConfirmSound();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return const LanguageSettingsDialog();
+      },
+    );
+  }
+
   @override
   void dispose() {
     _sfxPlayer.dispose();
@@ -582,6 +864,10 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = LanguageScope.of(context);
+    final uiLang = controller.uiLanguage;
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -592,6 +878,67 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         ),
         child: Stack(
           children: [
+            Positioned(
+              top: 36,
+              right: 36,
+              child: GestureDetector(
+                onTap: _showLanguageSettingsDialog,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(-0.10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.cyanAccent.withValues(alpha: 0.85),
+                        width: 1.8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.cyanAccent.withValues(alpha: 0.25),
+                          blurRadius: 18,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.skewX(0.10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            uiLang.flag,
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            uiLang.code.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_drop_down_rounded,
+                            color: Colors.cyanAccent,
+                            size: 26,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
@@ -606,32 +953,32 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
                     final buttons = [
                       BakuganButton(
-                        text: 'BATTLE',
+                        text: l10n.battle,
                         onPressed: _navigateToBattleMode,
                         width: buttonWidth,
                         height: 100,
                       ),
                       BakuganButton(
-                        text: 'LEADERBOARD',
+                        text: l10n.leaderboard,
                         onPressed: _navigateToLeaderboard,
                         width: buttonWidth,
                         height: 100,
                       ),
                       BakuganButton(
-                        text: 'HISTORY',
+                        text: l10n.history,
                         onPressed: _navigateToHistory,
                         width: buttonWidth,
                         height: 100,
                       ),
                       BakuganButton(
-                        text: 'INVENTORY',
+                        text: l10n.inventory,
                         onPressed: _navigateToInventory,
                         width: buttonWidth,
                         height: 100,
                         color: Colors.cyanAccent,
                       ),
                       BakuganButton(
-                        text: 'BACKUP / IMPORT',
+                        text: l10n.backupImport,
                         onPressed: _showBackupImportOptions,
                         width: buttonWidth,
                         height: 100,
@@ -700,6 +1047,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -727,11 +1076,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         size: 28,
                       ),
                     ),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'LEADERBOARD',
+                        l10n.leaderboardTitle,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'title_font',
                           fontSize: 48,
                           fontWeight: FontWeight.w900,
@@ -2542,6 +2891,8 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -2573,10 +2924,10 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(top: 80.0),
                 child: Text(
-                  'SELECT MODE',
-                  style: TextStyle(
+                  l10n.selectBattleMode,
+                  style: const TextStyle(
                     fontFamily: 'title_font',
-                    fontSize: 80,
+                    fontSize: 72,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     shadows: [
@@ -2595,7 +2946,7 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   BakuganButton(
-                    text: 'BATTLE\nROYALE',
+                    text: '1 VS 1',
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -2609,7 +2960,7 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
                   ),
                   const SizedBox(width: 40),
                   BakuganButton(
-                    text: 'TEAM\nBATTLE',
+                    text: l10n.teamBattle.replaceAll(' ', '\n'),
                     onPressed: () {
                       Navigator.push(
                         context,

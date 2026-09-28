@@ -21,8 +21,16 @@ class CardCatalogEntry {
     required this.attributes,
   });
 
+  String descriptionFor(AppLanguage lang) {
+    if (lang == AppLanguage.es) {
+      return descriptionEs.trim().isNotEmpty ? descriptionEs : descriptionEn;
+    } else {
+      return descriptionEn.trim().isNotEmpty ? descriptionEn : descriptionEs;
+    }
+  }
+
   String get description =>
-      descriptionEs.trim().isNotEmpty ? descriptionEs : descriptionEn;
+      descriptionFor(LanguageController.instance.cardLanguage);
 
   String get typeLabel => type == 'gate' ? 'GATE CARD' : 'ABILITY CARD';
 }
@@ -873,7 +881,7 @@ class _CardCarouselState extends State<_CardCarousel> {
               child: FramedDescriptionPanel(
                 width: descriptionWidth,
                 esText: card.description.isEmpty
-                    ? 'No description available.'
+                    ? AppLocalizations.current.noDescription
                     : card.description,
                 maxHeight: 220,
                 frameGradient: _inventoryCardGradient(card),

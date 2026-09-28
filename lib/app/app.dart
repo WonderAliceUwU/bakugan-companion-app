@@ -5,16 +5,26 @@ class BakuganApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Bakugan Stadium App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        fontFamily: 'body_font',
-      ),
-      builder: (context, child) => _BakuganScaledSurface(child: child),
-      home: const VideoSplashScreen(),
+    return ListenableBuilder(
+      listenable: LanguageController.instance,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'Bakugan Stadium App',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            useMaterial3: true,
+            fontFamily: 'body_font',
+          ),
+          builder: (context, child) {
+            return LanguageScope(
+              controller: LanguageController.instance,
+              child: _BakuganScaledSurface(child: child),
+            );
+          },
+          home: const VideoSplashScreen(),
+        );
+      },
     );
   }
 }

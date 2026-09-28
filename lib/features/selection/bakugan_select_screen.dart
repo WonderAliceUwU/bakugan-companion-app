@@ -507,7 +507,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            'SELECT YOUR DECK',
+                            AppLocalizations.current.selectBakugan,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: 'title_font',
