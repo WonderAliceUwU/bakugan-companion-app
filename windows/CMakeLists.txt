@@ -57,6 +57,15 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# flutter_inappwebview_windows 0.6.0 still includes MSVC's deprecated
+# experimental coroutine header. VS 2026/MSVC 14.51 turns its deprecation
+# notice into an error, so scope the temporary workaround to this plugin.
+if(TARGET flutter_inappwebview_windows_plugin)
+  target_compile_definitions(
+    flutter_inappwebview_windows_plugin
+    PRIVATE _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
