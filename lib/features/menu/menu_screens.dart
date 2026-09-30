@@ -16,26 +16,14 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
   bool _videoError = false;
   double _overlayOpacity = 0.0;
 
-  VideoPlayerController _createOpeningVideoController() {
-    if (!Platform.isWindows) {
-      return VideoPlayerController.asset('assets/video/bakugan_opening.mp4');
-    }
-
-    final executableDirectory = File(Platform.resolvedExecutable).parent.path;
-    final bundledVideoPath =
-        '$executableDirectory${Platform.pathSeparator}data'
-        '${Platform.pathSeparator}flutter_assets${Platform.pathSeparator}'
-        'assets${Platform.pathSeparator}video${Platform.pathSeparator}'
-        'bakugan_opening.mp4';
-    return VideoPlayerController.file(File(bundledVideoPath));
-  }
-
   @override
   void initState() {
     super.initState();
     loadAvailableBakugans();
     _sfxPlayer = AudioPlayer();
-    _controller = _createOpeningVideoController();
+    _controller = VideoPlayerController.asset(
+      'assets/video/bakugan_opening.mp4',
+    );
     _initializeVideo();
     _controller.addListener(_videoListener);
   }
