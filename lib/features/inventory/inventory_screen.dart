@@ -151,8 +151,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
       await _bgMusicPlayer.stop();
       await _bgMusicPlayer.setVolume(0.3);
       await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgMusicPlayer.play(AssetSource('music/menu/Store.flac'));
-    } catch (_) {}
+      await _bgMusicPlayer.play(AssetSource('music/menu/Store.mp3'));
+    } catch (error, stackTrace) {
+      debugPrint('Inventory music could not be played: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> _loadInventory() async {

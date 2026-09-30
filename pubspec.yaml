@@ -55,12 +55,12 @@ flutter:
     - assets/images/cards/cards_expansion.json
     - assets/images/cards/base/
     - assets/images/cards/new_vestroia/
-    - assets/music/menu/Title.flac
-    - assets/music/menu/Menu.flac
-    - assets/music/menu/Store.flac
+    - assets/music/menu/Title.mp3
+    - assets/music/menu/Menu.mp3
+    - assets/music/menu/Store.mp3
     - assets/music/arena/
-    - assets/music/battle/before_ability.flac
-    - assets/music/battle/after_ability.flac
+    - assets/music/battle/before_ability.mp3
+    - assets/music/battle/after_ability.mp3
     - assets/sound/
     - assets/images/characters/dan.png
     - assets/images/characters/runo.png

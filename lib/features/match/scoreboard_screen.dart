@@ -112,14 +112,14 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               .where(
                 (asset) =>
                     asset.startsWith('assets/music/arena/') &&
-                    asset.endsWith('.flac') &&
+                    asset.endsWith('.mp3') &&
                     !asset.endsWith('.DS_Store'),
               )
               .toList()
             ..sort();
       _arenaPlaylist = tracks.isNotEmpty
           ? tracks
-          : const ['assets/music/arena/arena-1.flac'];
+          : const ['assets/music/arena/arena-1.mp3'];
       _arenaPlayerA.onPlayerComplete.listen((_) {
         if (_useArenaPlayerA) {
           _handleArenaTrackComplete();
@@ -227,7 +227,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       await _arenaPlayerB.stop();
       await _bgMusicPlayer.stop();
       await _sfxPlayer.stop();
-      await _sfxPlayer.play(AssetSource('sound/win_match.flac'));
+      await _sfxPlayer.play(AssetSource('sound/win_match.mp3'));
     } catch (_) {}
   }
 
@@ -761,7 +761,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         : _arenaPlaylist[_currentArenaTrackIndex]
               .split('/')
               .last
-              .replaceAll('.flac', '')
+              .replaceAll('.mp3', '')
               .replaceAll('-', ' ')
               .toUpperCase();
 
@@ -1230,7 +1230,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       await _arenaPlayerA.stop();
       await _arenaPlayerB.stop();
       await _bgMusicPlayer.stop();
-      await _bgMusicPlayer.play(AssetSource('music/menu/Menu.flac'));
+      await _bgMusicPlayer.play(AssetSource('music/menu/Menu.mp3'));
     } catch (_) {}
   }
 
@@ -1851,7 +1851,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   Future<void> _playBakuganStaySound() async {
     try {
       await _sfxPlayer.stop();
-      await _sfxPlayer.play(AssetSource('sound/win_battle.flac'));
+      await _sfxPlayer.play(AssetSource('sound/win_battle.mp3'));
     } catch (_) {}
   }
 
@@ -1859,7 +1859,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     try {
       await _sfxPlayer.stop();
       await _sfxPlayer.setReleaseMode(ReleaseMode.stop);
-      await _sfxPlayer.play(AssetSource('sound/lose.flac'));
+      await _sfxPlayer.play(AssetSource('sound/lose.mp3'));
     } catch (_) {}
   }
 

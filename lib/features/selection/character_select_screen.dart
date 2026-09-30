@@ -102,8 +102,11 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
   Future<void> _playMenuMusic() async {
     try {
       await _bgMusicPlayer.stop();
-      await _bgMusicPlayer.play(AssetSource('music/menu/Menu.flac'));
-    } catch (_) {}
+      await _bgMusicPlayer.play(AssetSource('music/menu/Menu.mp3'));
+    } catch (error, stackTrace) {
+      debugPrint('Character menu music could not be played: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> _playTitleMusic() async {
@@ -111,8 +114,11 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
       await _bgMusicPlayer.stop();
       await _bgMusicPlayer.setVolume(0.3);
       await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgMusicPlayer.play(AssetSource('music/menu/Title.flac'));
-    } catch (_) {}
+      await _bgMusicPlayer.play(AssetSource('music/menu/Title.mp3'));
+    } catch (error, stackTrace) {
+      debugPrint('Title music could not be played: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   void _playClick() async {

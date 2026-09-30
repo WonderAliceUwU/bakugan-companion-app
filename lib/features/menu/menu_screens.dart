@@ -13,6 +13,7 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
   late VideoPlayerController _controller;
   late AudioPlayer _sfxPlayer;
   bool _isFinished = false;
+  bool _videoError = false;
   double _overlayOpacity = 0.0;
 
   @override
@@ -20,16 +21,34 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
     super.initState();
     loadAvailableBakugans();
     _sfxPlayer = AudioPlayer();
-    _controller =
-        VideoPlayerController.asset('assets/video/bakugan_opening.mp4')
-          ..initialize().then((_) {
-            if (mounted) {
-              _controller.setVolume(0.5);
-              setState(() {});
-              _controller.play();
-            }
-          });
+    _controller = VideoPlayerController.asset(
+      'assets/video/bakugan_opening.mp4',
+    );
+    _initializeVideo();
     _controller.addListener(_videoListener);
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      await _controller.initialize();
+      if (!_controller.value.isInitialized) {
+        throw StateError(
+          _controller.value.errorDescription ?? 'video initialization failed',
+        );
+      }
+      await _controller.setVolume(0.5);
+      if (!mounted) return;
+      setState(() {});
+      await _controller.play();
+    } catch (error, stackTrace) {
+      debugPrint('Opening video could not be initialized: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() => _videoError = true);
+      Future<void>.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) _startTransition();
+      });
+    }
   }
 
   void _videoListener() {
@@ -38,6 +57,28 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
         !_isFinished) {
       _startTransition();
     }
+  }
+
+  Widget _buildVideoContent() {
+    if (_videoError) {
+      return const Text(
+        'Opening video unavailable',
+        style: TextStyle(color: Colors.white70),
+      );
+    }
+    if (!_controller.value.isInitialized) {
+      return const CircularProgressIndicator(color: Colors.red);
+    }
+    return SizedBox.expand(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: _controller.value.size.width,
+          height: _controller.value.size.height,
+          child: VideoPlayer(_controller),
+        ),
+      ),
+    );
   }
 
   void _startTransition() {
@@ -82,18 +123,7 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
         child: Stack(
           children: [
             Center(
-              child: _controller.value.isInitialized
-                  ? SizedBox.expand(
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _controller.value.size.width,
-                          height: _controller.value.size.height,
-                          child: VideoPlayer(_controller),
-                        ),
-                      ),
-                    )
-                  : const CircularProgressIndicator(color: Colors.red),
+              child: _buildVideoContent(),
             ),
             AnimatedOpacity(
               opacity: _overlayOpacity,
@@ -588,7 +618,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   void initState() {
     super.initState();
     _sfxPlayer = AudioPlayer();
-    _playBackgroundMusic('music/menu/Title.flac');
+    _playBackgroundMusic('music/menu/Title.mp3');
   }
 
   Future<void> _playBackgroundMusic(String asset) async {
@@ -597,7 +627,10 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       await _bgMusicPlayer.setVolume(0.3);
       await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
       await _bgMusicPlayer.play(AssetSource(asset));
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('Background music could not be played: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   void _navigateToBattleMode() async {
@@ -615,7 +648,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   Future<void> _navigateToInventory() async {
     await Navigator.of(context).push(_fadeRoute(const InventoryScreen()));
     if (mounted) {
-      await _playBackgroundMusic('music/menu/Title.flac');
+      await _playBackgroundMusic('music/menu/Title.mp3');
     }
   }
 

@@ -1231,11 +1231,11 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
   }
 
   Future<void> _startBattleMusic() async {
-    await _playBattleMusicTrack('music/battle/before_ability.flac');
+    await _playBattleMusicTrack('music/battle/before_ability.mp3');
   }
 
   Future<void> _playAfterAbilityMusic() async {
-    await _playBattleMusicTrack('music/battle/after_ability.flac');
+    await _playBattleMusicTrack('music/battle/after_ability.mp3');
   }
 
   Future<void> _playBattleRevealSfx(String assetName) async {
@@ -1256,7 +1256,7 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     try {
       await _battleMusicPlayer.stop();
       await _battleMusicPlayer.setReleaseMode(ReleaseMode.stop);
-      await _battleMusicPlayer.play(AssetSource('sound/win_battle.flac'));
+      await _battleMusicPlayer.play(AssetSource('sound/win_battle.mp3'));
     } catch (_) {}
   }
 
