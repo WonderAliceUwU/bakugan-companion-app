@@ -14,6 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:fvp/fvp.dart' as fvp;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/mesh.dart'
@@ -58,6 +59,9 @@ Future<void> _playUiCancelSound() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isWindows) {
+    fvp.registerWith(options: {'platforms': ['windows']});
+  }
   try {
     await _bgMusicPlayer.stop();
   } catch (_) {}
