@@ -16,15 +16,15 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:fvp/fvp.dart' as fvp;
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/mesh.dart'
     as obj_mesh;
-import 'package:flutter_3d_controller/src/core/modules/obj_viewer/obj_viewer.dart'
-    as obj_viewer;
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/object.dart'
     as obj_object;
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/scene.dart'
     as obj_scene;
+import 'package:flutter_3d_controller/src/core/modules/model_viewer/model_viewer.dart'
+    as model_viewer;
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 part 'app/app.dart';
 part 'core/localization/language_settings.dart';

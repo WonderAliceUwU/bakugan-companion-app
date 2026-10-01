@@ -289,7 +289,6 @@ class BakuganPreview extends StatefulWidget {
 
 class _BakuganPreviewState extends State<BakuganPreview>
     with AutomaticKeepAliveClientMixin {
-  late Flutter3DController _controller;
   bool _showClosedObj = true;
 
   bool get _uses3DViewer {
@@ -355,7 +354,6 @@ class _BakuganPreviewState extends State<BakuganPreview>
   @override
   void initState() {
     super.initState();
-    _controller = Flutter3DController();
     _resetOpenCloseState();
   }
 
@@ -374,10 +372,6 @@ class _BakuganPreviewState extends State<BakuganPreview>
         oldWidget.phi != widget.phi ||
         oldWidget.autoRotate != widget.autoRotate) {
       _resetOpenCloseState();
-      Future<void>.delayed(const Duration(milliseconds: 120), () {
-        if (!mounted) return;
-        _configureModelView();
-      });
     }
   }
 
@@ -405,25 +399,6 @@ class _BakuganPreviewState extends State<BakuganPreview>
       transform: Matrix4.skewX(0.15),
       child: child,
     );
-  }
-
-  Future<void> _configureModelView({int attempt = 0}) async {
-    if (!mounted || !_uses3DViewer) return;
-
-    final double theta = widget.theta ?? (widget.isLarge ? 0 : 30);
-    final double phi = widget.phi ?? 75;
-
-    try {
-      _controller.setCameraOrbit(theta, phi, 100);
-      if (widget.isLarge && widget.autoRotate) {
-        _controller.startRotation(rotationSpeed: 15);
-      }
-    } catch (_) {
-      if (attempt >= 20) return;
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-      if (!mounted) return;
-      await _configureModelView(attempt: attempt + 1);
-    }
   }
 
   @override
@@ -700,15 +675,28 @@ class _BakuganPreviewState extends State<BakuganPreview>
     return IgnorePointer(
       ignoring: isDeck || widget.disableInteraction || !widget.isLarge,
       child: _unskewPreviewContent(
-        Flutter3DViewer(
+        model_viewer.ModelViewer(
           key: ValueKey('model_${widget.variant.modelPath}_${widget.isLarge}'),
           src: widget.variant.modelPath,
-          controller: _controller,
+          cameraOrbit:
+              '${widget.theta ?? (widget.isLarge ? 0 : 30)}deg '
+              '${widget.phi ?? 75}deg 100%',
+          cameraControls: widget.isLarge && !widget.disableInteraction,
+          disableTap: true,
+          autoRotate: widget.isLarge && widget.autoRotate,
+          rotationPerSecond: '15deg',
+          interactionPrompt: model_viewer.InteractionPrompt.none,
+          activeGestureInterceptor: true,
+          backgroundColor: Colors.transparent,
           progressBarColor: Colors.transparent,
-          onLoad: (_) {
-            Future<void>.delayed(const Duration(milliseconds: 180), () {
-              _configureModelView();
-            });
+          debugLogging: false,
+          onWebViewCreated: (controller) {
+            if (!Platform.isWindows) return;
+            unawaited(
+              controller.setSettings(
+                settings: InAppWebViewSettings(transparentBackground: true),
+              ),
+            );
           },
         ),
       ),
