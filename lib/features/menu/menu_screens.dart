@@ -122,9 +122,7 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
         behavior: HitTestBehavior.opaque,
         child: Stack(
           children: [
-            Center(
-              child: _buildVideoContent(),
-            ),
+            Center(child: _buildVideoContent()),
             AnimatedOpacity(
               opacity: _overlayOpacity,
               duration: const Duration(milliseconds: 600),
@@ -338,8 +336,7 @@ class LanguageSettingsDialog extends StatefulWidget {
   const LanguageSettingsDialog({super.key});
 
   @override
-  State<LanguageSettingsDialog> createState() =>
-      _LanguageSettingsDialogState();
+  State<LanguageSettingsDialog> createState() => _LanguageSettingsDialogState();
 }
 
 class _LanguageSettingsDialogState extends State<LanguageSettingsDialog> {
@@ -583,10 +580,7 @@ class _LanguageSettingsDialogState extends State<LanguageSettingsDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                language.flag,
-                style: const TextStyle(fontSize: 22),
-              ),
+              LanguageFlag(language: language),
               const SizedBox(width: 10),
               Text(
                 language.label,
@@ -945,10 +939,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            uiLang.flag,
-                            style: const TextStyle(fontSize: 22),
-                          ),
+                          LanguageFlag(language: uiLang),
                           const SizedBox(width: 8),
                           Text(
                             uiLang.code.toUpperCase(),

@@ -13,14 +13,105 @@ extension AppLanguageX on AppLanguage {
         return 'English';
     }
   }
+}
 
-  String get flag {
-    switch (this) {
-      case AppLanguage.es:
-        return '🇪🇸';
-      case AppLanguage.en:
-        return '🇬🇧';
+class LanguageFlag extends StatelessWidget {
+  final AppLanguage language;
+
+  const LanguageFlag({super.key, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 30,
+      height: 20,
+      child: CustomPaint(painter: _LanguageFlagPainter(language)),
+    );
+  }
+}
+
+class _LanguageFlagPainter extends CustomPainter {
+  final AppLanguage language;
+
+  const _LanguageFlagPainter(this.language);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    canvas.save();
+    canvas.clipRRect(RRect.fromRectAndRadius(bounds, const Radius.circular(3)));
+
+    if (language == AppLanguage.es) {
+      final paint = Paint()..color = const Color(0xFFC60B1E);
+      canvas.drawRect(bounds, paint);
+      paint.color = const Color(0xFFFFC400);
+      canvas.drawRect(
+        Rect.fromLTWH(0, size.height * 0.25, size.width, size.height * 0.5),
+        paint,
+      );
+    } else {
+      final paint = Paint()..color = const Color(0xFF012169);
+      canvas.drawRect(bounds, paint);
+
+      _drawLine(canvas, size, Colors.white, size.height * 0.34, true);
+      _drawLine(canvas, size, Colors.white, size.height * 0.34, false);
+      _drawDiagonal(canvas, size, Colors.white, size.height * 0.28);
+      _drawLine(
+        canvas,
+        size,
+        const Color(0xFFC8102E),
+        size.height * 0.16,
+        true,
+      );
+      _drawLine(
+        canvas,
+        size,
+        const Color(0xFFC8102E),
+        size.height * 0.16,
+        false,
+      );
+      _drawDiagonal(canvas, size, const Color(0xFFC8102E), size.height * 0.12);
     }
+
+    canvas.restore();
+  }
+
+  void _drawLine(
+    Canvas canvas,
+    Size size,
+    Color color,
+    double strokeWidth,
+    bool horizontal,
+  ) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    final center = horizontal ? size.height / 2 : size.width / 2;
+    if (horizontal) {
+      canvas.drawLine(Offset(0, center), Offset(size.width, center), paint);
+    } else {
+      canvas.drawLine(Offset(center, 0), Offset(center, size.height), paint);
+    }
+  }
+
+  void _drawDiagonal(
+    Canvas canvas,
+    Size size,
+    Color color,
+    double strokeWidth,
+  ) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    canvas.drawLine(Offset.zero, Offset(size.width, size.height), paint);
+    canvas.drawLine(Offset(size.width, 0), Offset(0, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LanguageFlagPainter oldDelegate) {
+    return oldDelegate.language != language;
   }
 }
 
@@ -165,7 +256,8 @@ class AppLocalizations {
       : 'Importing restores the full app state from the selected JSON backup and replaces current data.';
 
   // --- BATTLE MODE SELECTION ---
-  String get selectBattleMode => isEs ? 'SELECCIONAR MODO' : 'SELECT BATTLE MODE';
+  String get selectBattleMode =>
+      isEs ? 'SELECCIONAR MODO' : 'SELECT BATTLE MODE';
   String get duel1vs1 => isEs ? '1 VS 1' : '1 VS 1';
   String get duel1vs1Sub =>
       isEs ? '2 Jugadores • Duelo clásico' : '2 Players • Classic duel';
@@ -174,7 +266,8 @@ class AppLocalizations {
       isEs ? '4 Jugadores • Batalla en equipos' : '4 Players • Team battle';
 
   // --- CHARACTER / PLAYER SELECTION ---
-  String get selectCharacter => isEs ? 'SELECCIONAR PERSONAJE' : 'SELECT CHARACTER';
+  String get selectCharacter =>
+      isEs ? 'SELECCIONAR PERSONAJE' : 'SELECT CHARACTER';
   String get invite => isEs ? 'INVITAR' : 'INVITE';
   String get register => isEs ? 'REGISTRAR' : 'REGISTER';
   String get temporaryPlayer => isEs ? 'Jugador temporal' : 'Temporary player';
@@ -199,9 +292,8 @@ class AppLocalizations {
   String get uniqueNamesMsg => isEs
       ? 'Los nombres de los jugadores deben ser únicos.'
       : 'Player names must be unique.';
-  String enterNameMsg() => isEs
-      ? 'Introduce un nombre de jugador.'
-      : 'Enter a player name.';
+  String enterNameMsg() =>
+      isEs ? 'Introduce un nombre de jugador.' : 'Enter a player name.';
   String playerRegisteredMsg(String name) =>
       isEs ? '$name registrado.' : '$name registered.';
   String playerInvitedMsg(String name) => isEs
@@ -222,7 +314,8 @@ class AppLocalizations {
       isEs ? 'TABLA DE CLASIFICACIÓN' : 'LEADERBOARD';
   String get season => isEs ? 'TEMPORADA' : 'SEASON';
   String get currentSeason => isEs ? 'TEMPORADA ACTUAL' : 'CURRENT SEASON';
-  String get archivedSeasons => isEs ? 'TEMPORADAS ARCHIVADAS' : 'ARCHIVED SEASONS';
+  String get archivedSeasons =>
+      isEs ? 'TEMPORADAS ARCHIVADAS' : 'ARCHIVED SEASONS';
   String get newSeason => isEs ? 'NUEVA TEMPORADA' : 'NEW SEASON';
   String get playerHeader => isEs ? 'JUGADOR' : 'PLAYER';
   String get pointsHeader => isEs ? 'PUNTOS' : 'POINTS';
@@ -249,7 +342,8 @@ class AppLocalizations {
       isEs ? 'VER DETALLES DE BATALLAS' : 'VIEW BATTLE DETAILS';
 
   // --- CARD INVENTORY ---
-  String get cardInventoryTitle => isEs ? 'INVENTARIO DE CARTAS' : 'CARD INVENTORY';
+  String get cardInventoryTitle =>
+      isEs ? 'INVENTARIO DE CARTAS' : 'CARD INVENTORY';
   String get allCards => isEs ? 'TODAS' : 'ALL';
   String get gateCards => isEs ? 'CARTAS PORTAL' : 'GATE CARDS';
   String get abilityCards => isEs ? 'CARTAS DE HABILIDAD' : 'ABILITY CARDS';
@@ -264,15 +358,15 @@ class AppLocalizations {
   String get printedGPower => isEs ? 'G-POWER IMPRESO' : 'PRINTED G-POWER';
   String get gateCard => isEs ? 'CARTA PORTAL' : 'GATE CARD';
   String get abilities => isEs ? 'HABILIDADES' : 'ABILITIES';
-  String get revealGateCard => isEs ? 'REVELAR CARTA PORTAL' : 'REVELAR GATE CARD';
+  String get revealGateCard =>
+      isEs ? 'REVELAR CARTA PORTAL' : 'REVELAR GATE CARD';
   String get useAbility => isEs ? 'USAR HABILIDAD' : 'USE ABILITY';
   String get selectGateCardTitle =>
       isEs ? 'SELECCIONAR CARTA PORTAL' : 'SELECT GATE CARD';
   String get selectAbilityCardTitle =>
       isEs ? 'SELECCIONAR CARTA DE HABILIDAD' : 'SELECT ABILITY CARD';
-  String get searchCardNameHint => isEs
-      ? 'Escribe el nombre de la carta...'
-      : 'Type card name...';
+  String get searchCardNameHint =>
+      isEs ? 'Escribe el nombre de la carta...' : 'Type card name...';
   String get winnerIs => isEs ? '¡GANADOR:' : 'WINNER:';
   String get drawMatch => isEs ? '¡EMPATE!' : 'DRAW!';
   String get endMatch => isEs ? 'FINALIZAR PARTIDA' : 'END MATCH';
