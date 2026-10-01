@@ -384,6 +384,25 @@ class _BakuganPreviewState extends State<BakuganPreview>
     _showClosedObj = false;
   }
 
+  Future<void> _makeWindowsModelViewTransparent(
+    InAppWebViewController controller,
+  ) async {
+    if (!Platform.isWindows) return;
+
+    try {
+      // flutter_inappwebview_windows applies the native alpha only when this
+      // setting changes after the WebView2 controller has been created.
+      await controller.setSettings(
+        settings: InAppWebViewSettings(transparentBackground: false),
+      );
+      await controller.setSettings(
+        settings: InAppWebViewSettings(transparentBackground: true),
+      );
+    } catch (error) {
+      debugPrint('Error enabling transparent GLB background: $error');
+    }
+  }
+
   void _toggleOpenClose() {
     if (!widget.isLarge ||
         !_usesObjViewer ||
@@ -690,14 +709,8 @@ class _BakuganPreviewState extends State<BakuganPreview>
           backgroundColor: Colors.transparent,
           progressBarColor: Colors.transparent,
           debugLogging: false,
-          onWebViewCreated: (controller) {
-            if (!Platform.isWindows) return;
-            unawaited(
-              controller.setSettings(
-                settings: InAppWebViewSettings(transparentBackground: true),
-              ),
-            );
-          },
+          onWebViewCreated: (controller) =>
+              unawaited(_makeWindowsModelViewTransparent(controller)),
         ),
       ),
     );
