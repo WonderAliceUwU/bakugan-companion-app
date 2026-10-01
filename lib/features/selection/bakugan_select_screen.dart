@@ -71,6 +71,57 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
     await _sfxPlayer.play(AssetSource('sound/select_2.wav'));
   }
 
+  void _moveCarousel(int delta, int itemCount) {
+    if (itemCount <= 1) return;
+    final visibleBakugans = _visibleBakugans();
+    final nextIndex = (selectedBakuganIndex + delta + itemCount) % itemCount;
+    _playClick();
+    setState(() {
+      selectedBakuganIndex = nextIndex;
+      selectedVariantIndex = _preferredVariantIndex(visibleBakugans[nextIndex]);
+    });
+    _keepSelectedBakuganVisible(
+      nextIndex,
+      itemCount: itemCount,
+      viewportFraction: 0.2,
+    );
+  }
+
+  void _selectBakugan(int index) {
+    final visibleBakugans = _visibleBakugans();
+    if (index < 0 || index >= visibleBakugans.length) return;
+    _playClick();
+    setState(() {
+      selectedBakuganIndex = index;
+      selectedVariantIndex = _preferredVariantIndex(visibleBakugans[index]);
+    });
+  }
+
+  void _keepSelectedBakuganVisible(
+    int index, {
+    required int itemCount,
+    required double viewportFraction,
+  }) {
+    if (!_carouselController.hasClients) return;
+    final firstVisibleIndex = (_carouselController.page ?? 0).floor();
+    final visiblePageCount = max(1, (1 / viewportFraction).floor());
+    final lastVisibleIndex = firstVisibleIndex + visiblePageCount - 1;
+    final targetPage = index < firstVisibleIndex
+        ? index
+        : index > lastVisibleIndex
+        ? index - visiblePageCount + 1
+        : firstVisibleIndex;
+    final boundedTargetPage = targetPage.clamp(0, itemCount - 1);
+    if (boundedTargetPage == firstVisibleIndex) return;
+    unawaited(
+      _carouselController.animateToPage(
+        boundedTargetPage,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
   bool _isVariantBanned(BakuganVariant variant) {
     final speciesName = variant.speciesName.toLowerCase();
     final modelPath = variant.modelPath.toLowerCase();
@@ -730,39 +781,32 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_back_ios, size: 24),
                         color: Colors.white70,
-                        onPressed: () {
-                          _playClick();
-                          _carouselController.previousPage(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOut,
-                          );
-                        },
+                        onPressed: () =>
+                            _moveCarousel(-1, visibleBakugans.length),
                       ),
                       Expanded(
                         child: PageView.builder(
                           controller: _carouselController,
                           itemCount: visibleBakugans.length,
-                          onPageChanged: (index) => setState(() {
-                            selectedBakuganIndex = index;
-                            selectedVariantIndex = _preferredVariantIndex(
-                              visibleBakugans[index],
-                            );
-                          }),
                           itemBuilder: (context, index) {
                             final item = visibleBakugans[index];
                             final variant = _primaryVariantForSpecies(item);
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                              ),
-                              child: BakuganPreview(
-                                key: ValueKey(
-                                  'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _selectBakugan(index),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
                                 ),
-                                variant: variant,
-                                isSelected: selectedBakuganIndex == index,
-                                speciesName: item.name,
-                                autoRotate: false,
+                                child: BakuganPreview(
+                                  key: ValueKey(
+                                    'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                                  ),
+                                  variant: variant,
+                                  isSelected: selectedBakuganIndex == index,
+                                  speciesName: item.name,
+                                  autoRotate: false,
+                                ),
                               ),
                             );
                           },
@@ -771,13 +815,8 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios, size: 24),
                         color: Colors.white70,
-                        onPressed: () {
-                          _playClick();
-                          _carouselController.nextPage(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOut,
-                          );
-                        },
+                        onPressed: () =>
+                            _moveCarousel(1, visibleBakugans.length),
                       ),
                     ],
                   ),
@@ -1597,41 +1636,33 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                     Icons.arrow_back_ios,
                                     size: 40,
                                   ),
-                                  onPressed: () {
-                                    _playClick();
-                                    _carouselController.previousPage(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      curve: Curves.easeOut,
-                                    );
-                                  },
+                                  onPressed: () =>
+                                      _moveCarousel(-1, visibleBakugans.length),
                                 ),
                                 SizedBox(
                                   width: 1200,
                                   child: PageView.builder(
                                     controller: _carouselController,
                                     itemCount: visibleBakugans.length,
-                                    onPageChanged: (idx) => setState(() {
-                                      selectedBakuganIndex = idx;
-                                      selectedVariantIndex =
-                                          _preferredVariantIndex(
+                                    itemBuilder: (context, idx) => GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => _selectBakugan(idx),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 15,
+                                        ),
+                                        child: BakuganPreview(
+                                          key: ValueKey(
+                                            'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
+                                          ),
+                                          variant: _primaryVariantForSpecies(
                                             visibleBakugans[idx],
-                                          );
-                                    }),
-                                    itemBuilder: (context, idx) => Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 15,
-                                      ),
-                                      child: BakuganPreview(
-                                        key: ValueKey(
-                                          'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
+                                          ),
+                                          isSelected:
+                                              selectedBakuganIndex == idx,
+                                          speciesName:
+                                              visibleBakugans[idx].name,
                                         ),
-                                        variant: _primaryVariantForSpecies(
-                                          visibleBakugans[idx],
-                                        ),
-                                        isSelected: selectedBakuganIndex == idx,
-                                        speciesName: visibleBakugans[idx].name,
                                       ),
                                     ),
                                   ),
@@ -1641,15 +1672,8 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                     Icons.arrow_forward_ios,
                                     size: 40,
                                   ),
-                                  onPressed: () {
-                                    _playClick();
-                                    _carouselController.nextPage(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      curve: Curves.easeOut,
-                                    );
-                                  },
+                                  onPressed: () =>
+                                      _moveCarousel(1, visibleBakugans.length),
                                 ),
                               ],
                             )

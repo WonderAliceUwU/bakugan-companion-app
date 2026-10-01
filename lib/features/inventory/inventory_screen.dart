@@ -1393,12 +1393,57 @@ class _BakuganInventoryCarouselScreenState
     );
   }
 
-  void _setBakugan(int index) {
+  void _moveCarousel(int delta, int itemCount) {
+    if (itemCount <= 1) return;
     final visibleBakugans = _visibleBakugans;
+    final nextIndex = (_selectedBakuganIndex + delta + itemCount) % itemCount;
+    unawaited(_playUiConfirmSound());
+    setState(() {
+      _selectedBakuganIndex = nextIndex;
+      _selectedVariantIndex = _preferredVariantIndex(
+        visibleBakugans[nextIndex],
+      );
+    });
+    _keepSelectedBakuganVisible(
+      nextIndex,
+      itemCount: itemCount,
+      viewportFraction: 0.14,
+    );
+  }
+
+  void _selectBakugan(int index) {
+    final visibleBakugans = _visibleBakugans;
+    if (index < 0 || index >= visibleBakugans.length) return;
+    unawaited(_playUiConfirmSound());
     setState(() {
       _selectedBakuganIndex = index;
       _selectedVariantIndex = _preferredVariantIndex(visibleBakugans[index]);
     });
+  }
+
+  void _keepSelectedBakuganVisible(
+    int index, {
+    required int itemCount,
+    required double viewportFraction,
+  }) {
+    if (!_carouselController.hasClients) return;
+    final firstVisibleIndex = (_carouselController.page ?? 0).floor();
+    final visiblePageCount = max(1, (1 / viewportFraction).floor());
+    final lastVisibleIndex = firstVisibleIndex + visiblePageCount - 1;
+    final targetPage = index < firstVisibleIndex
+        ? index
+        : index > lastVisibleIndex
+        ? index - visiblePageCount + 1
+        : firstVisibleIndex;
+    final boundedTargetPage = targetPage.clamp(0, itemCount - 1);
+    if (boundedTargetPage == firstVisibleIndex) return;
+    unawaited(
+      _carouselController.animateToPage(
+        boundedTargetPage,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+      ),
+    );
   }
 
   @override
@@ -1800,13 +1845,7 @@ class _BakuganInventoryCarouselScreenState
           IconButton(
             icon: const Icon(Icons.arrow_back_ios, size: 40),
             color: Colors.cyanAccent,
-            onPressed: () {
-              unawaited(_playUiConfirmSound());
-              _carouselController.previousPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            },
+            onPressed: () => _moveCarousel(-1, visibleBakugans.length),
           ),
           SizedBox(
             width: width,
@@ -1814,21 +1853,24 @@ class _BakuganInventoryCarouselScreenState
               controller: _carouselController,
               padEnds: false,
               itemCount: visibleBakugans.length,
-              onPageChanged: _setBakugan,
               itemBuilder: (context, index) {
                 final variant = _primaryVariantForSpecies(
                   visibleBakugans[index],
                 );
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  child: BakuganPreview(
-                    key: ValueKey(
-                      'inventory_carousel_thumb_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _selectBakugan(index),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child: BakuganPreview(
+                      key: ValueKey(
+                        'inventory_carousel_thumb_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                      ),
+                      variant: variant,
+                      isSelected: _selectedBakuganIndex == index,
+                      speciesName: visibleBakugans[index].name,
+                      gridOpacityOverride: 0.14,
                     ),
-                    variant: variant,
-                    isSelected: _selectedBakuganIndex == index,
-                    speciesName: visibleBakugans[index].name,
-                    gridOpacityOverride: 0.14,
                   ),
                 );
               },
@@ -1837,13 +1879,7 @@ class _BakuganInventoryCarouselScreenState
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios, size: 40),
             color: Colors.cyanAccent,
-            onPressed: () {
-              unawaited(_playUiConfirmSound());
-              _carouselController.nextPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            },
+            onPressed: () => _moveCarousel(1, visibleBakugans.length),
           ),
         ],
       ),

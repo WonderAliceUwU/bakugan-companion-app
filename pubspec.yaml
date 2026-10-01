@@ -164,6 +164,7 @@ flutter:
     - assets/models/Season_1_Battle_Brawlers/Saurus/
     - assets/models/Season_1_Battle_Brawlers/Serpenoid/
     - assets/models/Season_1_Battle_Brawlers/Siege/
+    - assets/models/Season_1_Battle_Brawlers/Silent_Naga/
     - assets/models/Season_1_Battle_Brawlers/Naga/
     - assets/models/Season_1_Battle_Brawlers/Sirenoid/
     - assets/models/Season_1_Battle_Brawlers/Skyress/
@@ -225,7 +226,7 @@ flutter:
     - assets/models/Season_1_Battle_Brawlers/Mantris/Textures/Core/
     - assets/models/Season_1_Battle_Brawlers/Mecha_Chamelia/Textures/Core/
     - assets/models/Season_1_Battle_Brawlers/Monarus/Textures/Core/
-    - assets/models/Season_1_Battle_Brawlers/Naga/Textures/Cores/
+    - assets/models/Season_1_Battle_Brawlers/Naga/Textures/Core/
     - assets/models/Season_1_Battle_Brawlers/Oberus/Textures/Core/
     - assets/models/Season_1_Battle_Brawlers/Omega_Leonidas/Textures/Core/
     - assets/models/Season_1_Battle_Brawlers/Preyas_II_Angelo/Textures/Core/
