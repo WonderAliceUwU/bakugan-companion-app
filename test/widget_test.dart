@@ -140,19 +140,19 @@ void main() {
       'assets/models/Season_1_Battle_Brawlers/Delta_Dragonoid/Delta Dragonoid Closed.obj',
     );
 
-    final naga = availableBakugans.firstWhere(
-      (bakugan) => bakugan.name == 'Naga',
+    final silentNaga = availableBakugans.firstWhere(
+      (bakugan) => bakugan.name == 'Silent Naga',
     );
     expect(
-      naga.variants.map((variant) => variant.modelPath),
+      silentNaga.variants.map((variant) => variant.modelPath),
       contains(
-        'assets/models/Season_1_Battle_Brawlers/Naga/Silent Naga Open.obj',
+        'assets/models/Season_1_Battle_Brawlers/Silent_Naga/Silent Naga Open.obj',
       ),
     );
     expect(
-      naga.variants.map((variant) => variant.texturePath),
+      silentNaga.variants.map((variant) => variant.texturePath),
       contains(
-        'assets/models/Season_1_Battle_Brawlers/Naga/Textures/Cores/Pyrus Silent Naga.png',
+        'assets/models/Season_1_Battle_Brawlers/Silent_Naga/Textures/Cores/Pyrus Silent Naga.png',
       ),
     );
   });

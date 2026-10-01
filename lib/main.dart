@@ -18,6 +18,8 @@ import 'package:fvp/fvp.dart' as fvp;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/mesh.dart'
     as obj_mesh;
+import 'package:flutter_3d_controller/src/core/modules/obj_viewer/obj_viewer.dart'
+    as obj_viewer;
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/object.dart'
     as obj_object;
 import 'package:flutter_3d_controller/src/core/modules/obj_viewer/scene.dart'

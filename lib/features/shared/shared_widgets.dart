@@ -5,14 +5,14 @@ part of '../../main.dart';
 const _objCameraDistance = 11.0;
 const _objClosedCameraDistance = 30.0;
 const _objCameraHeight = 1.5;
-const _objCameraTargetY = 0.8;
+const _objCameraTargetY = 0.0;
 const _objCameraFov = 20.0;
 const _objModelScale = 5.0;
+const _objModelOffsetY = 0.35;
 const _objInitialRotationX = 0.0;
 const _objInitialRotationY = -32.0;
 const _objInitialRotationZ = 0.0;
 const _objRotationDegreesPerSecond = 10.0;
-const _objDragSensitivity = 0.35;
 const _objLargePreviewOffsetY = 60.0;
 const _objClosedPreviewOffsetY = 10.0;
 const _objSmallPreviewOffsetY = 20.0;
@@ -42,6 +42,8 @@ class _BakuganObjViewer extends StatefulWidget {
 class _BakuganObjViewerState extends State<_BakuganObjViewer> {
   late obj_scene.Scene _scene;
   Timer? _rotationTimer;
+  obj_object.Object? _modelRoot;
+  Offset? _lastPanPosition;
   double _rotationX = _objInitialRotationX;
   double _rotationY = _objInitialRotationY;
   double _rotationZ = _objInitialRotationZ;
@@ -93,6 +95,34 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
       scene.camera.fov = _objCameraFov;
       scene.texture = texture;
 
+      var minX = double.infinity;
+      var minY = double.infinity;
+      var minZ = double.infinity;
+      var maxX = double.negativeInfinity;
+      var maxY = double.negativeInfinity;
+      var maxZ = double.negativeInfinity;
+      for (final mesh in meshes) {
+        for (final vertex in mesh.vertices) {
+          minX = min(minX, vertex.x);
+          minY = min(minY, vertex.y);
+          minZ = min(minZ, vertex.z);
+          maxX = max(maxX, vertex.x);
+          maxY = max(maxY, vertex.y);
+          maxZ = max(maxZ, vertex.z);
+        }
+      }
+      final modelCenterX = minX.isFinite ? (minX + maxX) / 2 : 0.0;
+      final modelCenterY = minY.isFinite ? (minY + maxY) / 2 : 0.0;
+      final modelCenterZ = minZ.isFinite ? (minZ + maxZ) / 2 : 0.0;
+      final modelRoot = obj_object.Object(scene: scene);
+      modelRoot.position.y = _objModelOffsetY;
+      modelRoot.scale.setValues(_objModelScale, _objModelScale, _objModelScale);
+      modelRoot.rotation.x = _rotationX;
+      modelRoot.rotation.y = _rotationY;
+      modelRoot.rotation.z = _rotationZ;
+      modelRoot.updateTransform();
+      scene.world.add(modelRoot);
+
       for (final mesh in meshes) {
         mesh.texture = texture;
         mesh.texturePath = widget.texturePath;
@@ -108,21 +138,16 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
           );
         }
         final object = obj_object.Object(mesh: mesh, scene: scene);
-        object.scale.setValues(_objModelScale, _objModelScale, _objModelScale);
-        // The OBJ viewer stores Euler rotations in degrees; its transform
-        // converts them to radians internally. Start slightly turned, as in
-        // the previous model preview.
-        object.rotation.x = _rotationX;
-        object.rotation.y = _rotationY;
-        object.rotation.z = _rotationZ;
+        object.position.setValues(-modelCenterX, -modelCenterY, -modelCenterZ);
         object.updateTransform();
-        scene.world.add(object);
+        modelRoot.add(object);
       }
       scene.updateTexture();
 
       if (!mounted || token != _loadToken) return;
       setState(() {
         _scene = scene;
+        _modelRoot = modelRoot;
         _isLoaded = true;
       });
       _startRotation();
@@ -140,13 +165,8 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
     if (!widget.autoRotate || !_isLoaded) return;
     _rotationTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
       _rotationY += _objRotationDegreesPerSecond / 60;
-      for (final object in _scene.world.children) {
-        // Match flutter_3d_controller's previous model-viewer setting:
-        // 15 degrees per second. Object rotations are expressed in degrees
-        // by the package, even though the transform uses radians internally.
-        object.rotation.y = _rotationY;
-        object.updateTransform();
-      }
+      _modelRoot?.rotation.y = _rotationY;
+      _modelRoot?.updateTransform();
       _scene.update();
     });
   }
@@ -156,6 +176,8 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.modelPath != widget.modelPath ||
         oldWidget.texturePath != widget.texturePath) {
+      _loadModel();
+    } else if (oldWidget.cameraDistance != widget.cameraDistance) {
       _loadModel();
     } else if (oldWidget.autoRotate != widget.autoRotate) {
       _startRotation();
@@ -169,15 +191,17 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
   }
 
   void _handlePanUpdate(DragUpdateDetails details) {
-    _rotationY += details.delta.dx * _objDragSensitivity;
-    _rotationX += details.delta.dy * _objDragSensitivity;
-    for (final object in _scene.world.children) {
-      // Rotate the object directly instead of moving the camera. This keeps
-      // mouse dragging independent from camera zoom and supports both axes.
-      object.rotation.y = _rotationY;
-      object.rotation.x = _rotationX;
-      object.updateTransform();
+    final previousPosition = _lastPanPosition;
+    if (previousPosition == null) {
+      _lastPanPosition = details.localPosition;
+      return;
     }
+    _scene.camera.trackBall(
+      obj_viewer.toVector2(previousPosition),
+      obj_viewer.toVector2(details.localPosition),
+      1.25,
+    );
+    _lastPanPosition = details.localPosition;
     _scene.update();
   }
 
@@ -187,12 +211,6 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Reapply the framing on rebuilds as well as after loading the OBJ,
-        // so hot reloads also update an already loaded model.
-        _scene.camera.position.z = widget.cameraDistance;
-        _scene.camera.position.y = _objCameraHeight;
-        _scene.camera.target.y = _objCameraTargetY;
-        _scene.camera.fov = _objCameraFov;
         final painter = _BakuganObjPainter(_scene);
         final child = CustomPaint(
           painter: painter,
@@ -203,7 +221,19 @@ class _BakuganObjViewerState extends State<_BakuganObjViewer> {
           // Use a drag recognizer for model rotation. Scale gestures make a
           // mouse drag look like a zoom on macOS even with one pointer.
           onTap: widget.onTap,
+          onPanStart: (details) {
+            _rotationTimer?.cancel();
+            _lastPanPosition = details.localPosition;
+          },
           onPanUpdate: _handlePanUpdate,
+          onPanEnd: (_) {
+            _lastPanPosition = null;
+            _startRotation();
+          },
+          onPanCancel: () {
+            _lastPanPosition = null;
+            _startRotation();
+          },
           child: child,
         );
       },
