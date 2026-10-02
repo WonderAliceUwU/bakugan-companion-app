@@ -1385,68 +1385,48 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget _buildEloPauseOverlay() {
     final l10n = AppLocalizations.of(context);
     return Positioned.fill(
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: ColoredBox(
-            color: Colors.black.withValues(alpha: 0.78),
-            child: Center(
-              child: Container(
-                width: 520,
-                padding: const EdgeInsets.all(30),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.76),
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: Colors.orangeAccent, width: 3),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black87,
-                      blurRadius: 28,
-                      spreadRadius: 4,
+      child: IgnorePointer(
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: 0.78),
+              child: Center(
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.skewX(-0.10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 42,
+                      vertical: 22,
                     ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.pause_circle_filled_rounded,
-                      color: Colors.orangeAccent,
-                      size: 82,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.78),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.orangeAccent, width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black87,
+                          blurRadius: 24,
+                          spreadRadius: 3,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      l10n.eloPausedTitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 42,
-                        fontWeight: FontWeight.w900,
-                        fontStyle: FontStyle.italic,
-                        letterSpacing: 2,
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.skewX(0.10),
+                      child: Text(
+                        l10n.eloPausedTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 2.2,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.eloPausedDescription,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-                    BakuganButton(
-                      text: l10n.resumeElo,
-                      onPressed: () => unawaited(_setEloPaused(false)),
-                      width: 240,
-                      height: 68,
-                      color: Colors.cyanAccent,
-                      textFontSize: 20,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1962,39 +1942,46 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Expanded(
-                                            child: ListView.separated(
-                                              itemCount:
-                                                  seasonData.players.length,
-                                              separatorBuilder: (_, _) =>
-                                                  Divider(
-                                                    color: Colors.white
-                                                        .withValues(
-                                                          alpha: 0.08,
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                ListView.separated(
+                                                  itemCount:
+                                                      seasonData.players.length,
+                                                  separatorBuilder: (_, _) =>
+                                                      Divider(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                              alpha: 0.08,
+                                                            ),
+                                                        height: 12,
+                                                      ),
+                                                  itemBuilder: (context, index) {
+                                                    final entry = seasonData
+                                                        .players[index];
+                                                    final rank =
+                                                        rankByPlayerKey[_playerNameKey(
+                                                          entry.name,
+                                                        )];
+                                                    final isTop = rank == 1;
+                                                    return _LeaderboardRow(
+                                                      entry: entry,
+                                                      rank: rank,
+                                                      isTop: isTop,
+                                                      showDeleteAction:
+                                                          _isEditingLeaderboard &&
+                                                          isCurrentSeason,
+                                                      onDelete: () => unawaited(
+                                                        _deleteLeaderboardPlayer(
+                                                          entry.name,
                                                         ),
-                                                    height: 12,
-                                                  ),
-                                              itemBuilder: (context, index) {
-                                                final entry =
-                                                    seasonData.players[index];
-                                                final rank =
-                                                    rankByPlayerKey[_playerNameKey(
-                                                      entry.name,
-                                                    )];
-                                                final isTop = rank == 1;
-                                                return _LeaderboardRow(
-                                                  entry: entry,
-                                                  rank: rank,
-                                                  isTop: isTop,
-                                                  showDeleteAction:
-                                                      _isEditingLeaderboard &&
-                                                      isCurrentSeason,
-                                                  onDelete: () => unawaited(
-                                                    _deleteLeaderboardPlayer(
-                                                      entry.name,
-                                                    ),
-                                                  ),
-                                                );
-                                              },
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                                if (_isEloPaused)
+                                                  _buildEloPauseOverlay(),
+                                              ],
                                             ),
                                           ),
                                         ],
@@ -2012,7 +1999,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ],
               ),
             ),
-            if (_isEloPaused) _buildEloPauseOverlay(),
           ],
         ),
       ),
