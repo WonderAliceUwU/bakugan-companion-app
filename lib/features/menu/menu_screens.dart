@@ -1039,18 +1039,27 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   late Future<LeaderboardStore> _leaderboardFuture;
   bool _isEditingLeaderboard = false;
+  bool _isEloPaused = false;
   int? _selectedSeasonNumber;
 
   @override
   void initState() {
     super.initState();
-    _leaderboardFuture = LeaderboardRepository.instance.loadStore();
+    _leaderboardFuture = LeaderboardRepository.instance.loadStore()
+      ..then((store) {
+        if (!mounted) return;
+        setState(() => _isEloPaused = store.isEloPaused);
+      });
   }
 
   Future<void> _reload() async {
     final future = LeaderboardRepository.instance.loadStore();
     setState(() => _leaderboardFuture = future);
-    await future;
+    final store = await future;
+    if (!mounted) return;
+    if (_isEloPaused != store.isEloPaused) {
+      setState(() => _isEloPaused = store.isEloPaused);
+    }
   }
 
   Future<void> _startPlayerSeason(String name) async {
@@ -1061,7 +1070,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Future<void> _setEloPaused(bool isPaused) async {
     final store = await LeaderboardRepository.instance.setEloPaused(isPaused);
     if (!mounted) return;
-    setState(() => _leaderboardFuture = Future.value(store));
+    setState(() {
+      _isEloPaused = store.isEloPaused;
+      _leaderboardFuture = Future.value(store);
+    });
   }
 
   Future<void> _finishCurrentSeason() async {
@@ -1151,6 +1163,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final store = await LeaderboardRepository.instance.finishCurrentSeason();
     if (!mounted) return;
     setState(() {
+      _isEloPaused = store.isEloPaused;
       _selectedSeasonNumber = store.currentSeasonNumber;
       _isEditingLeaderboard = false;
       _leaderboardFuture = Future.value(store);
@@ -1443,17 +1456,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _withEloPauseOverlay({
-    required LeaderboardStore store,
-    required Widget child,
-  }) {
-    if (!store.isEloPaused) return child;
-    return Stack(
-      fit: StackFit.expand,
-      children: [child, _buildEloPauseOverlay()],
-    );
-  }
-
   Future<void> _deleteLeaderboardPlayer(String name) async {
     final messenger = ScaffoldMessenger.of(context);
     final data = await LeaderboardRepository.instance.deleteSavedPlayer(name);
@@ -1483,515 +1485,535 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        _playUiCancelSound();
-                        Navigator.of(context).pop();
-                      },
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        l10n.leaderboardTitle,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'title_font',
-                          fontSize: 48,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(color: Colors.blueAccent, blurRadius: 24),
-                          ],
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            _playUiCancelSound();
+                            Navigator.of(context).pop();
+                          },
+                          icon: const Icon(
+                            Icons.arrow_back_ios,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _reload,
-                      icon: const Icon(
-                        Icons.refresh_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: FutureBuilder<LeaderboardStore>(
-                  future: _leaderboardFuture,
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final store = snapshot.data!;
-                    _selectedSeasonNumber ??= store.currentSeasonNumber;
-                    final allSeasons = <LeaderboardSeason>[
-                      LeaderboardSeason(
-                        seasonNumber: store.currentSeasonNumber,
-                        title: 'Season ${store.currentSeasonNumber}',
-                        leaderboard: store.currentLeaderboard,
-                      ),
-                      ...store.archivedSeasons,
-                    ];
-                    LeaderboardSeason selectedSeason = allSeasons.first;
-                    for (final season in allSeasons) {
-                      if (season.seasonNumber == _selectedSeasonNumber) {
-                        selectedSeason = season;
-                        break;
-                      }
-                    }
-                    final seasonData = selectedSeason.leaderboard;
-                    final isCurrentSeason =
-                        selectedSeason.seasonNumber ==
-                        store.currentSeasonNumber;
-                    if (seasonData.players.isEmpty) {
-                      return _withEloPauseOverlay(
-                        store: store,
-                        child: _buildSeasonStartPrompt(
-                          context: context,
-                          store: store,
-                          selectedSeason: selectedSeason,
-                          isCurrentSeason: isCurrentSeason,
-                          allSeasons: allSeasons,
+                        Expanded(
+                          child: Text(
+                            l10n.leaderboardTitle,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'title_font',
+                              fontSize: 48,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.blueAccent,
+                                  blurRadius: 24,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      );
-                    }
-
-                    final rankedPlayers = seasonData.players
-                        .where((entry) => entry.isRanked)
-                        .toList();
-                    final topPlayer = rankedPlayers.isEmpty
-                        ? null
-                        : rankedPlayers.first;
-                    final rankByPlayerKey = <String, int>{};
-                    for (int i = 0; i < rankedPlayers.length; i++) {
-                      rankByPlayerKey[_playerNameKey(rankedPlayers[i].name)] =
-                          i + 1;
-                    }
-
-                    return _withEloPauseOverlay(
-                      store: store,
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final contentWidth = min(
-                            1120.0,
-                            max(320.0, constraints.maxWidth - 48),
+                        IconButton(
+                          onPressed: _reload,
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: FutureBuilder<LeaderboardStore>(
+                      future: _leaderboardFuture,
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  width: contentWidth,
-                                  child: Wrap(
-                                    spacing: 10,
-                                    runSpacing: 10,
-                                    children: [
-                                      for (final season in allSeasons)
-                                        ChoiceChip(
-                                          selected:
+                        }
+
+                        final store = snapshot.data!;
+                        _selectedSeasonNumber ??= store.currentSeasonNumber;
+                        final allSeasons = <LeaderboardSeason>[
+                          LeaderboardSeason(
+                            seasonNumber: store.currentSeasonNumber,
+                            title: 'Season ${store.currentSeasonNumber}',
+                            leaderboard: store.currentLeaderboard,
+                          ),
+                          ...store.archivedSeasons,
+                        ];
+                        LeaderboardSeason selectedSeason = allSeasons.first;
+                        for (final season in allSeasons) {
+                          if (season.seasonNumber == _selectedSeasonNumber) {
+                            selectedSeason = season;
+                            break;
+                          }
+                        }
+                        final seasonData = selectedSeason.leaderboard;
+                        final isCurrentSeason =
+                            selectedSeason.seasonNumber ==
+                            store.currentSeasonNumber;
+                        if (seasonData.players.isEmpty) {
+                          return _buildSeasonStartPrompt(
+                            context: context,
+                            store: store,
+                            selectedSeason: selectedSeason,
+                            isCurrentSeason: isCurrentSeason,
+                            allSeasons: allSeasons,
+                          );
+                        }
+
+                        final rankedPlayers = seasonData.players
+                            .where((entry) => entry.isRanked)
+                            .toList();
+                        final topPlayer = rankedPlayers.isEmpty
+                            ? null
+                            : rankedPlayers.first;
+                        final rankByPlayerKey = <String, int>{};
+                        for (int i = 0; i < rankedPlayers.length; i++) {
+                          rankByPlayerKey[_playerNameKey(
+                                rankedPlayers[i].name,
+                              )] =
+                              i + 1;
+                        }
+
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final contentWidth = min(
+                              1120.0,
+                              max(320.0, constraints.maxWidth - 48),
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    width: contentWidth,
+                                    child: Wrap(
+                                      spacing: 10,
+                                      runSpacing: 10,
+                                      children: [
+                                        for (final season in allSeasons)
+                                          ChoiceChip(
+                                            selected:
+                                                season.seasonNumber ==
+                                                selectedSeason.seasonNumber,
+                                            onSelected: (_) {
+                                              setState(() {
+                                                _selectedSeasonNumber =
+                                                    season.seasonNumber;
+                                                if (season.seasonNumber !=
+                                                    store.currentSeasonNumber) {
+                                                  _isEditingLeaderboard = false;
+                                                }
+                                              });
+                                            },
+                                            label: Text(
                                               season.seasonNumber ==
-                                              selectedSeason.seasonNumber,
-                                          onSelected: (_) {
-                                            setState(() {
-                                              _selectedSeasonNumber =
-                                                  season.seasonNumber;
-                                              if (season.seasonNumber !=
-                                                  store.currentSeasonNumber) {
-                                                _isEditingLeaderboard = false;
-                                              }
-                                            });
-                                          },
-                                          label: Text(
-                                            season.seasonNumber ==
-                                                    store.currentSeasonNumber
-                                                ? '${season.title} • CURRENT'
-                                                : season.title,
-                                            style: TextStyle(
+                                                      store.currentSeasonNumber
+                                                  ? '${season.title} • CURRENT'
+                                                  : season.title,
+                                              style: TextStyle(
+                                                color:
+                                                    season.seasonNumber ==
+                                                        selectedSeason
+                                                            .seasonNumber
+                                                    ? Colors.black
+                                                    : Colors.white,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                            selectedColor: Colors.cyanAccent,
+                                            backgroundColor: Colors.black
+                                                .withValues(alpha: 0.55),
+                                            side: BorderSide(
                                               color:
                                                   season.seasonNumber ==
                                                       selectedSeason
                                                           .seasonNumber
-                                                  ? Colors.black
-                                                  : Colors.white,
-                                              fontWeight: FontWeight.w900,
+                                                  ? Colors.cyanAccent
+                                                  : Colors.white24,
                                             ),
                                           ),
-                                          selectedColor: Colors.cyanAccent,
-                                          backgroundColor: Colors.black
-                                              .withValues(alpha: 0.55),
-                                          side: BorderSide(
-                                            color:
-                                                season.seasonNumber ==
-                                                    selectedSeason.seasonNumber
-                                                ? Colors.cyanAccent
-                                                : Colors.white24,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Container(
-                                  width: contentWidth,
-                                  padding: const EdgeInsets.all(28),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black,
-                                    borderRadius: BorderRadius.circular(26),
-                                    border: Border.all(
-                                      color: Colors.cyanAccent.withValues(
-                                        alpha: 0.7,
-                                      ),
-                                      width: 2.5,
+                                      ],
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.cyanAccent.withValues(
-                                          alpha: 0.18,
-                                        ),
-                                        blurRadius: 30,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
                                   ),
-                                  child: topPlayer == null
-                                      ? Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              '${selectedSeason.title} Has No Ranked Players Yet',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 30,
-                                                fontWeight: FontWeight.w900,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            const Text(
-                                              'Each player needs 5 matches to leave Unranked.',
-                                              style: TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : Wrap(
-                                          spacing: 22,
-                                          runSpacing: 22,
-                                          crossAxisAlignment:
-                                              WrapCrossAlignment.center,
-                                          children: [
-                                            Container(
-                                              width: 96,
-                                              height: 96,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: Colors.black.withValues(
-                                                  alpha: 0.32,
-                                                ),
-                                                border: Border.all(
-                                                  color: Colors.amberAccent,
-                                                  width: 3,
-                                                ),
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: const Text(
-                                                '#1',
-                                                style: TextStyle(
-                                                  color: Colors.amberAccent,
-                                                  fontSize: 32,
-                                                  fontWeight: FontWeight.w900,
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              width: min(
-                                                420.0,
-                                                max(260.0, contentWidth * 0.36),
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    '${selectedSeason.title} Top Ranked Player',
-                                                    style: const TextStyle(
-                                                      color: Colors.white70,
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  Text(
-                                                    topPlayer.name
-                                                        .toUpperCase(),
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 34,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                      height: 1.05,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Wrap(
-                                              spacing: 14,
-                                              runSpacing: 14,
-                                              children: [
-                                                _LeaderboardStat(
-                                                  label: 'Points',
-                                                  value: topPlayer.points
-                                                      .toString(),
-                                                  width: 118,
-                                                ),
-                                                _LeaderboardStat(
-                                                  label: 'Wins',
-                                                  value: topPlayer.wins
-                                                      .toString(),
-                                                  width: 100,
-                                                ),
-                                                _LeaderboardStat(
-                                                  label: 'Win Rate',
-                                                  value: _formatWinRate(
-                                                    topPlayer,
-                                                  ),
-                                                  width: 110,
-                                                ),
-                                                _LeaderboardStat(
-                                                  label: 'Gate Cards',
-                                                  value: topPlayer.gateCardsWon
-                                                      .toString(),
-                                                  width: 118,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                ),
-                                const SizedBox(height: 18),
-                                Expanded(
-                                  child: Container(
+                                  const SizedBox(height: 12),
+                                  Container(
                                     width: contentWidth,
-                                    padding: const EdgeInsets.all(18),
+                                    padding: const EdgeInsets.all(28),
                                     decoration: BoxDecoration(
                                       color: Colors.black,
                                       borderRadius: BorderRadius.circular(26),
                                       border: Border.all(
-                                        color: Colors.white24,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Row(
-                                          children: [
-                                            const Spacer(),
-                                            if (isCurrentSeason &&
-                                                seasonData.savedPlayers.any(
-                                                  (profile) =>
-                                                      !seasonData.players.any(
-                                                        (entry) =>
-                                                            _playerNameKey(
-                                                              entry.name,
-                                                            ) ==
-                                                            _playerNameKey(
-                                                              profile.name,
-                                                            ),
-                                                      ),
-                                                ))
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      Colors.cyanAccent,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 8,
-                                                      ),
-                                                  textStyle: const TextStyle(
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.8,
-                                                  ),
-                                                ),
-                                                onPressed: () => unawaited(
-                                                  _showStartPlayerDialog(store),
-                                                ),
-                                                icon: const Icon(
-                                                  Icons.play_arrow_rounded,
-                                                  size: 18,
-                                                ),
-                                                label: Text(
-                                                  l10n.startPlayerElo,
-                                                ),
-                                              ),
-                                            if (isCurrentSeason)
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      store.isEloPaused
-                                                      ? Colors.cyanAccent
-                                                      : Colors.orangeAccent,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 8,
-                                                      ),
-                                                  textStyle: const TextStyle(
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.8,
-                                                  ),
-                                                ),
-                                                onPressed: () => unawaited(
-                                                  _setEloPaused(
-                                                    !store.isEloPaused,
-                                                  ),
-                                                ),
-                                                icon: Icon(
-                                                  store.isEloPaused
-                                                      ? Icons.play_arrow_rounded
-                                                      : Icons.pause_rounded,
-                                                  size: 18,
-                                                ),
-                                                label: Text(
-                                                  store.isEloPaused
-                                                      ? l10n.resumeElo
-                                                      : l10n.pauseElo,
-                                                ),
-                                              ),
-                                            if (isCurrentSeason)
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      Colors.redAccent,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 8,
-                                                      ),
-                                                  textStyle: const TextStyle(
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.8,
-                                                  ),
-                                                ),
-                                                onPressed: _finishCurrentSeason,
-                                                icon: const Icon(
-                                                  Icons.flag_rounded,
-                                                  size: 18,
-                                                ),
-                                                label: Text(l10n.endSeason),
-                                              ),
-                                            TextButton.icon(
-                                              style: TextButton.styleFrom(
-                                                foregroundColor:
-                                                    !isCurrentSeason
-                                                    ? Colors.white38
-                                                    : _isEditingLeaderboard
-                                                    ? Colors.orangeAccent
-                                                    : Colors.cyanAccent,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 8,
-                                                    ),
-                                                textStyle: const TextStyle(
-                                                  fontWeight: FontWeight.w900,
-                                                  letterSpacing: 0.8,
-                                                ),
-                                              ),
-                                              onPressed: isCurrentSeason
-                                                  ? () {
-                                                      setState(() {
-                                                        _isEditingLeaderboard =
-                                                            !_isEditingLeaderboard;
-                                                      });
-                                                    }
-                                                  : null,
-                                              icon: Icon(
-                                                _isEditingLeaderboard
-                                                    ? Icons.close_rounded
-                                                    : Icons.edit_rounded,
-                                                size: 18,
-                                              ),
-                                              label: Text(
-                                                _isEditingLeaderboard
-                                                    ? 'DONE'
-                                                    : 'EDIT',
-                                              ),
-                                            ),
-                                          ],
+                                        color: Colors.cyanAccent.withValues(
+                                          alpha: 0.7,
                                         ),
-                                        const SizedBox(height: 8),
-                                        Expanded(
-                                          child: ListView.separated(
-                                            itemCount:
-                                                seasonData.players.length,
-                                            separatorBuilder: (_, _) => Divider(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.08,
-                                              ),
-                                              height: 12,
-                                            ),
-                                            itemBuilder: (context, index) {
-                                              final entry =
-                                                  seasonData.players[index];
-                                              final rank =
-                                                  rankByPlayerKey[_playerNameKey(
-                                                    entry.name,
-                                                  )];
-                                              final isTop = rank == 1;
-                                              return _LeaderboardRow(
-                                                entry: entry,
-                                                rank: rank,
-                                                isTop: isTop,
-                                                showDeleteAction:
-                                                    _isEditingLeaderboard &&
-                                                    isCurrentSeason,
-                                                onDelete: () => unawaited(
-                                                  _deleteLeaderboardPlayer(
-                                                    entry.name,
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                        width: 2.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.cyanAccent.withValues(
+                                            alpha: 0.18,
                                           ),
+                                          blurRadius: 30,
+                                          spreadRadius: 2,
                                         ),
                                       ],
                                     ),
+                                    child: topPlayer == null
+                                        ? Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${selectedSeason.title} Has No Ranked Players Yet',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 30,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 12),
+                                              const Text(
+                                                'Each player needs 5 matches to leave Unranked.',
+                                                style: TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Wrap(
+                                            spacing: 22,
+                                            runSpacing: 22,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
+                                            children: [
+                                              Container(
+                                                width: 96,
+                                                height: 96,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.32),
+                                                  border: Border.all(
+                                                    color: Colors.amberAccent,
+                                                    width: 3,
+                                                  ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: const Text(
+                                                  '#1',
+                                                  style: TextStyle(
+                                                    color: Colors.amberAccent,
+                                                    fontSize: 32,
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: min(
+                                                  420.0,
+                                                  max(
+                                                    260.0,
+                                                    contentWidth * 0.36,
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '${selectedSeason.title} Top Ranked Player',
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      topPlayer.name
+                                                          .toUpperCase(),
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 34,
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        fontStyle:
+                                                            FontStyle.italic,
+                                                        height: 1.05,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Wrap(
+                                                spacing: 14,
+                                                runSpacing: 14,
+                                                children: [
+                                                  _LeaderboardStat(
+                                                    label: 'Points',
+                                                    value: topPlayer.points
+                                                        .toString(),
+                                                    width: 118,
+                                                  ),
+                                                  _LeaderboardStat(
+                                                    label: 'Wins',
+                                                    value: topPlayer.wins
+                                                        .toString(),
+                                                    width: 100,
+                                                  ),
+                                                  _LeaderboardStat(
+                                                    label: 'Win Rate',
+                                                    value: _formatWinRate(
+                                                      topPlayer,
+                                                    ),
+                                                    width: 110,
+                                                  ),
+                                                  _LeaderboardStat(
+                                                    label: 'Gate Cards',
+                                                    value: topPlayer
+                                                        .gateCardsWon
+                                                        .toString(),
+                                                    width: 118,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
+                                  const SizedBox(height: 18),
+                                  Expanded(
+                                    child: Container(
+                                      width: contentWidth,
+                                      padding: const EdgeInsets.all(18),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black,
+                                        borderRadius: BorderRadius.circular(26),
+                                        border: Border.all(
+                                          color: Colors.white24,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Spacer(),
+                                              if (isCurrentSeason &&
+                                                  seasonData.savedPlayers.any(
+                                                    (profile) =>
+                                                        !seasonData.players.any(
+                                                          (entry) =>
+                                                              _playerNameKey(
+                                                                entry.name,
+                                                              ) ==
+                                                              _playerNameKey(
+                                                                profile.name,
+                                                              ),
+                                                        ),
+                                                  ))
+                                                TextButton.icon(
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor:
+                                                        Colors.cyanAccent,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 8,
+                                                        ),
+                                                    textStyle: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: 0.8,
+                                                    ),
+                                                  ),
+                                                  onPressed: () => unawaited(
+                                                    _showStartPlayerDialog(
+                                                      store,
+                                                    ),
+                                                  ),
+                                                  icon: const Icon(
+                                                    Icons.play_arrow_rounded,
+                                                    size: 18,
+                                                  ),
+                                                  label: Text(
+                                                    l10n.startPlayerElo,
+                                                  ),
+                                                ),
+                                              if (isCurrentSeason)
+                                                TextButton.icon(
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor:
+                                                        store.isEloPaused
+                                                        ? Colors.cyanAccent
+                                                        : Colors.orangeAccent,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 8,
+                                                        ),
+                                                    textStyle: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: 0.8,
+                                                    ),
+                                                  ),
+                                                  onPressed: () => unawaited(
+                                                    _setEloPaused(
+                                                      !store.isEloPaused,
+                                                    ),
+                                                  ),
+                                                  icon: Icon(
+                                                    store.isEloPaused
+                                                        ? Icons
+                                                              .play_arrow_rounded
+                                                        : Icons.pause_rounded,
+                                                    size: 18,
+                                                  ),
+                                                  label: Text(
+                                                    store.isEloPaused
+                                                        ? l10n.resumeElo
+                                                        : l10n.pauseElo,
+                                                  ),
+                                                ),
+                                              if (isCurrentSeason)
+                                                TextButton.icon(
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor:
+                                                        Colors.redAccent,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 8,
+                                                        ),
+                                                    textStyle: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: 0.8,
+                                                    ),
+                                                  ),
+                                                  onPressed:
+                                                      _finishCurrentSeason,
+                                                  icon: const Icon(
+                                                    Icons.flag_rounded,
+                                                    size: 18,
+                                                  ),
+                                                  label: Text(l10n.endSeason),
+                                                ),
+                                              TextButton.icon(
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor:
+                                                      !isCurrentSeason
+                                                      ? Colors.white38
+                                                      : _isEditingLeaderboard
+                                                      ? Colors.orangeAccent
+                                                      : Colors.cyanAccent,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 8,
+                                                      ),
+                                                  textStyle: const TextStyle(
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: 0.8,
+                                                  ),
+                                                ),
+                                                onPressed: isCurrentSeason
+                                                    ? () {
+                                                        setState(() {
+                                                          _isEditingLeaderboard =
+                                                              !_isEditingLeaderboard;
+                                                        });
+                                                      }
+                                                    : null,
+                                                icon: Icon(
+                                                  _isEditingLeaderboard
+                                                      ? Icons.close_rounded
+                                                      : Icons.edit_rounded,
+                                                  size: 18,
+                                                ),
+                                                label: Text(
+                                                  _isEditingLeaderboard
+                                                      ? 'DONE'
+                                                      : 'EDIT',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Expanded(
+                                            child: ListView.separated(
+                                              itemCount:
+                                                  seasonData.players.length,
+                                              separatorBuilder: (_, _) =>
+                                                  Divider(
+                                                    color: Colors.white
+                                                        .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                                    height: 12,
+                                                  ),
+                                              itemBuilder: (context, index) {
+                                                final entry =
+                                                    seasonData.players[index];
+                                                final rank =
+                                                    rankByPlayerKey[_playerNameKey(
+                                                      entry.name,
+                                                    )];
+                                                final isTop = rank == 1;
+                                                return _LeaderboardRow(
+                                                  entry: entry,
+                                                  rank: rank,
+                                                  isTop: isTop,
+                                                  showDeleteAction:
+                                                      _isEditingLeaderboard &&
+                                                      isCurrentSeason,
+                                                  onDelete: () => unawaited(
+                                                    _deleteLeaderboardPlayer(
+                                                      entry.name,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            if (_isEloPaused) _buildEloPauseOverlay(),
+          ],
         ),
       ),
     );
