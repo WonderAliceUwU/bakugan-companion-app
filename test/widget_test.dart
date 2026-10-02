@@ -175,6 +175,9 @@ void main() {
       await repo.savePlayerProfile(rawName: 'Loser0', character: 'shun');
       await repo.savePlayerProfile(rawName: 'Loser1', character: 'runo');
       await repo.savePlayerProfile(rawName: 'Loser2', character: 'alice');
+      for (final player in const ['Winner', 'Loser0', 'Loser1', 'Loser2']) {
+        await repo.startPlayerSeason(player);
+      }
 
       await repo.recordMatch(
         winners: const ['Winner'],
@@ -203,6 +206,82 @@ void main() {
       expect(players['Loser0']!.points, 984);
       expect(players['Loser1']!.points, 988);
       expect(players['Loser2']!.points, 992);
+    },
+  );
+
+  test('players must start a season before their Elo can change', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+      'bakugan_season_lifecycle_test_',
+    );
+    final originalPlatform = PathProviderPlatform.instance;
+    PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+    addTearDown(() async {
+      PathProviderPlatform.instance = originalPlatform;
+      await tempDir.delete(recursive: true);
+    });
+
+    final repo = LeaderboardRepository.instance;
+    await repo.savePlayerProfile(rawName: 'Winner', character: 'dan');
+    await repo.savePlayerProfile(rawName: 'Loser', character: 'shun');
+
+    var store = await repo.loadStore();
+    expect(store.currentLeaderboard.players, isEmpty);
+
+    await repo.startPlayerSeason('Winner');
+    await repo.startPlayerSeason('Loser');
+    await repo.setPlayerEloActive('Loser', isActive: false);
+    await repo.recordMatch(winners: const ['Winner'], losers: const ['Loser']);
+
+    store = await repo.loadStore();
+    final pausedLoser = store.currentLeaderboard.players.firstWhere(
+      (entry) => entry.name == 'Loser',
+    );
+    expect(pausedLoser.matches, 0);
+    expect(pausedLoser.isEloActive, isFalse);
+    expect(
+      store.currentLeaderboard.players
+          .firstWhere((entry) => entry.name == 'Winner')
+          .matches,
+      0,
+    );
+
+    await repo.startPlayerSeason('Loser');
+    await repo.recordMatch(winners: const ['Winner'], losers: const ['Loser']);
+    store = await repo.loadStore();
+    expect(
+      store.currentLeaderboard.players
+          .firstWhere((entry) => entry.name == 'Winner')
+          .matches,
+      1,
+    );
+  });
+
+  test(
+    'finishing a season archives its ranking and starts an empty season',
+    () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'bakugan_season_finish_test_',
+      );
+      final originalPlatform = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
+      addTearDown(() async {
+        PathProviderPlatform.instance = originalPlatform;
+        await tempDir.delete(recursive: true);
+      });
+
+      final repo = LeaderboardRepository.instance;
+      await repo.savePlayerProfile(rawName: 'Dan', character: 'dan');
+      await repo.startPlayerSeason('Dan');
+      await repo.recordMatch(winners: const ['Dan'], losers: const []);
+
+      final nextStore = await repo.finishCurrentSeason();
+
+      expect(nextStore.currentSeasonNumber, 3);
+      expect(nextStore.currentLeaderboard.players, isEmpty);
+      expect(nextStore.currentLeaderboard.savedPlayers, hasLength(1));
+      expect(nextStore.archivedSeasons.first.seasonNumber, 2);
+      expect(nextStore.archivedSeasons.first.leaderboard.players, hasLength(1));
+      expect(nextStore.archivedSeasons.first.finalizedAt, isNotNull);
     },
   );
 }

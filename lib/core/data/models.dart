@@ -286,6 +286,7 @@ class LeaderboardEntry {
   final int points;
   final int matches;
   final int gateCardsWon;
+  final bool isEloActive;
 
   const LeaderboardEntry({
     required this.name,
@@ -293,6 +294,7 @@ class LeaderboardEntry {
     required this.points,
     required this.matches,
     required this.gateCardsWon,
+    this.isEloActive = true,
   });
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
@@ -302,6 +304,9 @@ class LeaderboardEntry {
       points: (json['points'] as num?)?.toInt() ?? _defaultLeaderboardPoints,
       matches: (json['matches'] as num?)?.toInt() ?? 0,
       gateCardsWon: (json['gateCardsWon'] as num?)?.toInt() ?? 0,
+      isEloActive: json['isEloActive'] is bool
+          ? json['isEloActive'] as bool
+          : true,
     );
   }
 
@@ -311,6 +316,7 @@ class LeaderboardEntry {
     'points': points,
     'matches': matches,
     'gateCardsWon': gateCardsWon,
+    'isEloActive': isEloActive,
   };
 
   LeaderboardEntry copyWith({
@@ -319,6 +325,7 @@ class LeaderboardEntry {
     int? points,
     int? matches,
     int? gateCardsWon,
+    bool? isEloActive,
   }) {
     return LeaderboardEntry(
       name: name ?? this.name,
@@ -326,10 +333,11 @@ class LeaderboardEntry {
       points: points ?? this.points,
       matches: matches ?? this.matches,
       gateCardsWon: gateCardsWon ?? this.gateCardsWon,
+      isEloActive: isEloActive ?? this.isEloActive,
     );
   }
 
-  bool get isRanked => matches >= _minimumRankedMatches;
+  bool get isRanked => isEloActive && matches >= _minimumRankedMatches;
 
   int get matchesUntilRanked => max(0, _minimumRankedMatches - matches);
 
@@ -1098,17 +1106,6 @@ class LeaderboardRepository {
     final playersByKey = {
       for (final entry in data.players) _playerNameKey(entry.name): entry,
     };
-    playersByKey.putIfAbsent(
-      _playerNameKey(name),
-      () => LeaderboardEntry(
-        name: name,
-        wins: 0,
-        points: _defaultLeaderboardPoints,
-        matches: 0,
-        gateCardsWon: 0,
-      ),
-    );
-
     final updated = await _persistCurrentLeaderboard(
       store,
       LeaderboardData(
@@ -1117,6 +1114,93 @@ class LeaderboardRepository {
       ),
     );
     return updated.currentLeaderboard;
+  }
+
+  Future<LeaderboardData> startPlayerSeason(String rawName) async {
+    final key = _playerNameKey(rawName);
+    if (key.isEmpty) return load();
+
+    final store = await loadStore();
+    final data = store.currentLeaderboard;
+    SavedPlayerProfile? profile;
+    for (final candidate in data.savedPlayers) {
+      if (_playerNameKey(candidate.name) == key) {
+        profile = candidate;
+        break;
+      }
+    }
+    if (profile == null) return data;
+
+    final playersByKey = {
+      for (final entry in data.players) _playerNameKey(entry.name): entry,
+    };
+    final existing = playersByKey[key];
+    playersByKey[key] = existing == null
+        ? LeaderboardEntry(
+            name: profile.name,
+            wins: 0,
+            points: _defaultLeaderboardPoints,
+            matches: 0,
+            gateCardsWon: 0,
+          )
+        : existing.copyWith(isEloActive: true);
+
+    final updated = await _persistCurrentLeaderboard(
+      store,
+      data.copyWith(players: playersByKey.values.toList()),
+    );
+    return updated.currentLeaderboard;
+  }
+
+  Future<LeaderboardData> setPlayerEloActive(
+    String rawName, {
+    required bool isActive,
+  }) async {
+    final key = _playerNameKey(rawName);
+    if (key.isEmpty) return load();
+
+    final store = await loadStore();
+    final data = store.currentLeaderboard;
+    final players = [
+      for (final entry in data.players)
+        _playerNameKey(entry.name) == key
+            ? entry.copyWith(isEloActive: isActive)
+            : entry,
+    ];
+    if (!players.any((entry) => _playerNameKey(entry.name) == key)) {
+      return data;
+    }
+
+    final updated = await _persistCurrentLeaderboard(
+      store,
+      data.copyWith(players: players),
+    );
+    return updated.currentLeaderboard;
+  }
+
+  Future<LeaderboardStore> finishCurrentSeason() async {
+    final store = await loadStore();
+    final currentLeaderboard = _normalizeData(store.currentLeaderboard);
+    final archivedSeason = LeaderboardSeason(
+      seasonNumber: store.currentSeasonNumber,
+      title: 'Season ${store.currentSeasonNumber}',
+      leaderboard: currentLeaderboard,
+      finalizedAt: DateTime.now().toIso8601String(),
+    );
+    final archivedSeasons = [
+      archivedSeason,
+      ...store.archivedSeasons.where(
+        (season) => season.seasonNumber != store.currentSeasonNumber,
+      ),
+    ];
+    final nextStore = store.copyWith(
+      currentSeasonNumber: store.currentSeasonNumber + 1,
+      currentLeaderboard: LeaderboardData(
+        savedPlayers: currentLeaderboard.savedPlayers,
+      ),
+      archivedSeasons: archivedSeasons,
+    );
+    return _persistStore(nextStore);
   }
 
   Future<LeaderboardData> deleteSavedPlayer(String rawName) async {
@@ -1177,16 +1261,22 @@ class LeaderboardRepository {
       if (!savedPlayers.any((entry) => _playerNameKey(entry.name) == key)) {
         return null;
       }
-      return playersByKey.putIfAbsent(
-        key,
-        () => LeaderboardEntry(
-          name: name,
-          wins: 0,
-          points: _defaultLeaderboardPoints,
-          matches: 0,
-          gateCardsWon: 0,
-        ),
-      );
+      final entry = playersByKey[key];
+      if (entry == null || !entry.isEloActive) return null;
+      return entry;
+    }
+
+    final registeredKeys = savedPlayers
+        .map((entry) => _playerNameKey(entry.name))
+        .toSet();
+    final requestedKeys = {
+      ...winnerNames,
+      ...loserNames,
+    }.map(_playerNameKey).where(registeredKeys.contains).toSet();
+    if (requestedKeys.any(
+      (key) => playersByKey[key] == null || !playersByKey[key]!.isEloActive,
+    )) {
+      return data;
     }
 
     final winnerEntries = winnerNames
@@ -1379,6 +1469,9 @@ class LeaderboardRepository {
 
     final players = playersByKey.values.toList()
       ..sort((a, b) {
+        if (a.isEloActive != b.isEloActive) {
+          return a.isEloActive ? -1 : 1;
+        }
         if (a.isRanked != b.isRanked) {
           return a.isRanked ? -1 : 1;
         }

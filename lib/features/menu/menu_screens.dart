@@ -1053,6 +1053,339 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     await future;
   }
 
+  Future<void> _startPlayerSeason(String name) async {
+    await LeaderboardRepository.instance.startPlayerSeason(name);
+    await _reload();
+  }
+
+  Future<void> _setPlayerEloActive(LeaderboardEntry entry) async {
+    await LeaderboardRepository.instance.setPlayerEloActive(
+      entry.name,
+      isActive: !entry.isEloActive,
+    );
+    if (!mounted) return;
+    final store = await LeaderboardRepository.instance.loadStore();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() => _leaderboardFuture = Future.value(store));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            entry.isEloActive
+                ? l10n.playerEloPaused(entry.name)
+                : l10n.playerEloStarted(entry.name),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _finishCurrentSeason() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 180,
+            vertical: 140,
+          ),
+          child: Container(
+            width: 620,
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: const Color(0xFF05080D),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.redAccent, width: 3),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 24,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.endSeasonTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  l10n.endSeasonConfirm,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 26),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 14,
+                  runSpacing: 14,
+                  children: [
+                    BakuganButton(
+                      text: l10n.cancel,
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      width: 180,
+                      height: 62,
+                      color: Colors.grey,
+                      textFontSize: 20,
+                      useCancelSound: true,
+                    ),
+                    BakuganButton(
+                      text: l10n.confirm,
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      width: 200,
+                      height: 62,
+                      color: Colors.redAccent,
+                      textFontSize: 20,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    final store = await LeaderboardRepository.instance.finishCurrentSeason();
+    if (!mounted) return;
+    setState(() {
+      _selectedSeasonNumber = store.currentSeasonNumber;
+      _isEditingLeaderboard = false;
+      _leaderboardFuture = Future.value(store);
+    });
+  }
+
+  Future<void> _showStartPlayerDialog(LeaderboardStore store) async {
+    final currentKeys = store.currentLeaderboard.players
+        .map((entry) => _playerNameKey(entry.name))
+        .toSet();
+    final availablePlayers = store.currentLeaderboard.savedPlayers
+        .where((entry) => !currentKeys.contains(_playerNameKey(entry.name)))
+        .toList();
+    if (availablePlayers.isEmpty) return;
+
+    final selectedName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return Dialog(
+          backgroundColor: const Color(0xFF05080D),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: const BorderSide(color: Colors.cyanAccent, width: 2),
+          ),
+          child: Container(
+            width: 560,
+            padding: const EdgeInsets.all(26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.startSeason,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 420),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final player in availablePlayers)
+                          BakuganButton(
+                            text: player.name,
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(player.name),
+                            width: 220,
+                            height: 64,
+                            color: Colors.cyanAccent,
+                            textFontSize: 20,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (selectedName == null || !mounted) return;
+    await _startPlayerSeason(selectedName);
+  }
+
+  Widget _buildSeasonStartPrompt({
+    required BuildContext context,
+    required LeaderboardStore store,
+    required LeaderboardSeason selectedSeason,
+    required bool isCurrentSeason,
+    required List<LeaderboardSeason> allSeasons,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final savedPlayers = isCurrentSeason
+        ? store.currentLeaderboard.savedPlayers
+        : const <SavedPlayerProfile>[];
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: 680,
+          padding: const EdgeInsets.all(30),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: Colors.cyanAccent, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.cyanAccent.withValues(alpha: 0.18),
+                blurRadius: 30,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (allSeasons.length > 1) ...[
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final season in allSeasons)
+                      ChoiceChip(
+                        selected:
+                            season.seasonNumber == selectedSeason.seasonNumber,
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedSeasonNumber = season.seasonNumber;
+                            _isEditingLeaderboard = false;
+                          });
+                        },
+                        label: Text(
+                          season.seasonNumber == store.currentSeasonNumber
+                              ? '${season.title} • CURRENT'
+                              : season.title,
+                          style: TextStyle(
+                            color:
+                                season.seasonNumber ==
+                                    selectedSeason.seasonNumber
+                                ? Colors.black
+                                : Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        selectedColor: Colors.cyanAccent,
+                        backgroundColor: Colors.black.withValues(alpha: 0.55),
+                        side: BorderSide(
+                          color:
+                              season.seasonNumber == selectedSeason.seasonNumber
+                              ? Colors.cyanAccent
+                              : Colors.white24,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+              Icon(
+                isCurrentSeason
+                    ? Icons.play_circle_outline_rounded
+                    : Icons.leaderboard_rounded,
+                color: Colors.cyanAccent,
+                size: 76,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isCurrentSeason
+                    ? l10n.startSeason
+                    : '${selectedSeason.title} • ${l10n.noSeasonPlayers}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                isCurrentSeason
+                    ? l10n.seasonWaitingForPlayers
+                    : l10n.noSeasonPlayers,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+              ),
+              if (isCurrentSeason && savedPlayers.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final player in savedPlayers)
+                      BakuganButton(
+                        text: '${l10n.startPlayerElo}: ${player.name}',
+                        onPressed: () =>
+                            unawaited(_startPlayerSeason(player.name)),
+                        width: 270,
+                        height: 64,
+                        color: Colors.cyanAccent,
+                        textFontSize: 18,
+                      ),
+                  ],
+                ),
+              ] else if (isCurrentSeason) ...[
+                const SizedBox(height: 24),
+                Text(
+                  l10n.noPlayersToStart,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.orangeAccent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _deleteLeaderboardPlayer(String name) async {
     final messenger = ScaffoldMessenger.of(context);
     final data = await LeaderboardRepository.instance.deleteSavedPlayer(name);
@@ -1157,26 +1490,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         selectedSeason.seasonNumber ==
                         store.currentSeasonNumber;
                     if (seasonData.players.isEmpty) {
-                      return Center(
-                        child: Container(
-                          width: 560,
-                          padding: const EdgeInsets.all(28),
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white24, width: 2),
-                          ),
-                          child: const Text(
-                            'No registered players yet.\nAdd one from character selection with the register button.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
+                      return _buildSeasonStartPrompt(
+                        context: context,
+                        store: store,
+                        selectedSeason: selectedSeason,
+                        isCurrentSeason: isCurrentSeason,
+                        allSeasons: allSeasons,
                       );
                     }
 
@@ -1411,6 +1730,64 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                       Row(
                                         children: [
                                           const Spacer(),
+                                          if (isCurrentSeason &&
+                                              seasonData.savedPlayers.any(
+                                                (profile) =>
+                                                    !seasonData.players.any(
+                                                      (entry) =>
+                                                          _playerNameKey(
+                                                            entry.name,
+                                                          ) ==
+                                                          _playerNameKey(
+                                                            profile.name,
+                                                          ),
+                                                    ),
+                                              ))
+                                            TextButton.icon(
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    Colors.cyanAccent,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                textStyle: const TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.8,
+                                                ),
+                                              ),
+                                              onPressed: () => unawaited(
+                                                _showStartPlayerDialog(store),
+                                              ),
+                                              icon: const Icon(
+                                                Icons.play_arrow_rounded,
+                                                size: 18,
+                                              ),
+                                              label: Text(l10n.startPlayerElo),
+                                            ),
+                                          if (isCurrentSeason)
+                                            TextButton.icon(
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    Colors.redAccent,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                textStyle: const TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.8,
+                                                ),
+                                              ),
+                                              onPressed: _finishCurrentSeason,
+                                              icon: const Icon(
+                                                Icons.flag_rounded,
+                                                size: 18,
+                                              ),
+                                              label: Text(l10n.endSeason),
+                                            ),
                                           TextButton.icon(
                                             style: TextButton.styleFrom(
                                               foregroundColor: !isCurrentSeason
@@ -1475,10 +1852,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                               showDeleteAction:
                                                   _isEditingLeaderboard &&
                                                   isCurrentSeason,
+                                              showEloAction:
+                                                  _isEditingLeaderboard &&
+                                                  isCurrentSeason,
                                               onDelete: () => unawaited(
                                                 _deleteLeaderboardPlayer(
                                                   entry.name,
                                                 ),
+                                              ),
+                                              onEloToggle: () => unawaited(
+                                                _setPlayerEloActive(entry),
                                               ),
                                             );
                                           },
@@ -1608,14 +1991,18 @@ class _LeaderboardRow extends StatelessWidget {
   final int? rank;
   final bool isTop;
   final bool showDeleteAction;
+  final bool showEloAction;
   final VoidCallback onDelete;
+  final VoidCallback onEloToggle;
 
   const _LeaderboardRow({
     required this.entry,
     required this.rank,
     required this.isTop,
     required this.showDeleteAction,
+    required this.showEloAction,
     required this.onDelete,
+    required this.onEloToggle,
   });
 
   @override
@@ -1720,11 +2107,21 @@ class _LeaderboardRow extends StatelessWidget {
                 leftBlock,
                 const SizedBox(height: 18),
                 statBlock,
-                if (showDeleteAction) ...[
+                if (showDeleteAction || showEloAction) ...[
                   const SizedBox(height: 18),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: _DeleteLeaderboardButton(onTap: onDelete),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (showEloAction)
+                        _ToggleEloButton(
+                          isActive: entry.isEloActive,
+                          onTap: onEloToggle,
+                        ),
+                      if (showDeleteAction && showEloAction)
+                        const SizedBox(width: 12),
+                      if (showDeleteAction)
+                        _DeleteLeaderboardButton(onTap: onDelete),
+                    ],
                   ),
                 ],
               ],
@@ -1737,9 +2134,16 @@ class _LeaderboardRow extends StatelessWidget {
               Expanded(flex: 4, child: leftBlock),
               const SizedBox(width: 24),
               Expanded(flex: 5, child: statBlock),
-              if (showDeleteAction) ...[
+              if (showDeleteAction || showEloAction) ...[
                 const SizedBox(width: 18),
-                _DeleteLeaderboardButton(onTap: onDelete),
+                if (showEloAction)
+                  _ToggleEloButton(
+                    isActive: entry.isEloActive,
+                    onTap: onEloToggle,
+                  ),
+                if (showDeleteAction && showEloAction)
+                  const SizedBox(width: 12),
+                if (showDeleteAction) _DeleteLeaderboardButton(onTap: onDelete),
               ],
             ],
           );
@@ -1772,6 +2176,35 @@ class _DeleteLeaderboardButton extends StatelessWidget {
   }
 }
 
+class _ToggleEloButton extends StatelessWidget {
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _ToggleEloButton({required this.isActive, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive ? Colors.orangeAccent : Colors.cyanAccent;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: Icon(
+          isActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: Colors.black,
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
+
 class _LeaderboardStatusChip extends StatelessWidget {
   final LeaderboardEntry entry;
 
@@ -1779,6 +2212,26 @@ class _LeaderboardStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!entry.isEloActive) {
+      final l10n = AppLocalizations.of(context);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white30),
+        ),
+        child: Text(
+          l10n.eloPausedStatus,
+          style: TextStyle(
+            color: Colors.white60,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.7,
+          ),
+        ),
+      );
+    }
     final isRanked = entry.isRanked;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
