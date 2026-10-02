@@ -321,8 +321,8 @@ class AppLocalizations {
   String get endSeasonTitle =>
       isEs ? '¿TERMINAR TEMPORADA?' : 'END CURRENT SEASON?';
   String get endSeasonConfirm => isEs
-      ? 'El ranking actual se guardará y comenzará una nueva temporada. Los jugadores tendrán que iniciarla para volver a contar en el Elo.'
-      : 'The current ranking will be saved and a new season will begin. Players must start it before they count toward Elo again.';
+      ? 'La temporada actual terminará y se formará el ranking.'
+      : 'The current season will end and the ranking will be formed.';
   String get startSeason => isEs ? 'INICIAR TEMPORADA' : 'START SEASON';
   String get startPlayerElo => isEs ? 'INICIAR ELO' : 'START ELO';
   String get pauseElo => isEs ? 'PAUSAR ELO' : 'PAUSE ELO';
