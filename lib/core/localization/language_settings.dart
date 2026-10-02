@@ -325,9 +325,12 @@ class AppLocalizations {
       : 'The current ranking will be saved and a new season will begin. Players must start it before they count toward Elo again.';
   String get startSeason => isEs ? 'INICIAR TEMPORADA' : 'START SEASON';
   String get startPlayerElo => isEs ? 'INICIAR ELO' : 'START ELO';
-  String get resumePlayerElo => isEs ? 'REANUDAR ELO' : 'RESUME ELO';
-  String get pausePlayerElo => isEs ? 'PAUSAR ELO' : 'PAUSE ELO';
-  String get eloPausedStatus => isEs ? 'ELO PAUSADO' : 'ELO PAUSED';
+  String get pauseElo => isEs ? 'PAUSAR ELO' : 'PAUSE ELO';
+  String get resumeElo => isEs ? 'REANUDAR ELO' : 'RESUME ELO';
+  String get eloPausedTitle => isEs ? 'PAUSA' : 'PAUSE';
+  String get eloPausedDescription => isEs
+      ? 'El Elo está pausado para todos los jugadores. Las partidas no modificarán la clasificación.'
+      : 'Elo is paused for every player. Matches will not change the leaderboard.';
   String get seasonWaitingForPlayers => isEs
       ? 'Esta temporada está lista. Cada jugador debe iniciarla para entrar en el Elo.'
       : 'This season is ready. Each player must start it before entering Elo.';
@@ -337,10 +340,6 @@ class AppLocalizations {
   String get noPlayersToStart => isEs
       ? 'Registra un jugador para poder iniciar su Elo.'
       : 'Register a player before starting their Elo.';
-  String playerEloPaused(String name) =>
-      isEs ? 'El Elo de $name está pausado.' : '$name\'s Elo is paused.';
-  String playerEloStarted(String name) =>
-      isEs ? 'El Elo de $name está activo.' : '$name\'s Elo is active.';
   String get playerHeader => isEs ? 'JUGADOR' : 'PLAYER';
   String get pointsHeader => isEs ? 'PUNTOS' : 'POINTS';
   String get winsHeader => isEs ? 'VICTORIAS' : 'WINS';

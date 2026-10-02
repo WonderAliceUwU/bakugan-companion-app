@@ -286,7 +286,6 @@ class LeaderboardEntry {
   final int points;
   final int matches;
   final int gateCardsWon;
-  final bool isEloActive;
 
   const LeaderboardEntry({
     required this.name,
@@ -294,7 +293,6 @@ class LeaderboardEntry {
     required this.points,
     required this.matches,
     required this.gateCardsWon,
-    this.isEloActive = true,
   });
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
@@ -304,9 +302,6 @@ class LeaderboardEntry {
       points: (json['points'] as num?)?.toInt() ?? _defaultLeaderboardPoints,
       matches: (json['matches'] as num?)?.toInt() ?? 0,
       gateCardsWon: (json['gateCardsWon'] as num?)?.toInt() ?? 0,
-      isEloActive: json['isEloActive'] is bool
-          ? json['isEloActive'] as bool
-          : true,
     );
   }
 
@@ -316,7 +311,6 @@ class LeaderboardEntry {
     'points': points,
     'matches': matches,
     'gateCardsWon': gateCardsWon,
-    'isEloActive': isEloActive,
   };
 
   LeaderboardEntry copyWith({
@@ -325,7 +319,6 @@ class LeaderboardEntry {
     int? points,
     int? matches,
     int? gateCardsWon,
-    bool? isEloActive,
   }) {
     return LeaderboardEntry(
       name: name ?? this.name,
@@ -333,11 +326,10 @@ class LeaderboardEntry {
       points: points ?? this.points,
       matches: matches ?? this.matches,
       gateCardsWon: gateCardsWon ?? this.gateCardsWon,
-      isEloActive: isEloActive ?? this.isEloActive,
     );
   }
 
-  bool get isRanked => isEloActive && matches >= _minimumRankedMatches;
+  bool get isRanked => matches >= _minimumRankedMatches;
 
   int get matchesUntilRanked => max(0, _minimumRankedMatches - matches);
 
@@ -471,6 +463,7 @@ class LeaderboardSeason {
 class LeaderboardStore {
   final int currentSeasonNumber;
   final LeaderboardData currentLeaderboard;
+  final bool isEloPaused;
   final List<LeaderboardSeason> archivedSeasons;
   final List<MatchHistoryEntry> matchHistory;
   final BakuganInventoryState bakuganInventory;
@@ -478,6 +471,7 @@ class LeaderboardStore {
   const LeaderboardStore({
     required this.currentSeasonNumber,
     required this.currentLeaderboard,
+    this.isEloPaused = false,
     this.archivedSeasons = const [],
     this.matchHistory = const [],
     this.bakuganInventory = const BakuganInventoryState(),
@@ -494,6 +488,7 @@ class LeaderboardStore {
           (json['currentLeaderboard'] as Map?) ?? const {},
         ),
       ),
+      isEloPaused: json['isEloPaused'] == true,
       archivedSeasons: rawArchivedSeasons is List
           ? rawArchivedSeasons
                 .whereType<Map>()
@@ -523,6 +518,7 @@ class LeaderboardStore {
   Map<String, dynamic> toJson() => {
     'currentSeasonNumber': currentSeasonNumber,
     'currentLeaderboard': currentLeaderboard.toJson(),
+    'isEloPaused': isEloPaused,
     'archivedSeasons': archivedSeasons.map((entry) => entry.toJson()).toList(),
     'matchHistory': matchHistory.map((entry) => entry.toJson()).toList(),
     'bakuganInventory': bakuganInventory.toJson(),
@@ -531,6 +527,7 @@ class LeaderboardStore {
   LeaderboardStore copyWith({
     int? currentSeasonNumber,
     LeaderboardData? currentLeaderboard,
+    bool? isEloPaused,
     List<LeaderboardSeason>? archivedSeasons,
     List<MatchHistoryEntry>? matchHistory,
     BakuganInventoryState? bakuganInventory,
@@ -538,6 +535,7 @@ class LeaderboardStore {
     return LeaderboardStore(
       currentSeasonNumber: currentSeasonNumber ?? this.currentSeasonNumber,
       currentLeaderboard: currentLeaderboard ?? this.currentLeaderboard,
+      isEloPaused: isEloPaused ?? this.isEloPaused,
       archivedSeasons: archivedSeasons ?? this.archivedSeasons,
       matchHistory: matchHistory ?? this.matchHistory,
       bakuganInventory: bakuganInventory ?? this.bakuganInventory,
@@ -1135,15 +1133,15 @@ class LeaderboardRepository {
       for (final entry in data.players) _playerNameKey(entry.name): entry,
     };
     final existing = playersByKey[key];
-    playersByKey[key] = existing == null
-        ? LeaderboardEntry(
-            name: profile.name,
-            wins: 0,
-            points: _defaultLeaderboardPoints,
-            matches: 0,
-            gateCardsWon: 0,
-          )
-        : existing.copyWith(isEloActive: true);
+    playersByKey[key] =
+        existing ??
+        LeaderboardEntry(
+          name: profile.name,
+          wins: 0,
+          points: _defaultLeaderboardPoints,
+          matches: 0,
+          gateCardsWon: 0,
+        );
 
     final updated = await _persistCurrentLeaderboard(
       store,
@@ -1152,30 +1150,9 @@ class LeaderboardRepository {
     return updated.currentLeaderboard;
   }
 
-  Future<LeaderboardData> setPlayerEloActive(
-    String rawName, {
-    required bool isActive,
-  }) async {
-    final key = _playerNameKey(rawName);
-    if (key.isEmpty) return load();
-
+  Future<LeaderboardStore> setEloPaused(bool isPaused) async {
     final store = await loadStore();
-    final data = store.currentLeaderboard;
-    final players = [
-      for (final entry in data.players)
-        _playerNameKey(entry.name) == key
-            ? entry.copyWith(isEloActive: isActive)
-            : entry,
-    ];
-    if (!players.any((entry) => _playerNameKey(entry.name) == key)) {
-      return data;
-    }
-
-    final updated = await _persistCurrentLeaderboard(
-      store,
-      data.copyWith(players: players),
-    );
-    return updated.currentLeaderboard;
+    return _persistStore(store.copyWith(isEloPaused: isPaused));
   }
 
   Future<LeaderboardStore> finishCurrentSeason() async {
@@ -1198,6 +1175,7 @@ class LeaderboardRepository {
       currentLeaderboard: LeaderboardData(
         savedPlayers: currentLeaderboard.savedPlayers,
       ),
+      isEloPaused: false,
       archivedSeasons: archivedSeasons,
     );
     return _persistStore(nextStore);
@@ -1245,6 +1223,7 @@ class LeaderboardRepository {
 
     final store = await loadStore();
     final data = store.currentLeaderboard;
+    if (store.isEloPaused) return data;
     final savedPlayers = List<SavedPlayerProfile>.from(data.savedPlayers);
     final playersByKey = {
       for (final entry in data.players) _playerNameKey(entry.name): entry,
@@ -1261,9 +1240,7 @@ class LeaderboardRepository {
       if (!savedPlayers.any((entry) => _playerNameKey(entry.name) == key)) {
         return null;
       }
-      final entry = playersByKey[key];
-      if (entry == null || !entry.isEloActive) return null;
-      return entry;
+      return playersByKey[key];
     }
 
     final registeredKeys = savedPlayers
@@ -1273,9 +1250,7 @@ class LeaderboardRepository {
       ...winnerNames,
       ...loserNames,
     }.map(_playerNameKey).where(registeredKeys.contains).toSet();
-    if (requestedKeys.any(
-      (key) => playersByKey[key] == null || !playersByKey[key]!.isEloActive,
-    )) {
+    if (requestedKeys.any((key) => playersByKey[key] == null)) {
       return data;
     }
 
@@ -1417,6 +1392,7 @@ class LeaderboardRepository {
     return LeaderboardStore(
       currentSeasonNumber: max(1, store.currentSeasonNumber),
       currentLeaderboard: _normalizeData(store.currentLeaderboard),
+      isEloPaused: store.isEloPaused,
       archivedSeasons: archivedSeasons,
       matchHistory: List<MatchHistoryEntry>.from(store.matchHistory)
         ..sort((a, b) => b.playedAt.compareTo(a.playedAt)),
@@ -1469,9 +1445,6 @@ class LeaderboardRepository {
 
     final players = playersByKey.values.toList()
       ..sort((a, b) {
-        if (a.isEloActive != b.isEloActive) {
-          return a.isEloActive ? -1 : 1;
-        }
         if (a.isRanked != b.isRanked) {
           return a.isRanked ? -1 : 1;
         }

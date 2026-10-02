@@ -229,15 +229,11 @@ void main() {
 
     await repo.startPlayerSeason('Winner');
     await repo.startPlayerSeason('Loser');
-    await repo.setPlayerEloActive('Loser', isActive: false);
+    await repo.setEloPaused(true);
     await repo.recordMatch(winners: const ['Winner'], losers: const ['Loser']);
 
     store = await repo.loadStore();
-    final pausedLoser = store.currentLeaderboard.players.firstWhere(
-      (entry) => entry.name == 'Loser',
-    );
-    expect(pausedLoser.matches, 0);
-    expect(pausedLoser.isEloActive, isFalse);
+    expect(store.isEloPaused, isTrue);
     expect(
       store.currentLeaderboard.players
           .firstWhere((entry) => entry.name == 'Winner')
@@ -245,9 +241,10 @@ void main() {
       0,
     );
 
-    await repo.startPlayerSeason('Loser');
+    await repo.setEloPaused(false);
     await repo.recordMatch(winners: const ['Winner'], losers: const ['Loser']);
     store = await repo.loadStore();
+    expect(store.isEloPaused, isFalse);
     expect(
       store.currentLeaderboard.players
           .firstWhere((entry) => entry.name == 'Winner')
