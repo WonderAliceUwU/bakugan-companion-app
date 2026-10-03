@@ -237,6 +237,7 @@ class AppLocalizations {
   String get leaderboard => isEs ? 'CLASIFICACIÓN' : 'LEADERBOARD';
   String get history => isEs ? 'HISTORIAL' : 'HISTORY';
   String get inventory => isEs ? 'INVENTARIO' : 'INVENTORY';
+  String get savegame => 'SAVEGAME';
   String get backupImport => isEs ? 'COPIA / IMPORTAR' : 'BACKUP / IMPORT';
   String get settingsTitle => isEs ? 'AJUSTES' : 'SETTINGS';
   String get volume => isEs ? 'VOLUMEN' : 'VOLUME';

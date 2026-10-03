@@ -911,7 +911,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
-                        text: l10n.backupImport,
+                        text: l10n.savegame,
                         onPressed: _showBackupImportOptions,
                         size: BakuganButtonSize.xl,
                         width: buttonWidth,
