@@ -2,7 +2,7 @@
 
 <img src="assets/images/logo.png" alt="Bakugan Companion logo" width="200">
 
-# BAKUGAN COMPANION
+# BAKUGAN COMPANION APP
 
 ### Collect your Bakugan, build your match and battle without the math.
 
@@ -27,8 +27,6 @@ Bakugan Companion is a tool for players and Game Masters who play Bakugan
 in real life. It combines a collection tracker with a complete match and
 battle assistant, keeping the calculations and match state under control
 so everyone can focus on the game.
-
-> You bring the Bakugan. The app handles the battlefield.
 
 ## Features
 
