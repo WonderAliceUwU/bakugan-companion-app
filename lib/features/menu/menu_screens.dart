@@ -872,8 +872,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final availableWidth = min(920.0, constraints.maxWidth);
-                    const gridGap = 16.0;
+                    final availableWidth = min(1080.0, constraints.maxWidth);
+                    const gridGap = 20.0;
                     final buttonWidth = (availableWidth - (gridGap * 2)) / 3;
 
                     final buttons = [
@@ -881,7 +881,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         text: l10n.battle,
                         onPressed: _navigateToBattleMode,
                         width: buttonWidth,
-                        height: 82,
+                        height: 96,
                         gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
@@ -889,7 +889,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         text: l10n.leaderboard,
                         onPressed: _navigateToLeaderboard,
                         width: buttonWidth,
-                        height: 82,
+                        height: 96,
                         gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
@@ -897,7 +897,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         text: l10n.history,
                         onPressed: _navigateToHistory,
                         width: buttonWidth,
-                        height: 82,
+                        height: 96,
                         gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
@@ -905,7 +905,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         text: l10n.inventory,
                         onPressed: _navigateToInventory,
                         width: buttonWidth,
-                        height: 82,
+                        height: 96,
                         color: Colors.cyanAccent,
                         gridOpacity: 0.055,
                         useGradientBorder: false,
@@ -914,7 +914,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         text: l10n.backupImport,
                         onPressed: _showBackupImportOptions,
                         width: buttonWidth,
-                        height: 82,
+                        height: 96,
                         gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
