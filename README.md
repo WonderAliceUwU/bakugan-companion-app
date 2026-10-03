@@ -9,7 +9,7 @@
 <p>A companion app for real-life Bakugan players and Game Masters.</p>
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android%20%7C%20iOS-111827)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Android%20%7C%20iOS-111827)
 ![Status](https://img.shields.io/badge/status-in%20development-F59E0B)
 
 </div>
