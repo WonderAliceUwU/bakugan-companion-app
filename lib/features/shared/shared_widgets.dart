@@ -1569,6 +1569,7 @@ class BakuganModalActionButton extends StatelessWidget {
   final IconData? icon;
   final bool useCancelSound;
   final bool showGrid;
+  final double gridOpacity;
   final bool useGradientBorder;
   final double width;
   final double height;
@@ -1581,6 +1582,7 @@ class BakuganModalActionButton extends StatelessWidget {
     this.icon,
     this.useCancelSound = false,
     this.showGrid = true,
+    this.gridOpacity = 0.1,
     this.useGradientBorder = true,
     this.width = 190,
     this.height = 58,
@@ -1637,7 +1639,7 @@ class BakuganModalActionButton extends StatelessWidget {
                     Positioned.fill(
                       child: CustomPaint(
                         painter: GridPainter(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withValues(alpha: gridOpacity),
                           spacing: 13,
                         ),
                       ),

@@ -882,6 +882,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: _navigateToBattleMode,
                         width: buttonWidth,
                         height: 82,
+                        gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
@@ -889,6 +890,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: _navigateToLeaderboard,
                         width: buttonWidth,
                         height: 82,
+                        gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
@@ -896,6 +898,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: _navigateToHistory,
                         width: buttonWidth,
                         height: 82,
+                        gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
@@ -904,6 +907,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         width: buttonWidth,
                         height: 82,
                         color: Colors.cyanAccent,
+                        gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
@@ -911,6 +915,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: _showBackupImportOptions,
                         width: buttonWidth,
                         height: 82,
+                        gridOpacity: 0.055,
                         useGradientBorder: false,
                       ),
                     ];
