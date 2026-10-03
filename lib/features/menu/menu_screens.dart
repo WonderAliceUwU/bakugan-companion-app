@@ -873,42 +873,40 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final availableWidth = min(920.0, constraints.maxWidth);
-                    final isCompact = availableWidth < 760;
-                    final buttonWidth = isCompact
-                        ? min(420.0, availableWidth)
-                        : (availableWidth - 24) / 2;
+                    const gridGap = 16.0;
+                    final buttonWidth = (availableWidth - (gridGap * 2)) / 3;
 
                     final buttons = [
-                      BakuganButton(
+                      BakuganModalActionButton(
                         text: l10n.battle,
                         onPressed: _navigateToBattleMode,
                         width: buttonWidth,
-                        height: 100,
+                        height: 82,
                       ),
-                      BakuganButton(
+                      BakuganModalActionButton(
                         text: l10n.leaderboard,
                         onPressed: _navigateToLeaderboard,
                         width: buttonWidth,
-                        height: 100,
+                        height: 82,
                       ),
-                      BakuganButton(
+                      BakuganModalActionButton(
                         text: l10n.history,
                         onPressed: _navigateToHistory,
                         width: buttonWidth,
-                        height: 100,
+                        height: 82,
                       ),
-                      BakuganButton(
+                      BakuganModalActionButton(
                         text: l10n.inventory,
                         onPressed: _navigateToInventory,
                         width: buttonWidth,
-                        height: 100,
+                        height: 82,
                         color: Colors.cyanAccent,
                       ),
-                      BakuganButton(
+                      BakuganModalActionButton(
                         text: l10n.backupImport,
                         onPressed: _showBackupImportOptions,
                         width: buttonWidth,
-                        height: 100,
+                        height: 82,
                       ),
                     ];
 
@@ -916,8 +914,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       width: availableWidth,
                       child: Wrap(
                         alignment: WrapAlignment.center,
-                        spacing: 24,
-                        runSpacing: 24,
+                        spacing: gridGap,
+                        runSpacing: gridGap,
                         children: buttons,
                       ),
                     );
