@@ -2,11 +2,10 @@
 
 <img src="assets/images/logo.png" alt="Bakugan Companion logo" width="230">
 
-# BAKUGAN COMPANION APP
 
-### Collect your Bakugan, build your match and battle without the math.
+<img width="4770" height="296" alt="image" src="https://github.com/user-attachments/assets/5da13157-1946-4551-8cca-aa74efa6a2b2" />
 
-<p>A companion app for real-life Bakugan players and Game Masters.</p>
+<p>A fan-made companion app for real-life Bakugan players and game Masters.</p>
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Android%20%7C%20iOS-111827)
