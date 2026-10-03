@@ -380,6 +380,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _powerStartPlayer = AudioPlayer();
     _countTickPlayer = AudioPlayer();
     _revealSfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_powerStartPlayer);
+    AppVolumeController.instance.register(_countTickPlayer);
+    AppVolumeController.instance.register(_revealSfxPlayer);
+    AppVolumeController.instance.register(_battleMusicPlayer);
     _powerAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
@@ -4059,6 +4063,10 @@ class _BattleArenaScreenState extends State<BattleArenaScreen>
     _cardNameController.dispose();
     _cardNameFocusNode.dispose();
     _powerAnimationController.dispose();
+    AppVolumeController.instance.unregister(_powerStartPlayer);
+    AppVolumeController.instance.unregister(_countTickPlayer);
+    AppVolumeController.instance.unregister(_revealSfxPlayer);
+    AppVolumeController.instance.unregister(_battleMusicPlayer);
     _powerStartPlayer.dispose();
     _countTickPlayer.dispose();
     _revealSfxPlayer.dispose();

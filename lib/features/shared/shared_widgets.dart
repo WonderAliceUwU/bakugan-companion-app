@@ -1199,24 +1199,557 @@ class CharacterMiniature extends StatelessWidget {
 
 class GridPainter extends CustomPainter {
   final Color color;
+  final double spacing;
 
-  GridPainter({required this.color});
+  GridPainter({required this.color, this.spacing = 20});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..strokeWidth = 1.0;
-    for (double i = 0; i < size.width; i += 20) {
+    for (double i = 0; i < size.width; i += spacing) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }
-    for (double i = 0; i < size.height; i += 20) {
+    for (double i = 0; i < size.height; i += spacing) {
       canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
     }
   }
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class _PressScale extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onPressed;
+
+  const _PressScale({required this.child, this.onPressed});
+
+  @override
+  State<_PressScale> createState() => _PressScaleState();
+}
+
+class _PressScaleState extends State<_PressScale> {
+  bool _pressed = false;
+
+  void _setPressed(bool pressed) {
+    if (mounted && _pressed != pressed) setState(() => _pressed = pressed);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _setPressed(true),
+      onTap: widget.onPressed,
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.94 : 1,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class BakuganModal extends StatelessWidget {
+  final String title;
+  final Widget child;
+  final List<Widget> actions;
+  final IconData? icon;
+  final Color accentColor;
+  final double width;
+  final bool showGridBackground;
+  final double gridOpacity;
+  final EdgeInsets insetPadding;
+  final EdgeInsets contentPadding;
+  final bool showCloseButton;
+
+  const BakuganModal({
+    super.key,
+    required this.title,
+    required this.child,
+    this.actions = const [],
+    this.icon,
+    this.accentColor = Colors.cyanAccent,
+    this.width = 760,
+    this.showGridBackground = true,
+    this.gridOpacity = 0.035,
+    this.insetPadding = const EdgeInsets.symmetric(
+      horizontal: 32,
+      vertical: 24,
+    ),
+    this.contentPadding = const EdgeInsets.fromLTRB(40, 0, 40, 36),
+    this.showCloseButton = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: insetPadding,
+      child: Transform(
+        alignment: Alignment.center,
+        transformHitTests: true,
+        transform: Matrix4.skewX(-0.12),
+        child: Container(
+          width: width,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                accentColor.withValues(alpha: 0.95),
+                const Color(0xFF1E8D92),
+                const Color(0xFF0B4C53),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.65),
+                blurRadius: 30,
+                offset: const Offset(0, 14),
+              ),
+              BoxShadow(
+                color: accentColor.withValues(alpha: 0.18),
+                blurRadius: 28,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(19),
+                child: Container(
+                  color: const Color(0xFF070C12),
+                  child: Stack(
+                    children: [
+                      if (showGridBackground)
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: GridPainter(
+                              color: accentColor.withValues(alpha: gridOpacity),
+                            ),
+                          ),
+                        ),
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.035),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.18),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.skewX(0.12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    const Color(
+                                      0xFF070C12,
+                                    ).withValues(alpha: 0.96),
+                                    const Color(
+                                      0xFF070C12,
+                                    ).withValues(alpha: 0.82),
+                                    Colors.transparent,
+                                  ],
+                                  stops: const [0, 0.58, 1],
+                                ),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  contentPadding.left + 12,
+                                  22,
+                                  contentPadding.right,
+                                  16,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    if (icon != null) ...[
+                                      Baseline(
+                                        baseline: 29,
+                                        baselineType: TextBaseline.alphabetic,
+                                        child: Transform.translate(
+                                          offset: const Offset(0, 7),
+                                          child: Icon(
+                                            icon!,
+                                            color: accentColor,
+                                            size: 36,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        title.toUpperCase(),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w900,
+                                          fontStyle: FontStyle.italic,
+                                          letterSpacing: 1.5,
+                                          shadows: [
+                                            Shadow(
+                                              color: accentColor,
+                                              blurRadius: 14,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Container(
+                              height: 1.5,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    accentColor.withValues(alpha: 0.48),
+                                    accentColor.withValues(alpha: 0.18),
+                                    Colors.transparent,
+                                  ],
+                                  stops: const [0, 0.38, 1],
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                contentPadding.left,
+                                20,
+                                contentPadding.right,
+                                22,
+                              ),
+                              child: child,
+                            ),
+                            if (actions.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                height: 1.5,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.centerRight,
+                                    end: Alignment.centerLeft,
+                                    colors: [
+                                      accentColor.withValues(alpha: 0.48),
+                                      accentColor.withValues(alpha: 0.18),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0, 0.38, 1],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                height: 76,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: Align(
+                                        alignment: Alignment.centerRight,
+                                        child: FractionallySizedBox(
+                                          widthFactor: 0.55,
+                                          heightFactor: 1,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.centerRight,
+                                                end: Alignment.centerLeft,
+                                                colors: [
+                                                  const Color(
+                                                    0xFF070C12,
+                                                  ).withValues(alpha: 0.94),
+                                                  const Color(
+                                                    0xFF070C12,
+                                                  ).withValues(alpha: 0.58),
+                                                  Colors.transparent,
+                                                ],
+                                                stops: const [0, 0.58, 1],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Padding(
+                                        padding: EdgeInsets.only(
+                                          right: contentPadding.right,
+                                          bottom: 8,
+                                        ),
+                                        child: Wrap(
+                                          alignment: WrapAlignment.end,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          spacing: 14,
+                                          runSpacing: 12,
+                                          children: actions,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (showCloseButton)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Transform.translate(
+                    offset: const Offset(3, -3),
+                    transformHitTests: true,
+                    child: _BakuganModalIconButton(
+                      icon: Icons.close_rounded,
+                      color: Colors.cyanAccent,
+                      backgroundGradient: const LinearGradient(
+                        colors: [Colors.cyanAccent, Colors.cyanAccent],
+                      ),
+                      borderColor: Colors.cyanAccent,
+                      iconColor: Colors.black,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.zero,
+                        topRight: Radius.circular(16),
+                        bottomLeft: Radius.circular(9),
+                        bottomRight: Radius.zero,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      skew: 0,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BakuganModalActionButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+  final Color color;
+  final IconData? icon;
+  final bool useCancelSound;
+  final bool showGrid;
+  final bool useGradientBorder;
+  final double width;
+  final double height;
+
+  const BakuganModalActionButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    this.color = Colors.cyanAccent,
+    this.icon,
+    this.useCancelSound = false,
+    this.showGrid = true,
+    this.useGradientBorder = true,
+    this.width = 190,
+    this.height = 58,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.skewX(-0.12),
+      child: _PressScale(
+        onPressed: () {
+          unawaited(
+            useCancelSound ? _playUiCancelSound() : _playUiConfirmSound(),
+          );
+          onPressed();
+        },
+        child: Container(
+          width: width,
+          height: height,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: useGradientBorder ? null : color.withValues(alpha: 0.72),
+            gradient: useGradientBorder
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color,
+                      color.withValues(alpha: 0.48),
+                      Colors.black,
+                    ],
+                  )
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.22),
+                blurRadius: 14,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(3),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF05080D),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Stack(
+                children: [
+                  if (showGrid)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: GridPainter(
+                          color: color.withValues(alpha: 0.1),
+                          spacing: 13,
+                        ),
+                      ),
+                    ),
+                  Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.skewX(0.12),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (icon != null) ...[
+                            Icon(icon, color: color, size: 21),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            text.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'button_font',
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                              shadows: [Shadow(color: color, blurRadius: 10)],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BakuganModalIconButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+  final double skew;
+  final Gradient? backgroundGradient;
+  final Color? borderColor;
+  final Color? iconColor;
+  final BorderRadius borderRadius;
+
+  const _BakuganModalIconButton({
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    this.skew = -0.12,
+    this.backgroundGradient,
+    this.borderColor,
+    this.iconColor,
+    this.borderRadius = const BorderRadius.all(Radius.circular(9)),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform(
+      alignment: Alignment.center,
+      transformHitTests: false,
+      transform: Matrix4.skewX(skew),
+      child: Container(
+        width: 48,
+        height: 44,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: backgroundGradient == null
+              ? Colors.black.withValues(alpha: 0.7)
+              : null,
+          gradient: backgroundGradient,
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: borderColor ?? color.withValues(alpha: 0.8),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.28),
+              blurRadius: 14,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Transform(
+                alignment: Alignment.center,
+                transformHitTests: false,
+                transform: Matrix4.skewX(0.08),
+                child: _PressScale(
+                  onPressed: onPressed,
+                  child: SizedBox.expand(
+                    child: Center(
+                      child: Icon(icon, color: iconColor ?? color, size: 24),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class DescriptionHeaderActionButton extends StatelessWidget {

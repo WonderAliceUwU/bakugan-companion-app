@@ -279,6 +279,12 @@ void main() {
       expect(nextStore.archivedSeasons.first.seasonNumber, 2);
       expect(nextStore.archivedSeasons.first.leaderboard.players, hasLength(1));
       expect(nextStore.archivedSeasons.first.finalizedAt, isNotNull);
+
+      final startedStore = await repo.startCurrentSeason();
+      expect(
+        startedStore.currentLeaderboard.players.map((entry) => entry.name),
+        contains('Dan'),
+      );
     },
   );
 }

@@ -94,6 +94,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
   void initState() {
     super.initState();
     _sfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_sfxPlayer);
     playerCount = widget.isTeamBattle ? 4 : 2;
     _playMenuMusic();
     unawaited(_loadSavedPlayers());
@@ -112,7 +113,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
   Future<void> _playTitleMusic() async {
     try {
       await _bgMusicPlayer.stop();
-      await _bgMusicPlayer.setVolume(0.3);
+      await _setAppPlayerBaseVolume(_bgMusicPlayer, 0.3);
       await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
       await _bgMusicPlayer.play(AssetSource('music/menu/Title.mp3'));
     } catch (error, stackTrace) {
@@ -244,7 +245,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                             fillColor: Colors.black.withValues(alpha: 0.28),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: Colors.white24),
+                              borderSide: const BorderSide(
+                                color: Colors.white24,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -260,16 +263,15 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                           height: 224,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.only(
-                              left: 26,
-                              right: 16,
-                            ),
+                            padding: const EdgeInsets.only(left: 26, right: 16),
                             itemCount: characters.length,
                             itemBuilder: (context, index) {
                               final character = characters[index];
                               return Padding(
                                 padding: EdgeInsets.only(
-                                  right: index == characters.length - 1 ? 0 : 18,
+                                  right: index == characters.length - 1
+                                      ? 0
+                                      : 18,
                                 ),
                                 child: SizedBox(
                                   width: 188,
@@ -338,8 +340,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                               ),
                               onPressed: () {
                                 _playClick();
-                                final sanitized =
-                                    _sanitizePlayerName(controller.text);
+                                final sanitized = _sanitizePlayerName(
+                                  controller.text,
+                                );
                                 if (sanitized.isEmpty) {
                                   _showCharacterSelectMessage(
                                     AppLocalizations.current.enterNameMsg(),
@@ -400,7 +403,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
   void _onOkPressed() {
     final currentPlayer = _currentSelectedPlayer;
     if (currentPlayer == null) {
-      _showCharacterSelectMessage('Select, invite, or register a player first.');
+      _showCharacterSelectMessage(
+        'Select, invite, or register a player first.',
+      );
       return;
     }
     if (currentPlayerIndex < playerCount - 1) {
@@ -411,7 +416,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
         (i) => _selectedPlayers[i]?.name ?? '',
       );
       if (currentNames.any((name) => name.isEmpty)) {
-        _showCharacterSelectMessage('Every player slot needs a selected profile.');
+        _showCharacterSelectMessage(
+          'Every player slot needs a selected profile.',
+        );
         return;
       }
       final uniqueKeys = currentNames.map(_playerNameKey).toSet();
@@ -442,6 +449,7 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
 
   @override
   void dispose() {
+    AppVolumeController.instance.unregister(_sfxPlayer);
     _sfxPlayer.dispose();
     super.dispose();
   }
@@ -504,8 +512,11 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                             char: _selectedPlayers[i]?.character,
                             isActive: i == currentPlayerIndex,
                             isBlue: i % 2 == 0,
-                            isSavedProfile: _selectedPlayers[i] != null &&
-                                _savedProfileByName(_selectedPlayers[i]!.name) !=
+                            isSavedProfile:
+                                _selectedPlayers[i] != null &&
+                                _savedProfileByName(
+                                      _selectedPlayers[i]!.name,
+                                    ) !=
                                     null,
                           ),
                         ),
@@ -561,8 +572,9 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                                 title: l10n.invite,
                                 subtitle: l10n.temporaryPlayer,
                                 accent: Colors.orangeAccent,
-                                onTap: () =>
-                                    _openPlayerProfilePrompt(saveProfile: false),
+                                onTap: () => _openPlayerProfilePrompt(
+                                  saveProfile: false,
+                                ),
                               );
                             }
                             if (index == 1) {
@@ -590,7 +602,8 @@ class _CharacterSelectScreenState extends State<CharacterSelectScreen> {
                                 child: CharacterMiniature(
                                   char: profile.character,
                                   isSelected:
-                                      currentKey == _playerNameKey(profile.name),
+                                      currentKey ==
+                                      _playerNameKey(profile.name),
                                   label: profile.name,
                                 ),
                               ),

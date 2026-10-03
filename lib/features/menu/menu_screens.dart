@@ -21,9 +21,11 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
     super.initState();
     loadAvailableBakugans();
     _sfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_sfxPlayer);
     _controller = VideoPlayerController.asset(
       'assets/video/bakugan_opening.mp4',
     );
+    AppVolumeController.instance.registerVideo(_controller);
     _initializeVideo();
     _controller.addListener(_videoListener);
   }
@@ -36,7 +38,7 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
           _controller.value.errorDescription ?? 'video initialization failed',
         );
       }
-      await _controller.setVolume(0.5);
+      await _setAppVideoBaseVolume(_controller, 0.5);
       if (!mounted) return;
       setState(() {});
       await _controller.play();
@@ -69,13 +71,16 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
     if (!_controller.value.isInitialized) {
       return const CircularProgressIndicator(color: Colors.red);
     }
-    return SizedBox.expand(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: _controller.value.size.width,
-          height: _controller.value.size.height,
-          child: VideoPlayer(_controller),
+    return Center(
+      child: AspectRatio(
+        aspectRatio: _controller.value.aspectRatio,
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: _controller.value.size.width,
+            height: _controller.value.size.height,
+            child: VideoPlayer(_controller),
+          ),
         ),
       ),
     );
@@ -108,7 +113,9 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
   @override
   void dispose() {
     _controller.removeListener(_videoListener);
+    AppVolumeController.instance.unregisterVideo(_controller);
     _controller.dispose();
+    AppVolumeController.instance.unregister(_sfxPlayer);
     _sfxPlayer.dispose();
     super.dispose();
   }
@@ -474,41 +481,6 @@ class _LanguageSettingsDialogState extends State<LanguageSettingsDialog> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.info_outline_rounded,
-                          color: Colors.white70,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            l10n.untranslatedNote,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.75),
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              height: 1.3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   Align(
                     alignment: Alignment.centerRight,
                     child: ElevatedButton.icon(
@@ -612,13 +584,14 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   void initState() {
     super.initState();
     _sfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_sfxPlayer);
     _playBackgroundMusic('music/menu/Title.mp3');
   }
 
   Future<void> _playBackgroundMusic(String asset) async {
     try {
       await _bgMusicPlayer.stop();
-      await _bgMusicPlayer.setVolume(0.3);
+      await _setAppPlayerBaseVolume(_bgMusicPlayer, 0.3);
       await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
       await _bgMusicPlayer.play(AssetSource(asset));
     } catch (error, stackTrace) {
@@ -872,27 +845,15 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     );
   }
 
-  Future<void> _showLanguageSettingsDialog() async {
-    _playUiConfirmSound();
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return const LanguageSettingsDialog();
-      },
-    );
-  }
-
   @override
   void dispose() {
+    AppVolumeController.instance.unregister(_sfxPlayer);
     _sfxPlayer.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = LanguageScope.of(context);
-    final uiLang = controller.uiLanguage;
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
@@ -905,64 +866,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         ),
         child: Stack(
           children: [
-            Positioned(
-              top: 36,
-              right: 36,
-              child: GestureDetector(
-                onTap: _showLanguageSettingsDialog,
-                child: Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.skewX(-0.10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.cyanAccent.withValues(alpha: 0.85),
-                        width: 1.8,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.cyanAccent.withValues(alpha: 0.25),
-                          blurRadius: 18,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.skewX(0.10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          LanguageFlag(language: uiLang),
-                          const SizedBox(width: 8),
-                          Text(
-                            uiLang.code.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_drop_down_rounded,
-                            color: Colors.cyanAccent,
-                            size: 26,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
@@ -1064,6 +967,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Future<void> _startPlayerSeason(String name) async {
     await LeaderboardRepository.instance.startPlayerSeason(name);
+    await _reload();
+  }
+
+  Future<void> _startCurrentSeason() async {
+    await LeaderboardRepository.instance.startCurrentSeason();
     await _reload();
   }
 
@@ -1382,10 +1290,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _buildEloPauseOverlay() {
-    final l10n = AppLocalizations.of(context);
+  Widget _buildLeaderboardStateOverlay({
+    required Widget child,
+    required bool ignorePointer,
+    Color? borderColor,
+    bool straightenChild = true,
+  }) {
     return Positioned.fill(
       child: IgnorePointer(
+        ignoring: ignorePointer,
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
@@ -1403,7 +1316,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.78),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.orangeAccent, width: 3),
+                      border: borderColor == null
+                          ? null
+                          : Border.all(color: borderColor, width: 3),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black87,
@@ -1412,26 +1327,53 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         ),
                       ],
                     ),
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.skewX(0.10),
-                      child: Text(
-                        l10n.eloPausedTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 42,
-                          fontWeight: FontWeight.w900,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: 2.2,
-                        ),
-                      ),
-                    ),
+                    child: straightenChild
+                        ? Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.skewX(0.10),
+                            child: child,
+                          )
+                        : child,
                   ),
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEloPauseOverlay() {
+    final l10n = AppLocalizations.of(context);
+    return _buildLeaderboardStateOverlay(
+      ignorePointer: true,
+      borderColor: Colors.orangeAccent,
+      child: Text(
+        l10n.eloPausedTitle,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 42,
+          fontWeight: FontWeight.w900,
+          fontStyle: FontStyle.italic,
+          letterSpacing: 2.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeasonStartOverlay() {
+    final l10n = AppLocalizations.of(context);
+    return _buildLeaderboardStateOverlay(
+      ignorePointer: false,
+      straightenChild: false,
+      child: BakuganButton(
+        text: l10n.startSeason,
+        onPressed: () => unawaited(_startCurrentSeason()),
+        width: 300,
+        height: 72,
+        color: Colors.cyanAccent,
+        textFontSize: 22,
       ),
     );
   }
@@ -1543,10 +1485,29 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             break;
                           }
                         }
-                        final seasonData = selectedSeason.leaderboard;
+                        final storedSeasonData = selectedSeason.leaderboard;
                         final isCurrentSeason =
                             selectedSeason.seasonNumber ==
                             store.currentSeasonNumber;
+                        final isSeasonWaitingToStart =
+                            isCurrentSeason &&
+                            storedSeasonData.players.isEmpty &&
+                            storedSeasonData.savedPlayers.isNotEmpty;
+                        final seasonData = isSeasonWaitingToStart
+                            ? storedSeasonData.copyWith(
+                                players: [
+                                  for (final profile
+                                      in storedSeasonData.savedPlayers)
+                                    LeaderboardEntry(
+                                      name: profile.name,
+                                      wins: 0,
+                                      points: 1000,
+                                      matches: 0,
+                                      gateCardsWon: 0,
+                                    ),
+                                ],
+                              )
+                            : storedSeasonData;
                         if (seasonData.players.isEmpty) {
                           return _buildSeasonStartPrompt(
                             context: context,
@@ -1800,6 +1761,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                             children: [
                                               const Spacer(),
                                               if (isCurrentSeason &&
+                                                  !isSeasonWaitingToStart &&
                                                   seasonData.savedPlayers.any(
                                                     (profile) =>
                                                         !seasonData.players.any(
@@ -1840,7 +1802,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                                     l10n.startPlayerElo,
                                                   ),
                                                 ),
-                                              if (isCurrentSeason)
+                                              if (isCurrentSeason &&
+                                                  !isSeasonWaitingToStart)
                                                 TextButton.icon(
                                                   style: TextButton.styleFrom(
                                                     foregroundColor:
@@ -1876,7 +1839,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                                         : l10n.pauseElo,
                                                   ),
                                                 ),
-                                              if (isCurrentSeason)
+                                              if (isCurrentSeason &&
+                                                  !isSeasonWaitingToStart)
                                                 TextButton.icon(
                                                   style: TextButton.styleFrom(
                                                     foregroundColor:
@@ -1900,44 +1864,46 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                                   ),
                                                   label: Text(l10n.endSeason),
                                                 ),
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      !isCurrentSeason
-                                                      ? Colors.white38
-                                                      : _isEditingLeaderboard
-                                                      ? Colors.orangeAccent
-                                                      : Colors.cyanAccent,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 8,
-                                                      ),
-                                                  textStyle: const TextStyle(
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.8,
+                                              if (!isSeasonWaitingToStart)
+                                                TextButton.icon(
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor:
+                                                        !isCurrentSeason
+                                                        ? Colors.white38
+                                                        : _isEditingLeaderboard
+                                                        ? Colors.orangeAccent
+                                                        : Colors.cyanAccent,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 8,
+                                                        ),
+                                                    textStyle: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: 0.8,
+                                                    ),
+                                                  ),
+                                                  onPressed: isCurrentSeason
+                                                      ? () {
+                                                          setState(() {
+                                                            _isEditingLeaderboard =
+                                                                !_isEditingLeaderboard;
+                                                          });
+                                                        }
+                                                      : null,
+                                                  icon: Icon(
+                                                    _isEditingLeaderboard
+                                                        ? Icons.close_rounded
+                                                        : Icons.edit_rounded,
+                                                    size: 18,
+                                                  ),
+                                                  label: Text(
+                                                    _isEditingLeaderboard
+                                                        ? 'DONE'
+                                                        : 'EDIT',
                                                   ),
                                                 ),
-                                                onPressed: isCurrentSeason
-                                                    ? () {
-                                                        setState(() {
-                                                          _isEditingLeaderboard =
-                                                              !_isEditingLeaderboard;
-                                                        });
-                                                      }
-                                                    : null,
-                                                icon: Icon(
-                                                  _isEditingLeaderboard
-                                                      ? Icons.close_rounded
-                                                      : Icons.edit_rounded,
-                                                  size: 18,
-                                                ),
-                                                label: Text(
-                                                  _isEditingLeaderboard
-                                                      ? 'DONE'
-                                                      : 'EDIT',
-                                                ),
-                                              ),
                                             ],
                                           ),
                                           const SizedBox(height: 8),
@@ -1979,7 +1945,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                                     );
                                                   },
                                                 ),
-                                                if (_isEloPaused)
+                                                if (isSeasonWaitingToStart)
+                                                  _buildSeasonStartOverlay()
+                                                else if (_isEloPaused)
                                                   _buildEloPauseOverlay(),
                                               ],
                                             ),
@@ -3402,6 +3370,7 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
   void initState() {
     super.initState();
     _sfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_sfxPlayer);
   }
 
   void _playCancel() async {
@@ -3411,6 +3380,7 @@ class _BattleModeScreenState extends State<BattleModeScreen> {
 
   @override
   void dispose() {
+    AppVolumeController.instance.unregister(_sfxPlayer);
     _sfxPlayer.dispose();
     super.dispose();
   }

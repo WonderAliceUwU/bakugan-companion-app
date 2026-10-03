@@ -29,7 +29,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   List<String> _arenaPlaylist = const [];
   int _currentArenaTrackIndex = 0;
   int _currentArenaTrackLoopCount = 0;
-  bool _isArenaMuted = false;
   bool _useArenaPlayerA = true;
   bool _isArenaCrossfading = false;
   AbilityCard? _focusedMatchAbilityCard;
@@ -67,6 +66,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   void initState() {
     super.initState();
     _sfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_sfxPlayer);
+    AppVolumeController.instance.register(_arenaPlayerA);
+    AppVolumeController.instance.register(_arenaPlayerB);
     scores = widget.isTeamBattle
         ? [0, 0]
         : List.filled(widget.players.length, 0);
@@ -137,7 +139,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   Future<void> _setArenaPlayerVolume(AudioPlayer player, double volume) async {
     try {
-      await player.setVolume(_isArenaMuted ? 0 : volume);
+      await _setAppPlayerBaseVolume(player, volume);
     } catch (_) {}
   }
 
@@ -216,9 +218,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 
   Future<void> _toggleArenaMute() async {
-    setState(() => _isArenaMuted = !_isArenaMuted);
-    await _setArenaPlayerVolume(_arenaPlayerA, _useArenaPlayerA ? 0.4 : 0);
-    await _setArenaPlayerVolume(_arenaPlayerB, _useArenaPlayerA ? 0 : 0.4);
+    await AppVolumeController.instance.toggleMute();
   }
 
   Future<void> _playMatchWinSound() async {
@@ -825,9 +825,16 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                       ],
                     ),
                   ),
-                  _buildPlaylistIconButton(
-                    icon: _isArenaMuted ? Icons.volume_off : Icons.volume_up,
-                    onTap: _toggleArenaMute,
+                  ListenableBuilder(
+                    listenable: AppVolumeController.instance,
+                    builder: (context, _) => _buildPlaylistIconButton(
+                      icon:
+                          AppVolumeController.instance.isMuted ||
+                              AppVolumeController.instance.volume == 0
+                          ? Icons.volume_off
+                          : Icons.volume_up,
+                      onTap: _toggleArenaMute,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   _buildPlaylistIconButton(
@@ -1827,7 +1834,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     final normalized = name.trim().toLowerCase();
     for (final card in _matchAbilityCards.values) {
       if (card.name.trim().toLowerCase() == normalized) {
-        return MatchHistoryCardEntry(name: card.name, imagePath: card.imagePath);
+        return MatchHistoryCardEntry(
+          name: card.name,
+          imagePath: card.imagePath,
+        );
       }
     }
     return MatchHistoryCardEntry(
@@ -2141,6 +2151,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   void dispose() {
     _matchCardNameController.dispose();
     _matchCardNameFocusNode.dispose();
+    AppVolumeController.instance.unregister(_arenaPlayerA);
+    AppVolumeController.instance.unregister(_arenaPlayerB);
+    AppVolumeController.instance.unregister(_sfxPlayer);
     _arenaPlayerA.dispose();
     _arenaPlayerB.dispose();
     _sfxPlayer.dispose();
@@ -2442,12 +2455,15 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                       ? (resultMap['externalAbilitiesUsed']
                                                 as List)
                                             .map((entry) {
-                                              if (entry is MatchHistoryCardEntry) {
+                                              if (entry
+                                                  is MatchHistoryCardEntry) {
                                                 return entry;
                                               }
                                               if (entry is Map) {
                                                 return MatchHistoryCardEntry.fromJson(
-                                                  Map<String, dynamic>.from(entry),
+                                                  Map<String, dynamic>.from(
+                                                    entry,
+                                                  ),
                                                 );
                                               }
                                               return MatchHistoryCardEntry(
@@ -2533,7 +2549,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                                 rightBakugan?.texturePath,
                                             imagePath:
                                                 rightBakuganSpecies.isEmpty ||
-                                                    rightBakuganAttribute.isEmpty
+                                                    rightBakuganAttribute
+                                                        .isEmpty
                                                 ? ''
                                                 : _historyBakuganImagePath(
                                                     speciesName:
@@ -2551,7 +2568,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                                               .toList(),
                                         ),
                                         winnerName: winningPlayer?.name,
-                                        revealedGateCard: revealedGateCard == null
+                                        revealedGateCard:
+                                            revealedGateCard == null
                                             ? null
                                             : MatchHistoryCardEntry(
                                                 name: revealedGateCard.name,

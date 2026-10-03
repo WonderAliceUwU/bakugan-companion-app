@@ -45,6 +45,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
   void initState() {
     super.initState();
     _sfxPlayer = AudioPlayer();
+    AppVolumeController.instance.register(_sfxPlayer);
     unawaited(_loadInventoryConfiguration());
   }
 
@@ -514,6 +515,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
 
   @override
   void dispose() {
+    AppVolumeController.instance.unregister(_sfxPlayer);
     _sfxPlayer.dispose();
     super.dispose();
   }

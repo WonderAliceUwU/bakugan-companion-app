@@ -1150,6 +1150,31 @@ class LeaderboardRepository {
     return updated.currentLeaderboard;
   }
 
+  Future<LeaderboardStore> startCurrentSeason() async {
+    final store = await loadStore();
+    final data = store.currentLeaderboard;
+    final playersByKey = {
+      for (final entry in data.players) _playerNameKey(entry.name): entry,
+    };
+
+    for (final profile in data.savedPlayers) {
+      final key = _playerNameKey(profile.name);
+      playersByKey[key] ??= LeaderboardEntry(
+        name: profile.name,
+        wins: 0,
+        points: _defaultLeaderboardPoints,
+        matches: 0,
+        gateCardsWon: 0,
+      );
+    }
+
+    final updated = await _persistCurrentLeaderboard(
+      store,
+      data.copyWith(players: playersByKey.values.toList()),
+    );
+    return updated;
+  }
+
   Future<LeaderboardStore> setEloPaused(bool isPaused) async {
     final store = await loadStore();
     return _persistStore(store.copyWith(isEloPaused: isPaused));

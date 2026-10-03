@@ -149,7 +149,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _playStoreMusic() async {
     try {
       await _bgMusicPlayer.stop();
-      await _bgMusicPlayer.setVolume(0.3);
+      await _setAppPlayerBaseVolume(_bgMusicPlayer, 0.3);
       await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
       await _bgMusicPlayer.play(AssetSource('music/menu/Store.mp3'));
     } catch (error, stackTrace) {

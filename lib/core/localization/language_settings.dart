@@ -238,6 +238,9 @@ class AppLocalizations {
   String get history => isEs ? 'HISTORIAL' : 'HISTORY';
   String get inventory => isEs ? 'INVENTARIO' : 'INVENTORY';
   String get backupImport => isEs ? 'COPIA / IMPORTAR' : 'BACKUP / IMPORT';
+  String get settingsTitle => isEs ? 'AJUSTES' : 'SETTINGS';
+  String get volume => isEs ? 'VOLUMEN' : 'VOLUME';
+  String get languageLabel => isEs ? 'IDIOMA' : 'LANGUAGE';
   String get languageSettingsTitle =>
       isEs ? 'CONFIGURACIÓN DE IDIOMA' : 'LANGUAGE SETTINGS';
   String get uiLanguageLabel => isEs ? 'Idioma de la UI' : 'UI Language';
@@ -402,7 +405,6 @@ class AppLocalizations {
       isEs ? 'Habilidades Prohibidas' : 'Abilities Forbidden';
   String get noDescription =>
       isEs ? 'Sin descripción disponible.' : 'No description available.';
-  String get untranslatedNote => isEs
-      ? 'Nota: Los nombres de Bakugan y los atributos (Pyrus, Aquos, Subterra, Haos, Darkus, Ventus) no se traducen.'
-      : 'Note: Bakugan names and attributes (Pyrus, Aquos, Subterra, Haos, Darkus, Ventus) remain untranslated.';
+  String get muteAudio => isEs ? 'SILENCIAR AUDIO' : 'MUTE AUDIO';
+  String get unmuteAudio => isEs ? 'ACTIVAR AUDIO' : 'UNMUTE AUDIO';
 }

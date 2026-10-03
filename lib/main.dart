@@ -52,6 +52,20 @@ Future<void> _playUiConfirmSound() async {
   } catch (_) {}
 }
 
+Future<void> _setAppPlayerBaseVolume(
+  AudioPlayer player,
+  double baseVolume,
+) async {
+  await AppVolumeController.instance.setBaseVolume(player, baseVolume);
+}
+
+Future<void> _setAppVideoBaseVolume(
+  VideoPlayerController player,
+  double baseVolume,
+) async {
+  await AppVolumeController.instance.setVideoBaseVolume(player, baseVolume);
+}
+
 Future<void> _playUiCancelSound() async {
   try {
     await _uiCancelPlayer.stop();
@@ -62,8 +76,15 @@ Future<void> _playUiCancelSound() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isWindows) {
-    fvp.registerWith(options: {'platforms': ['windows']});
+    fvp.registerWith(
+      options: {
+        'platforms': ['windows'],
+      },
+    );
   }
+  AppVolumeController.instance.register(_bgMusicPlayer);
+  AppVolumeController.instance.register(_uiConfirmPlayer);
+  AppVolumeController.instance.register(_uiCancelPlayer);
   try {
     await _bgMusicPlayer.stop();
   } catch (_) {}
