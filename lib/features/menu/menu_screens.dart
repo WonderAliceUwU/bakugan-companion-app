@@ -882,18 +882,21 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         onPressed: _navigateToBattleMode,
                         width: buttonWidth,
                         height: 82,
+                        useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
                         text: l10n.leaderboard,
                         onPressed: _navigateToLeaderboard,
                         width: buttonWidth,
                         height: 82,
+                        useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
                         text: l10n.history,
                         onPressed: _navigateToHistory,
                         width: buttonWidth,
                         height: 82,
+                        useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
                         text: l10n.inventory,
@@ -901,12 +904,14 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                         width: buttonWidth,
                         height: 82,
                         color: Colors.cyanAccent,
+                        useGradientBorder: false,
                       ),
                       BakuganModalActionButton(
                         text: l10n.backupImport,
                         onPressed: _showBackupImportOptions,
                         width: buttonWidth,
                         height: 82,
+                        useGradientBorder: false,
                       ),
                     ];
 
