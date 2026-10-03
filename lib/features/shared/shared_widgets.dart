@@ -1562,6 +1562,49 @@ class BakuganModal extends StatelessWidget {
   }
 }
 
+enum BakuganButtonSize { s, m, l, xl }
+
+extension BakuganButtonSizeValues on BakuganButtonSize {
+  double get defaultWidth {
+    switch (this) {
+      case BakuganButtonSize.s:
+        return 150;
+      case BakuganButtonSize.m:
+        return 190;
+      case BakuganButtonSize.l:
+        return 240;
+      case BakuganButtonSize.xl:
+        return 300;
+    }
+  }
+
+  double get defaultHeight {
+    switch (this) {
+      case BakuganButtonSize.s:
+        return 44;
+      case BakuganButtonSize.m:
+        return 58;
+      case BakuganButtonSize.l:
+        return 72;
+      case BakuganButtonSize.xl:
+        return 96;
+    }
+  }
+
+  double get defaultTextFontSize {
+    switch (this) {
+      case BakuganButtonSize.s:
+        return 16;
+      case BakuganButtonSize.m:
+        return 19;
+      case BakuganButtonSize.l:
+        return 22;
+      case BakuganButtonSize.xl:
+        return 25;
+    }
+  }
+}
+
 class BakuganModalActionButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -1571,8 +1614,10 @@ class BakuganModalActionButton extends StatelessWidget {
   final bool showGrid;
   final double gridOpacity;
   final bool useGradientBorder;
-  final double width;
-  final double height;
+  final BakuganButtonSize size;
+  final double? width;
+  final double? height;
+  final double? textFontSize;
 
   const BakuganModalActionButton({
     super.key,
@@ -1584,12 +1629,17 @@ class BakuganModalActionButton extends StatelessWidget {
     this.showGrid = true,
     this.gridOpacity = 0.1,
     this.useGradientBorder = true,
-    this.width = 190,
-    this.height = 58,
+    this.size = BakuganButtonSize.m,
+    this.width,
+    this.height,
+    this.textFontSize,
   });
 
   @override
   Widget build(BuildContext context) {
+    final buttonWidth = width ?? size.defaultWidth;
+    final buttonHeight = height ?? size.defaultHeight;
+    final buttonTextFontSize = textFontSize ?? size.defaultTextFontSize;
     return Transform(
       alignment: Alignment.center,
       transform: Matrix4.skewX(-0.12),
@@ -1601,8 +1651,8 @@ class BakuganModalActionButton extends StatelessWidget {
           onPressed();
         },
         child: Container(
-          width: width,
-          height: height,
+          width: buttonWidth,
+          height: buttonHeight,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -1661,7 +1711,7 @@ class BakuganModalActionButton extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: 'button_font',
                               color: Colors.white,
-                              fontSize: 19,
+                              fontSize: buttonTextFontSize,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.8,
                               shadows: [Shadow(color: color, blurRadius: 10)],
