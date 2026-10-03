@@ -1,6 +1,6 @@
 <div align="center">
 
-![Bakugan Companion logo](assets/images/logo.png)
+<img src="assets/images/logo.png" alt="Bakugan Companion logo" width="180">
 
 # BAKUGAN COMPANION
 
