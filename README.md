@@ -3,8 +3,8 @@
 <img src="assets/images/logo.png" alt="Bakugan Companion logo" width="230">
 
 
-<img src="https://github.com/user-attachments/assets/64da306d-b1bb-4396-970c-d2f0c7e59380" 
-     alt="collect-your-bakugan-build-your-match-and-battle" 
+<img src="assets/readme_assets/battle-without-the-math.png"
+     alt="battle-without-the-math"
      style="max-width: 100%; height: auto;" 
      width="800" />
      
@@ -19,7 +19,7 @@
 <br>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/0bf05186-172f-4a21-a589-04e9484e60eb" width="800" style="max-width: 100%; height: auto;" alt="Bakugan Companion overview" />
+  <img src="assets/readme_assets/what-is-bakugan-companion.png" width="800" style="max-width: 100%; height: auto;" alt="Bakugan Companion overview" />
 </p>
 
 Bakugan Companion is a tool for players and Game Masters who play Bakugan
@@ -28,10 +28,10 @@ battle assistant, keeping the calculations and match state under control
 so everyone can focus on the game.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/d609137f-72a0-4e13-a192-a53845151851" alt="home screen" width="700"/>
+  <img src="assets/readme_assets/home.jpeg" alt="home screen" width="700"/>
 </p>
 
-<img src="https://github.com/user-attachments/assets/1f7bd296-4d3f-4f9d-8a64-0137b8a681bd" alt="Track yout collection" width="700"/>
+<img src="assets/readme_assets/track-your-collection.png" alt="Track yout collection" width="700"/>
 
 Keep track of the Bakugan and cards in your physical collection.
 Browse them by attribute, type, and variant.
@@ -43,7 +43,7 @@ Browse them by attribute, type, and variant.
   <img src="docs/screenshots/card-inventory.png" alt="Card inventory" width="360" style="max-width: 100%; height: auto;">
 </p>
 
-<img src="https://github.com/user-attachments/assets/be380fad-bc36-4eaa-bf16-40dae6eb3b92" alt="Set-up your match" width="700"/>
+<img src="assets/readme_assets/set-up-your-match.png" alt="Set-up your match" width="700"/>
 
 Prepare a complete match before playing: choose the format, players,
 teams, and Bakugan taking part in the battle.
@@ -55,7 +55,7 @@ teams, and Bakugan taking part in the battle.
   <img src="docs/screenshots/one-vs-one.png" alt="1 vs 1 setup" width="360" style="max-width: 100%; height: auto;">
 </p>
 
-<img src="https://github.com/user-attachments/assets/fdfeec6d-ecc4-41fd-841a-96361e402d8e" alt="Battles fully automated" width="700"/>
+<img src="assets/readme_assets/battles-fully-automated.png" alt="Battles fully automated" width="700"/>
 
 Run 1 vs 1 and team battles without reaching for a calculator. The app
 tracks the battle state and handles power changes, bonuses, abilities,
@@ -68,7 +68,7 @@ and swaps as the action unfolds. It also has a music playlist with all the origi
   <img src="docs/screenshots/team-battle.png" alt="Team battle" width="360" style="max-width: 100%; height: auto;">
 </p>
 
-<img src="https://github.com/user-attachments/assets/98da7831-80dc-4058-8554-4914c196366d" alt="Seasons and elo" width="700"/>
+<img src="assets/readme_assets/seasons-and-elo.png" alt="Seasons and elo" width="700"/>
 
 Organize your games into seasons and follow player progression with an
 ELO rating system.
@@ -79,7 +79,7 @@ ELO rating system.
 </p>
 
 
-<img src="https://github.com/user-attachments/assets/a9056ae3-e7c0-487b-9632-ee73a902f6fd" alt="Match history" width="700"/>
+<img src="assets/readme_assets/match-history.png" alt="Match history" width="700"/>
 
 Review previous matches, results, players, and battle details so every
 session becomes part of your play history.
@@ -90,7 +90,7 @@ session becomes part of your play history.
 </p>
 
 
-<img src="https://github.com/user-attachments/assets/38c050c1-b937-413e-abf4-bc5d4a8c8c2d" alt="Savegame system" width="700"/>
+<img src="assets/readme_assets/savegame-system.png" alt="Savegame system" width="700"/>
 
 
 Back up and restore saved matches so tournament and campaign data stays
@@ -101,7 +101,7 @@ safe across devices or installations.
   <img src="docs/screenshots/backup.png" alt="Backup system" width="360" style="max-width: 100%; height: auto;">
 </p>
 
-<img src="https://github.com/user-attachments/assets/d525a0d4-c20e-45f1-addb-5fddc9739a2d" alt="Credits" width="700"/>
+<img src="assets/readme_assets/credits.png" alt="Credits" width="700"/>
 
 3D Models thanks to MrZangestsu and sprites thanks to Jeppa <3.
 Built with Flutter and made for the Bakugan community.
