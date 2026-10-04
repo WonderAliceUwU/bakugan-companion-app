@@ -18,11 +18,6 @@
 
 <br>
 
-<!-- Replace this placeholder with a wide screenshot or GIF of the app in action. -->
-<p align="center">
-  <img src="docs/screenshots/hero.png" alt="Bakugan Companion battle overview" width="900" style="max-width: 100%; height: auto;">
-</p>
-
 <p align="center">
   <img src="https://github.com/user-attachments/assets/0bf05186-172f-4a21-a589-04e9484e60eb" width="800" style="max-width: 100%; height: auto;" alt="Bakugan Companion overview" />
 </p>
@@ -31,6 +26,10 @@ Bakugan Companion is a tool for players and Game Masters who play Bakugan
 in real life. It combines a collection tracker with a complete match and
 battle assistant, keeping the calculations and match state under control
 so everyone can focus on the game.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/d609137f-72a0-4e13-a192-a53845151851" alt="home screen" width="700"/>
+</p>
 
 <img src="https://github.com/user-attachments/assets/1f7bd296-4d3f-4f9d-8a64-0137b8a681bd" alt="Track yout collection" width="700"/>
 
