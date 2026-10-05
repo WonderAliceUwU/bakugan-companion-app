@@ -790,6 +790,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                         child: PageView.builder(
                           controller: _carouselController,
                           padEnds: false,
+                          clipBehavior: Clip.none,
                           itemCount: visibleBakugans.length,
                           itemBuilder: (context, index) {
                             final item = visibleBakugans[index];
@@ -1652,6 +1653,7 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                   child: PageView.builder(
                                     controller: _carouselController,
                                     padEnds: false,
+                                    clipBehavior: Clip.none,
                                     itemCount: visibleBakugans.length,
                                     itemBuilder: (context, idx) => GestureDetector(
                                       behavior: HitTestBehavior.opaque,
