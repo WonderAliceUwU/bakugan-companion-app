@@ -801,14 +801,21 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 7,
                                 ),
-                                child: BakuganPreview(
-                                  key: ValueKey(
-                                    'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                                child: AnimatedScale(
+                                  scale: selectedBakuganIndex == index
+                                      ? 1.1
+                                      : 1.0,
+                                  duration: const Duration(milliseconds: 180),
+                                  curve: Curves.easeOut,
+                                  child: BakuganPreview(
+                                    key: ValueKey(
+                                      'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
+                                    ),
+                                    variant: variant,
+                                    isSelected: selectedBakuganIndex == index,
+                                    speciesName: item.name,
+                                    autoRotate: false,
                                   ),
-                                  variant: variant,
-                                  isSelected: selectedBakuganIndex == index,
-                                  speciesName: item.name,
-                                  autoRotate: false,
                                 ),
                               ),
                             );
@@ -1655,17 +1662,26 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 15,
                                         ),
-                                        child: BakuganPreview(
-                                          key: ValueKey(
-                                            'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
+                                        child: AnimatedScale(
+                                          scale: selectedBakuganIndex == idx
+                                              ? 1.1
+                                              : 1.0,
+                                          duration: const Duration(
+                                            milliseconds: 180,
                                           ),
-                                          variant: _primaryVariantForSpecies(
-                                            visibleBakugans[idx],
+                                          curve: Curves.easeOut,
+                                          child: BakuganPreview(
+                                            key: ValueKey(
+                                              'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
+                                            ),
+                                            variant: _primaryVariantForSpecies(
+                                              visibleBakugans[idx],
+                                            ),
+                                            isSelected:
+                                                selectedBakuganIndex == idx,
+                                            speciesName:
+                                                visibleBakugans[idx].name,
                                           ),
-                                          isSelected:
-                                              selectedBakuganIndex == idx,
-                                          speciesName:
-                                              visibleBakugans[idx].name,
                                         ),
                                       ),
                                     ),
