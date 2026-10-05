@@ -797,25 +797,23 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                             return GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => _selectBakugan(index),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                ),
-                                child: AnimatedScale(
-                                  scale: selectedBakuganIndex == index
-                                      ? 1.1
-                                      : 1.0,
-                                  duration: const Duration(milliseconds: 180),
-                                  curve: Curves.easeOut,
-                                  child: BakuganPreview(
-                                    key: ValueKey(
-                                      'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
-                                    ),
-                                    variant: variant,
-                                    isSelected: selectedBakuganIndex == index,
-                                    speciesName: item.name,
-                                    autoRotate: false,
+                              child: AnimatedPadding(
+                                padding: selectedBakuganIndex == index
+                                    ? const EdgeInsets.symmetric(horizontal: 2)
+                                    : const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 4,
+                                      ),
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOut,
+                                child: BakuganPreview(
+                                  key: ValueKey(
+                                    'compact_preview_${variant.modelPath}_${variant.attribute}_${variant.texturePath}',
                                   ),
+                                  variant: variant,
+                                  isSelected: selectedBakuganIndex == index,
+                                  speciesName: item.name,
+                                  autoRotate: false,
                                 ),
                               ),
                             );
@@ -1658,30 +1656,30 @@ class _BakuganSelectScreenState extends State<BakuganSelectScreen> {
                                     itemBuilder: (context, idx) => GestureDetector(
                                       behavior: HitTestBehavior.opaque,
                                       onTap: () => _selectBakugan(idx),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 15,
+                                      child: AnimatedPadding(
+                                        padding: selectedBakuganIndex == idx
+                                            ? const EdgeInsets.symmetric(
+                                                horizontal: 5,
+                                              )
+                                            : const EdgeInsets.symmetric(
+                                                horizontal: 15,
+                                                vertical: 5,
+                                              ),
+                                        duration: const Duration(
+                                          milliseconds: 180,
                                         ),
-                                        child: AnimatedScale(
-                                          scale: selectedBakuganIndex == idx
-                                              ? 1.1
-                                              : 1.0,
-                                          duration: const Duration(
-                                            milliseconds: 180,
+                                        curve: Curves.easeOut,
+                                        child: BakuganPreview(
+                                          key: ValueKey(
+                                            'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
                                           ),
-                                          curve: Curves.easeOut,
-                                          child: BakuganPreview(
-                                            key: ValueKey(
-                                              'preview_${_primaryVariantForSpecies(visibleBakugans[idx]).modelPath}_${_primaryVariantForSpecies(visibleBakugans[idx]).attribute}_${_primaryVariantForSpecies(visibleBakugans[idx]).texturePath}',
-                                            ),
-                                            variant: _primaryVariantForSpecies(
-                                              visibleBakugans[idx],
-                                            ),
-                                            isSelected:
-                                                selectedBakuganIndex == idx,
-                                            speciesName:
-                                                visibleBakugans[idx].name,
+                                          variant: _primaryVariantForSpecies(
+                                            visibleBakugans[idx],
                                           ),
+                                          isSelected:
+                                              selectedBakuganIndex == idx,
+                                          speciesName:
+                                              visibleBakugans[idx].name,
                                         ),
                                       ),
                                     ),
