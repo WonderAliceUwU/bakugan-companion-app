@@ -61,6 +61,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   PlayerData? rightPlayer;
   int? leftBakuganIdx;
   int? rightBakuganIdx;
+  late final MatchPauseController _matchPauseMenuController;
 
   @override
   void initState() {
@@ -89,6 +90,11 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       widget.players.length,
       (_) => List<int?>.filled(3, null),
     );
+    _matchPauseMenuController = MatchPauseController(
+      onOpen: _pauseArenaPlaylist,
+      onAction: _handlePauseAction,
+    );
+    _matchPauseController.value = _matchPauseMenuController;
     _loadMatchAbilityCards();
     _loadArenaPlaylistAndStart();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1552,6 +1558,27 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     await _resumeArenaPlaylist();
   }
 
+  Future<void> _handlePauseAction(String action) async {
+    if (!mounted) return;
+
+    if (action == 'main_menu') {
+      Navigator.of(context).pushAndRemoveUntil(
+        _fadeRoute(const MainMenuScreen()),
+        (route) => false,
+      );
+      return;
+    }
+
+    if (action == 'selection') {
+      await _playCharacterSelectMusic();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      return;
+    }
+
+    await _resumeArenaPlaylist();
+  }
+
   void _addPoint(int index, {bool playPointSound = true}) async {
     bool didWinMatch = false;
     setState(() {
@@ -2149,6 +2176,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
   @override
   void dispose() {
+    if (identical(_matchPauseController.value, _matchPauseMenuController)) {
+      _matchPauseController.value = null;
+    }
     _matchCardNameController.dispose();
     _matchCardNameFocusNode.dispose();
     AppVolumeController.instance.unregister(_arenaPlayerA);
@@ -2172,7 +2202,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         actions: <Type, Action<Intent>>{
           ActivateIntent: CallbackAction<Intent>(
             onInvoke: (_) {
-              _openPauseMenu();
+              _openAppSettingsDialog();
               return null;
             },
           ),
@@ -2715,17 +2745,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                             width: 300,
                             height: 85,
                           ),
-                          if (!selectionMode) ...[
-                            const SizedBox(width: 14),
-                            BakuganButton(
-                              text: '',
-                              icon: Icons.pause_rounded,
-                              iconOnly: true,
-                              onPressed: _openPauseMenu,
-                              width: 120,
-                              height: 85,
-                            ),
-                          ],
                         ],
                       ),
                     ),

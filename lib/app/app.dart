@@ -2,6 +2,15 @@ part of '../main.dart';
 
 final GlobalKey<NavigatorState> _appNavigatorKey = GlobalKey<NavigatorState>();
 final ValueNotifier<bool> _isAppSettingsOpen = ValueNotifier<bool>(false);
+final ValueNotifier<MatchPauseController?> _matchPauseController =
+    ValueNotifier<MatchPauseController?>(null);
+
+class MatchPauseController {
+  final Future<void> Function() onOpen;
+  final Future<void> Function(String action) onAction;
+
+  const MatchPauseController({required this.onOpen, required this.onAction});
+}
 
 class BakuganApp extends StatelessWidget {
   const BakuganApp({super.key});
@@ -197,10 +206,23 @@ class _AppVolumeSurface extends StatelessWidget {
               valueListenable: _isAppSettingsOpen,
               builder: (context, isOpen, _) {
                 if (isOpen) return const SizedBox.shrink();
-                return const Positioned(
-                  top: 22,
-                  right: 24,
-                  child: _AppSettingsButton(),
+                return ValueListenableBuilder<MatchPauseController?>(
+                  valueListenable: _matchPauseController,
+                  builder: (context, pauseController, _) {
+                    if (pauseController != null) {
+                      return const Positioned(
+                        bottom: 40,
+                        left: 0,
+                        right: 0,
+                        child: Center(child: _AppSettingsButton(isPause: true)),
+                      );
+                    }
+                    return const Positioned(
+                      top: 22,
+                      right: 24,
+                      child: _AppSettingsButton(),
+                    );
+                  },
                 );
               },
             );
@@ -212,7 +234,9 @@ class _AppVolumeSurface extends StatelessWidget {
 }
 
 class _AppSettingsButton extends StatelessWidget {
-  const _AppSettingsButton();
+  final bool isPause;
+
+  const _AppSettingsButton({this.isPause = false});
 
   @override
   Widget build(BuildContext context) {
@@ -273,10 +297,12 @@ class _AppSettingsButton extends StatelessWidget {
                   transform: Matrix4.skewX(0.12),
                   child: _PressScale(
                     onPressed: _openAppSettingsDialog,
-                    child: const SizedBox.expand(
+                    child: SizedBox.expand(
                       child: Center(
                         child: Icon(
-                          Icons.settings_rounded,
+                          isPause
+                              ? Icons.pause_rounded
+                              : Icons.settings_rounded,
                           color: Colors.cyanAccent,
                           size: 32,
                         ),
@@ -298,6 +324,11 @@ Future<void> _openAppSettingsDialog() async {
   final navigatorContext = _appNavigatorKey.currentContext;
   if (navigatorContext == null) return;
 
+  final matchPauseController = _matchPauseController.value;
+  if (matchPauseController != null) {
+    await matchPauseController.onOpen();
+  }
+
   _isAppSettingsOpen.value = true;
   try {
     await showGeneralDialog<void>(
@@ -317,7 +348,11 @@ Future<void> _openAppSettingsDialog() async {
                   child: Container(color: Colors.black.withValues(alpha: 0.35)),
                 ),
               ),
-              const Center(child: AppSettingsDialog()),
+              Center(
+                child: AppSettingsDialog(
+                  matchPauseController: _matchPauseController.value,
+                ),
+              ),
             ],
           ),
         );
@@ -339,7 +374,9 @@ Future<void> _openAppSettingsDialog() async {
 }
 
 class AppSettingsDialog extends StatefulWidget {
-  const AppSettingsDialog({super.key});
+  final MatchPauseController? matchPauseController;
+
+  const AppSettingsDialog({super.key, this.matchPauseController});
 
   @override
   State<AppSettingsDialog> createState() => _AppSettingsDialogState();
@@ -359,6 +396,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations(_selectedUiLang);
+    final matchPauseController = widget.matchPauseController;
 
     return BakuganModal(
       title: l10n.settingsTitle,
@@ -377,6 +415,49 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
             ),
             const SizedBox(height: 12),
             const _AppVolumeControls(),
+            if (matchPauseController != null) ...[
+              const SizedBox(height: 24),
+              _buildSectionLabel(
+                icon: Icons.pause_rounded,
+                label: 'MATCH',
+                color: Colors.cyanAccent,
+              ),
+              const SizedBox(height: 12),
+              BakuganButton(
+                text: 'RESUME',
+                icon: Icons.play_arrow_rounded,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  unawaited(matchPauseController.onAction('resume'));
+                },
+                width: double.infinity,
+                height: 64,
+              ),
+              const SizedBox(height: 10),
+              BakuganButton(
+                text: 'RESTART',
+                icon: Icons.restart_alt_rounded,
+                color: Colors.orangeAccent,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  unawaited(matchPauseController.onAction('selection'));
+                },
+                width: double.infinity,
+                height: 64,
+              ),
+              const SizedBox(height: 10),
+              BakuganButton(
+                text: 'EXIT TO MENU',
+                icon: Icons.home_rounded,
+                color: Colors.redAccent,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  unawaited(matchPauseController.onAction('main_menu'));
+                },
+                width: double.infinity,
+                height: 64,
+              ),
+            ],
             const SizedBox(height: 24),
             _buildSectionLabel(
               icon: Icons.language_rounded,
