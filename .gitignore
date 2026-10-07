@@ -4,6 +4,20 @@
 *.pyc
 *.swp
 .DS_Store
+
+# Local tooling and generated metadata
+.ai/
+.agents/
+.artifacts/
+.codex/
+.mcp/
+.mcp.json
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
 .atom/
 .build/
 .buildlog/
