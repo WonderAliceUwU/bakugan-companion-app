@@ -606,6 +606,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   void _navigateToLeaderboard() async {
     await Navigator.of(context).push(_fadeRoute(const LeaderboardScreen()));
+    if (mounted) {
+      await _playBackgroundMusic('music/menu/Title.mp3');
+    }
   }
 
   void _navigateToHistory() async {
@@ -956,11 +959,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void initState() {
     super.initState();
+    _playLeaderboardMusic();
     _leaderboardFuture = LeaderboardRepository.instance.loadStore()
       ..then((store) {
         if (!mounted) return;
         setState(() => _isEloPaused = store.isEloPaused);
       });
+  }
+
+  Future<void> _playLeaderboardMusic() async {
+    try {
+      await _bgMusicPlayer.stop();
+      await _setAppPlayerBaseVolume(_bgMusicPlayer, 0.3);
+      await _bgMusicPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgMusicPlayer.play(AssetSource('music/menu/Tournament.mp3'));
+    } catch (error) {
+      debugPrint('Leaderboard music could not be played: $error');
+    }
   }
 
   Future<void> _reload() async {
@@ -1410,7 +1425,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/Menu.png'),
+            image: AssetImage('assets/images/scoreboard_bg.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
           ),

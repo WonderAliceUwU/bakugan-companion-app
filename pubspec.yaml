@@ -50,6 +50,7 @@ flutter:
     - assets/images/selection-bg.png
     - assets/images/inventory_bg.jpeg
     - assets/images/match-bg.png
+    - assets/images/scoreboard_bg.png
     - assets/images/logo.png
     - assets/images/cards/anverse.png
     - assets/images/cards/cards.json
@@ -58,6 +59,7 @@ flutter:
     - assets/images/cards/new_vestroia/
     - assets/music/menu/Title.mp3
     - assets/music/menu/Menu.mp3
+    - assets/music/menu/Tournament.mp3
     - assets/music/menu/Store.mp3
     - assets/music/arena/
     - assets/music/battle/before_ability.mp3
