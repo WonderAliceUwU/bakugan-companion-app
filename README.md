@@ -28,7 +28,7 @@ battle assistant, keeping the calculations and match state under control
 so everyone can focus on the game.
 
 <p align="center">
-  <img src="assets/readme_assets/home_undo.jpeg" alt="home screen" width="700"/>
+  <img src="assets/readme_assets/home.jpeg" alt="home screen" width="700"/>
 </p>
 
 <img src="assets/readme_assets/track-your-collection.png" alt="Track yout collection" width="700"/>
